@@ -1,0 +1,40 @@
+{
+  "title": "KPIs",
+  "subtitle": "Acompanhe seus indicadores-chave de desempenho",
+  "new_kpi": "Novo KPI",
+  "edit_kpi": "Editar KPI",
+  "delete_kpi": "Excluir KPI",
+  "fields": {
+    "title": "Título",
+    "description": "Descrição",
+    "current_value": "Valor Atual",
+    "target_value": "Valor Meta",
+    "unit": "Unidade",
+    "category": "Categoria"
+  },
+  "categories": {
+    "general": "Geral",
+    "streaming": "Streaming",
+    "shows": "Shows",
+    "social": "Redes Sociais",
+    "financial": "Financeiro",
+    "marketing": "Marketing"
+  },
+  "status": {
+    "complete": "Completo",
+    "on_track": "No Caminho",
+    "behind": "Atrasado",
+    "at_risk": "Em Risco"
+  },
+  "empty_state": {
+    "title": "Ainda não há KPIs",
+    "description": "Crie seu primeiro KPI para começar a acompanhar o desempenho",
+    "action": "Criar KPI"
+  },
+  "placeholders": {
+    "title": "ex., Streams Mensais",
+    "description": "Breve descrição deste KPI",
+    "unit": "ex., streams, shows, $"
+  },
+  "confirm_delete": "Tem certeza que deseja excluir este KPI?"
+}

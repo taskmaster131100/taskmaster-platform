@@ -1,0 +1,69 @@
+{
+  "name": "TaskMaster - Music Career Management",
+  "short_name": "TaskMaster",
+  "description": "The complete platform for managing music careers. Manage artists, releases, shows and teams in one place.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "music", "productivity"],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80",
+      "sizes": "1740x980",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "TaskMaster Dashboard"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Planning Copilot",
+      "short_name": "Copilot",
+      "description": "Criar projetos com IA",
+      "url": "/planejamento",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Command Center",
+      "short_name": "Central",
+      "description": "Visão geral executiva",
+      "url": "/command-center",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Artistas",
+      "short_name": "Talentos",
+      "description": "Gerenciar artistas",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

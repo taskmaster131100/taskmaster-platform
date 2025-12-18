@@ -1,0 +1,104 @@
+{
+  "title": "Simple, Transparent Pricing",
+  "subtitle": "Choose the perfect plan for your music career",
+  "billing": {
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save 20%"
+  },
+  "popular": "Most Popular",
+  "per_month": "/month",
+  "billed_yearly": "Billed {{amount}}/year",
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "description": "Perfect for independent artists starting their career",
+      "cta": "Start Free Trial"
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "For professional managers and small agencies",
+      "cta": "Start Free Trial"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "For labels, distributors, and large agencies",
+      "cta": "Contact Sales"
+    }
+  },
+  "features": {
+    "artists": "Up to {{count}} artists",
+    "artists_unlimited": "Unlimited artists",
+    "task_management": "Task management",
+    "calendar_events": "Calendar & events",
+    "basic_reports": "Basic reports",
+    "advanced_reports": "Advanced reports",
+    "kpis": "Up to {{count}} KPIs",
+    "kpis_unlimited": "Unlimited KPIs",
+    "storage": "File storage ({{size}})",
+    "email_support": "Email support",
+    "priority_support": "Priority email support",
+    "support_24_7": "24/7 priority support",
+    "ai_planning": "AI planning assistant",
+    "advanced_analytics": "Advanced analytics",
+    "team_collaboration": "Team collaboration",
+    "integrations": "Integrations (Spotify, Instagram)",
+    "all_integrations": "All integrations",
+    "custom_branding": "Custom branding",
+    "api_access": "API access",
+    "account_manager": "Dedicated account manager",
+    "custom_features": "Custom features"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "q1": {
+      "question": "Can I change plans later?",
+      "answer": "Yes! You can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle."
+    },
+    "q2": {
+      "question": "Is there a free trial?",
+      "answer": "Yes! All plans come with a 14-day free trial. No credit card required to start."
+    },
+    "q3": {
+      "question": "What payment methods do you accept?",
+      "answer": "We accept all major credit cards (Visa, Mastercard, American Express) via Stripe."
+    },
+    "q4": {
+      "question": "Can I cancel anytime?",
+      "answer": "Absolutely! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period."
+    },
+    "q5": {
+      "question": "Do you offer refunds?",
+      "answer": "We offer a 30-day money-back guarantee. If you're not satisfied, contact us for a full refund."
+    }
+  },
+  "trust": {
+    "title": "Trusted by artists and managers worldwide",
+    "secure_payment": "Secure Payment",
+    "ssl_encrypted": "SSL Encrypted",
+    "gdpr_compliant": "GDPR Compliant"
+  },
+  "checkout": {
+    "title": "Complete your purchase",
+    "subtitle": "Start your 14-day free trial today",
+    "back_to_pricing": "Back to pricing",
+    "order_summary": "Order Summary",
+    "billing_interval": "Billing Interval",
+    "whats_included": "What's included:",
+    "payment_info": "Payment Information",
+    "stripe_note": "Stripe integration is ready to be configured. Add your Stripe API keys to enable payments.",
+    "card_number": "Card Number",
+    "expiry_date": "Expiry Date",
+    "cvc": "CVC",
+    "price_summary": "Price Summary",
+    "yearly_discount": "Yearly Discount (20%)",
+    "total": "Total",
+    "start_trial": "Start Free Trial",
+    "processing": "Processing...",
+    "secure_payment": "Secure payment with Stripe",
+    "terms": "By clicking \"Start Free Trial\", you agree to our Terms of Service and Privacy Policy.",
+    "trial_info": "14-day free trial • Cancel anytime • No credit card required",
+    "plan_not_found": "Plan not found",
+    "view_plans": "View Plans"
+  }
+}

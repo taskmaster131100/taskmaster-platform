@@ -1,0 +1,26 @@
+# Ignore migration files
+supabase/migrations/*
+
+# Ignore large components that aren't frequently modified
+src/components/ui/*
+src/components/sheetmusic/*
+src/components/repertoire/*
+src/components/sales/*
+src/components/release/*
+src/components/team/*
+src/components/admin/*
+src/components/account/*
+
+# Ignore service implementations
+src/services/*
+
+# Ignore type definitions
+src/types/*
+
+# Ignore configuration files
+*.config.js
+*.config.ts
+tsconfig*.json
+
+# Ignore CSS files
+src/index.css

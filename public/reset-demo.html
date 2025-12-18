@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset TaskMaster Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .success {
+            display: none;
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .steps {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .steps h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .steps li {
+            margin: 8px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Reset TaskMaster Demo</h1>
+        <p>
+            Clique no botão abaixo para limpar todos os dados locais e ver o fluxo completo do TaskMaster desde o início:
+        </p>
+
+        <div class="steps">
+            <h3>Você verá:</h3>
+            <ol>
+                <li>✨ Tela de Login linda com gradiente</li>
+                <li>🎯 Seleção de modo (Local/Nuvem)</li>
+                <li>👋 Onboarding "Bem-vindo ao TaskMaster"</li>
+                <li>🚀 Command Center</li>
+                <li>📱 Menu lateral com Produção Musical</li>
+            </ol>
+        </div>
+
+        <button onclick="resetDemo()">Resetar e Ver Fluxo Completo</button>
+
+        <div class="success" id="success">
+            ✅ Demo resetado com sucesso!<br>
+            Redirecionando para o login...
+        </div>
+    </div>
+
+    <script>
+        function resetDemo() {
+            // Limpar todo o localStorage
+            localStorage.clear();
+
+            // Mostrar mensagem de sucesso
+            document.getElementById('success').style.display = 'block';
+
+            // Redirecionar para a home após 2 segundos
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

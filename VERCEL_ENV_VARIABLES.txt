@@ -1,0 +1,89 @@
+===========================================
+🔐 ENVIRONMENT VARIABLES PARA VERCEL
+===========================================
+
+COPIE E COLE NO VERCEL (uma por vez):
+
+-------------------------------------------
+Nome: VITE_SUPABASE_URL
+Valor: https://ktspxbucvfzaqyszpyso.supabase.co
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_SUPABASE_ANON_KEY
+Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0c3B4YnVjdmZ6YXF5c3pweXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NDcyNzQsImV4cCI6MjA3MTAyMzI3NH0.-UfFVeGoCJFc69FHSwZ2FHlcQs1uidkxg0tItxmpPTc
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_BETA_MODE
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_INVITE_ONLY
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_PUBLIC_SIGNUPS
+Valor: false
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_PIPELINE_V2
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_APPROVALS
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_COMMAND_CENTER
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_PLANNING_COPILOT
+Valor: true
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_BILLING
+Valor: false
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_SUBSCRIPTIONS
+Valor: false
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+-------------------------------------------
+Nome: VITE_FEATURE_OWNERSHIP
+Valor: false
+Ambiente: Production, Preview, and Development
+-------------------------------------------
+
+===========================================
+TOTAL: 12 variáveis
+===========================================
+
+⚠️ IMPORTANTE:
+- Copie EXATAMENTE como está
+- Selecione os 3 ambientes para cada variável
+- Não adicione espaços extras
+- Não quebre as linhas dos valores
+
+✅ Depois de adicionar todas, clique em "Deploy"

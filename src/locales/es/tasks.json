@@ -1,0 +1,45 @@
+{
+  "title": "Tareas",
+  "subtitle": "Gestiona tus tareas y proyectos",
+  "new_task": "Nueva Tarea",
+  "edit_task": "Editar Tarea",
+  "delete_task": "Eliminar Tarea",
+  "task_details": "Detalles de la Tarea",
+  "fields": {
+    "title": "Título",
+    "description": "Descripción",
+    "status": "Estado",
+    "priority": "Prioridad",
+    "due_date": "Fecha de Vencimiento",
+    "assigned_to": "Asignado a",
+    "category": "Categoría",
+    "tags": "Etiquetas",
+    "attachments": "Archivos Adjuntos",
+    "comments": "Comentarios"
+  },
+  "priority": {
+    "low": "Baja",
+    "medium": "Media",
+    "high": "Alta",
+    "urgent": "Urgente"
+  },
+  "filters": {
+    "all": "Todas las Tareas",
+    "my_tasks": "Mis Tareas",
+    "assigned_to_me": "Asignadas a Mí",
+    "overdue": "Vencidas",
+    "completed": "Completadas",
+    "in_progress": "En Progreso"
+  },
+  "board": {
+    "todo": "Por Hacer",
+    "in_progress": "En Progreso",
+    "review": "Revisión",
+    "done": "Hecho"
+  },
+  "empty_state": {
+    "title": "Aún no hay tareas",
+    "description": "Crea tu primera tarea para comenzar",
+    "action": "Crear Tarea"
+  }
+}

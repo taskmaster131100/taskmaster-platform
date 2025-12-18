@@ -1,0 +1,40 @@
+{
+  "title": "KPIs",
+  "subtitle": "Rastrea tus indicadores clave de rendimiento",
+  "new_kpi": "Nuevo KPI",
+  "edit_kpi": "Editar KPI",
+  "delete_kpi": "Eliminar KPI",
+  "fields": {
+    "title": "Título",
+    "description": "Descripción",
+    "current_value": "Valor Actual",
+    "target_value": "Valor Objetivo",
+    "unit": "Unidad",
+    "category": "Categoría"
+  },
+  "categories": {
+    "general": "General",
+    "streaming": "Streaming",
+    "shows": "Shows",
+    "social": "Redes Sociales",
+    "financial": "Financiero",
+    "marketing": "Marketing"
+  },
+  "status": {
+    "complete": "Completo",
+    "on_track": "En Camino",
+    "behind": "Atrasado",
+    "at_risk": "En Riesgo"
+  },
+  "empty_state": {
+    "title": "Aún no hay KPIs",
+    "description": "Crea tu primer KPI para comenzar a rastrear el rendimiento",
+    "action": "Crear KPI"
+  },
+  "placeholders": {
+    "title": "ej., Streams Mensuales",
+    "description": "Breve descripción de este KPI",
+    "unit": "ej., streams, shows, $"
+  },
+  "confirm_delete": "¿Estás seguro de que quieres eliminar este KPI?"
+}

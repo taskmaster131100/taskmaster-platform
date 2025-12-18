@@ -1,0 +1,112 @@
+{
+  "app": {
+    "name": "TaskMaster",
+    "tagline": "Plataforma completa de gestão musical"
+  },
+  "nav": {
+    "dashboard": "Painel",
+    "tasks": "Tarefas",
+    "calendar": "Calendário",
+    "reports": "Relatórios",
+    "kpis": "KPIs",
+    "planning": "Planejamento",
+    "artists": "Artistas",
+    "shows": "Shows",
+    "music": "Música",
+    "files": "Arquivos",
+    "settings": "Configurações",
+    "profile": "Perfil",
+    "logout": "Sair"
+  },
+  "actions": {
+    "create": "Criar",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "finish": "Finalizar",
+    "close": "Fechar",
+    "refresh": "Atualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Baixar",
+    "upload": "Enviar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "view": "Visualizar",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "update": "Atualizar",
+    "submit": "Enviar",
+    "reset": "Redefinir",
+    "clear": "Limpar"
+  },
+  "status": {
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "pending": "Pendente",
+    "completed": "Concluído",
+    "cancelled": "Cancelado",
+    "draft": "Rascunho",
+    "published": "Publicado",
+    "archived": "Arquivado",
+    "in_progress": "Em Andamento",
+    "todo": "A Fazer",
+    "done": "Concluído"
+  },
+  "time": {
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "tomorrow": "Amanhã",
+    "this_week": "Esta Semana",
+    "last_week": "Semana Passada",
+    "next_week": "Próxima Semana",
+    "this_month": "Este Mês",
+    "last_month": "Mês Passado",
+    "next_month": "Próximo Mês",
+    "this_year": "Este Ano",
+    "last_year": "Ano Passado"
+  },
+  "messages": {
+    "success": "Sucesso!",
+    "error": "Erro",
+    "warning": "Aviso",
+    "info": "Informação",
+    "loading": "Carregando...",
+    "no_data": "Nenhum dado disponível",
+    "confirm_delete": "Tem certeza que deseja excluir este item?",
+    "saved_successfully": "Salvo com sucesso",
+    "deleted_successfully": "Excluído com sucesso",
+    "updated_successfully": "Atualizado com sucesso",
+    "created_successfully": "Criado com sucesso"
+  },
+  "validation": {
+    "required": "Este campo é obrigatório",
+    "invalid_email": "Endereço de e-mail inválido",
+    "invalid_phone": "Número de telefone inválido",
+    "min_length": "Mínimo de {{count}} caracteres",
+    "max_length": "Máximo de {{count}} caracteres",
+    "min_value": "O valor mínimo é {{value}}",
+    "max_value": "O valor máximo é {{value}}"
+  },
+  "pagination": {
+    "showing": "Mostrando",
+    "of": "de",
+    "results": "resultados",
+    "per_page": "por página",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "first": "Primeiro",
+    "last": "Último"
+  },
+  "language": {
+    "select": "Selecionar Idioma",
+    "en": "Inglês",
+    "es": "Espanhol",
+    "pt-BR": "Português (Brasil)"
+  }
+}

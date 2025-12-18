@@ -1,0 +1,18 @@
+# Headers de segurança para Vercel
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Cache para assets estáticos
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache para arquivos JS e CSS
+*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+*.css
+  Cache-Control: public, max-age=31536000, immutable

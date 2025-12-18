@@ -1,0 +1,34 @@
+{
+  "title": "Panel",
+  "welcome": "Bienvenido a TaskMaster",
+  "subtitle": "Gestiona tu carrera musical eficientemente",
+  "overview": {
+    "title": "Resumen",
+    "total_tasks": "Tareas Totales",
+    "completed_tasks": "Tareas Completadas",
+    "active_projects": "Proyectos Activos",
+    "upcoming_events": "Próximos Eventos",
+    "active_plannings": "Planificaciones Activas",
+    "total_shows": "Shows Totales",
+    "total_artists": "Artistas Totales"
+  },
+  "quick_actions": {
+    "title": "Acciones Rápidas",
+    "create_task": "Crear Tarea",
+    "schedule_event": "Programar Evento",
+    "new_planning": "Nueva Planificación",
+    "add_artist": "Añadir Artista",
+    "upload_file": "Subir Archivo"
+  },
+  "recent_activity": {
+    "title": "Actividad Reciente",
+    "no_activity": "Sin actividad reciente",
+    "view_all": "Ver Todo"
+  },
+  "stats": {
+    "title": "Estadísticas",
+    "this_week": "Esta Semana",
+    "this_month": "Este Mes",
+    "this_year": "Este Año"
+  }
+}

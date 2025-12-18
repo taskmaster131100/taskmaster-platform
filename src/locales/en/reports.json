@@ -1,0 +1,44 @@
+{
+  "title": "Reports & Analytics",
+  "subtitle": "View performance metrics and system analytics",
+  "export_pdf": "Export PDF",
+  "refresh": "Refresh",
+  "metrics": {
+    "total_tasks": "Total Tasks",
+    "completed": "completed",
+    "completion_rate": "Completion Rate",
+    "of_tasks": "of tasks",
+    "events": "Events",
+    "upcoming": "upcoming",
+    "shows": "Shows",
+    "active_plannings": "Active Plannings",
+    "of_total": "of {{total}} total",
+    "artists": "Artists",
+    "managed": "managed",
+    "kpis": "KPIs",
+    "achieved": "achieved",
+    "kpi_success_rate": "KPI Success Rate",
+    "goals_achieved": "goals achieved"
+  },
+  "charts": {
+    "task_distribution": "Task Distribution",
+    "to_do": "To Do",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "done": "Done",
+    "shows_events": "Shows & Events",
+    "total_shows": "Total Shows",
+    "upcoming_shows": "Upcoming Shows",
+    "upcoming_events": "Upcoming Events"
+  },
+  "summary": {
+    "title": "Executive Summary",
+    "productivity": "Productivity",
+    "task_completion_rate": "Task completion rate",
+    "schedule": "Schedule",
+    "upcoming_activities": "Upcoming activities",
+    "planning": "Planning",
+    "active_plannings": "Active plannings",
+    "kpi_success": "KPI Success"
+  }
+}

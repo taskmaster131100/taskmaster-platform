@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile-friendly input styles */
+.mobile-friendly-input {
+  font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+/* Mobile-friendly button styles */
+.touch-button {
+  touch-action: manipulation;
+}
+
+/* Mobile navigation styles */
+.mobile-nav-item {
+  @apply flex flex-col items-center justify-center;
+  width: 20%;
+}
+
+.mobile-nav-text {
+  @apply text-xs mt-1;
+}
+
+/* iOS safe area handling */
+.ios-safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.ios-safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.notch-padding {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Mobile layout adjustments */
+@media (max-width: 768px) {
+  .mobile-header {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  
+  .mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .mobile-main-content {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0));
+  }
+  
+  .mobile-friendly-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Tablet layout adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-sidebar {
+    width: 4rem;
+  }
+  
+  .tablet-main-content {
+    margin-left: 4rem;
+  }
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Tutorial highlight */
+.tutorial-highlight {
+  position: relative;
+  z-index: 9999;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.5);
+  border-radius: 0.5rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+  }
+}
+
+/* Animation utilities */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Theme color schemes */
+:root {
+  --primary: theme('colors.indigo.600');
+  --primary-hover: theme('colors.indigo.700');
+  --primary-light: theme('colors.indigo.100');
+  --secondary: theme('colors.purple.600');
+  --secondary-hover: theme('colors.purple.700');
+  --secondary-light: theme('colors.purple.100');
+}
+
+.theme-blue {
+  --primary: theme('colors.blue.600');
+  --primary-hover: theme('colors.blue.700');
+  --primary-light: theme('colors.blue.100');
+  --secondary: theme('colors.cyan.600');
+  --secondary-hover: theme('colors.cyan.700');
+  --secondary-light: theme('colors.cyan.100');
+}
+
+.theme-purple {
+  --primary: theme('colors.purple.600');
+  --primary-hover: theme('colors.purple.700');
+  --primary-light: theme('colors.purple.100');
+  --secondary: theme('colors.pink.600');
+  --secondary-hover: theme('colors.pink.700');
+  --secondary-light: theme('colors.pink.100');
+}
+
+.theme-green {
+  --primary: theme('colors.green.600');
+  --primary-hover: theme('colors.green.700');
+  --primary-light: theme('colors.green.100');
+  --secondary: theme('colors.emerald.600');
+  --secondary-hover: theme('colors.emerald.700');
+  --secondary-light: theme('colors.emerald.100');
+}
+
+.theme-orange {
+  --primary: theme('colors.orange.600');
+  --primary-hover: theme('colors.orange.700');
+  --primary-light: theme('colors.orange.100');
+  --secondary: theme('colors.amber.600');
+  --secondary-hover: theme('colors.amber.700');
+  --secondary-light: theme('colors.amber.100');
+}

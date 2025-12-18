@@ -1,0 +1,11 @@
+{
+  "status": "healthy",
+  "service": "TaskMaster Beta",
+  "version": "1.0.0-beta",
+  "timestamp": "2025-10-22T23:00:00Z",
+  "environment": "production",
+  "components": {
+    "frontend": "ok",
+    "build": "ok"
+  }
+}

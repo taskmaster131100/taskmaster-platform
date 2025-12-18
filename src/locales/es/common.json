@@ -1,0 +1,112 @@
+{
+  "app": {
+    "name": "TaskMaster",
+    "tagline": "Plataforma completa de gestión musical"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "tasks": "Tareas",
+    "calendar": "Calendario",
+    "reports": "Informes",
+    "kpis": "KPIs",
+    "planning": "Planificación",
+    "artists": "Artistas",
+    "shows": "Shows",
+    "music": "Música",
+    "files": "Archivos",
+    "settings": "Configuración",
+    "profile": "Perfil",
+    "logout": "Cerrar sesión"
+  },
+  "actions": {
+    "create": "Crear",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "finish": "Finalizar",
+    "close": "Cerrar",
+    "refresh": "Actualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Descargar",
+    "upload": "Subir",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "sort": "Ordenar",
+    "view": "Ver",
+    "add": "Añadir",
+    "remove": "Quitar",
+    "update": "Actualizar",
+    "submit": "Enviar",
+    "reset": "Restablecer",
+    "clear": "Limpiar"
+  },
+  "status": {
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "pending": "Pendiente",
+    "completed": "Completado",
+    "cancelled": "Cancelado",
+    "draft": "Borrador",
+    "published": "Publicado",
+    "archived": "Archivado",
+    "in_progress": "En Progreso",
+    "todo": "Por Hacer",
+    "done": "Hecho"
+  },
+  "time": {
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "tomorrow": "Mañana",
+    "this_week": "Esta Semana",
+    "last_week": "Semana Pasada",
+    "next_week": "Próxima Semana",
+    "this_month": "Este Mes",
+    "last_month": "Mes Pasado",
+    "next_month": "Próximo Mes",
+    "this_year": "Este Año",
+    "last_year": "Año Pasado"
+  },
+  "messages": {
+    "success": "¡Éxito!",
+    "error": "Error",
+    "warning": "Advertencia",
+    "info": "Información",
+    "loading": "Cargando...",
+    "no_data": "No hay datos disponibles",
+    "confirm_delete": "¿Estás seguro de que quieres eliminar este elemento?",
+    "saved_successfully": "Guardado exitosamente",
+    "deleted_successfully": "Eliminado exitosamente",
+    "updated_successfully": "Actualizado exitosamente",
+    "created_successfully": "Creado exitosamente"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalid_email": "Dirección de correo inválida",
+    "invalid_phone": "Número de teléfono inválido",
+    "min_length": "Mínimo {{count}} caracteres",
+    "max_length": "Máximo {{count}} caracteres",
+    "min_value": "El valor mínimo es {{value}}",
+    "max_value": "El valor máximo es {{value}}"
+  },
+  "pagination": {
+    "showing": "Mostrando",
+    "of": "de",
+    "results": "resultados",
+    "per_page": "por página",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "first": "Primero",
+    "last": "Último"
+  },
+  "language": {
+    "select": "Seleccionar Idioma",
+    "en": "Inglés",
+    "es": "Español",
+    "pt-BR": "Portugués (Brasil)"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Tasks",
+  "subtitle": "Manage your tasks and projects",
+  "new_task": "New Task",
+  "edit_task": "Edit Task",
+  "delete_task": "Delete Task",
+  "task_details": "Task Details",
+  "fields": {
+    "title": "Title",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "due_date": "Due Date",
+    "assigned_to": "Assigned To",
+    "category": "Category",
+    "tags": "Tags",
+    "attachments": "Attachments",
+    "comments": "Comments"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "filters": {
+    "all": "All Tasks",
+    "my_tasks": "My Tasks",
+    "assigned_to_me": "Assigned to Me",
+    "overdue": "Overdue",
+    "completed": "Completed",
+    "in_progress": "In Progress"
+  },
+  "board": {
+    "todo": "To Do",
+    "in_progress": "In Progress",
+    "review": "Review",
+    "done": "Done"
+  },
+  "empty_state": {
+    "title": "No tasks yet",
+    "description": "Create your first task to get started",
+    "action": "Create Task"
+  }
+}

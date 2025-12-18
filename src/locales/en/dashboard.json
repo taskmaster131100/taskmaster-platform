@@ -1,0 +1,34 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome to TaskMaster",
+  "subtitle": "Manage your music career efficiently",
+  "overview": {
+    "title": "Overview",
+    "total_tasks": "Total Tasks",
+    "completed_tasks": "Completed Tasks",
+    "active_projects": "Active Projects",
+    "upcoming_events": "Upcoming Events",
+    "active_plannings": "Active Plannings",
+    "total_shows": "Total Shows",
+    "total_artists": "Total Artists"
+  },
+  "quick_actions": {
+    "title": "Quick Actions",
+    "create_task": "Create Task",
+    "schedule_event": "Schedule Event",
+    "new_planning": "New Planning",
+    "add_artist": "Add Artist",
+    "upload_file": "Upload File"
+  },
+  "recent_activity": {
+    "title": "Recent Activity",
+    "no_activity": "No recent activity",
+    "view_all": "View All"
+  },
+  "stats": {
+    "title": "Statistics",
+    "this_week": "This Week",
+    "this_month": "This Month",
+    "this_year": "This Year"
+  }
+}

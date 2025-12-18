@@ -1,0 +1,104 @@
+{
+  "title": "Precios Simples y Transparentes",
+  "subtitle": "Elige el plan perfecto para tu carrera musical",
+  "billing": {
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "save": "Ahorra 20%"
+  },
+  "popular": "Más Popular",
+  "per_month": "/mes",
+  "billed_yearly": "Facturado {{amount}}/año",
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "description": "Perfecto para artistas independientes que comienzan su carrera",
+      "cta": "Iniciar Prueba Gratuita"
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Para managers profesionales y pequeñas agencias",
+      "cta": "Iniciar Prueba Gratuita"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Para sellos, distribuidoras y grandes agencias",
+      "cta": "Contactar Ventas"
+    }
+  },
+  "features": {
+    "artists": "Hasta {{count}} artistas",
+    "artists_unlimited": "Artistas ilimitados",
+    "task_management": "Gestión de tareas",
+    "calendar_events": "Calendario y eventos",
+    "basic_reports": "Informes básicos",
+    "advanced_reports": "Informes avanzados",
+    "kpis": "Hasta {{count}} KPIs",
+    "kpis_unlimited": "KPIs ilimitados",
+    "storage": "Almacenamiento de archivos ({{size}})",
+    "email_support": "Soporte por email",
+    "priority_support": "Soporte prioritario por email",
+    "support_24_7": "Soporte prioritario 24/7",
+    "ai_planning": "Asistente de planificación IA",
+    "advanced_analytics": "Análisis avanzados",
+    "team_collaboration": "Colaboración en equipo",
+    "integrations": "Integraciones (Spotify, Instagram)",
+    "all_integrations": "Todas las integraciones",
+    "custom_branding": "Marca personalizada",
+    "api_access": "Acceso a API",
+    "account_manager": "Gerente de cuenta dedicado",
+    "custom_features": "Funciones personalizadas"
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "q1": {
+      "question": "¿Puedo cambiar de plan más tarde?",
+      "answer": "¡Sí! Puedes actualizar o degradar tu plan en cualquier momento. Los cambios se reflejarán en tu próximo ciclo de facturación."
+    },
+    "q2": {
+      "question": "¿Hay una prueba gratuita?",
+      "answer": "¡Sí! Todos los planes incluyen una prueba gratuita de 14 días. No se requiere tarjeta de crédito para comenzar."
+    },
+    "q3": {
+      "question": "¿Qué métodos de pago aceptan?",
+      "answer": "Aceptamos todas las principales tarjetas de crédito (Visa, Mastercard, American Express) a través de Stripe."
+    },
+    "q4": {
+      "question": "¿Puedo cancelar en cualquier momento?",
+      "answer": "¡Absolutamente! Puedes cancelar tu suscripción en cualquier momento. Continuarás teniendo acceso hasta el final de tu período de facturación."
+    },
+    "q5": {
+      "question": "¿Ofrecen reembolsos?",
+      "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás satisfecho, contáctanos para un reembolso completo."
+    }
+  },
+  "trust": {
+    "title": "Confiado por artistas y managers en todo el mundo",
+    "secure_payment": "Pago Seguro",
+    "ssl_encrypted": "Encriptado SSL",
+    "gdpr_compliant": "Cumple con GDPR"
+  },
+  "checkout": {
+    "title": "Completa tu compra",
+    "subtitle": "Comienza tu prueba gratuita de 14 días hoy",
+    "back_to_pricing": "Volver a precios",
+    "order_summary": "Resumen del Pedido",
+    "billing_interval": "Intervalo de Facturación",
+    "whats_included": "Qué está incluido:",
+    "payment_info": "Información de Pago",
+    "stripe_note": "La integración con Stripe está lista para ser configurada. Agrega tus claves de API de Stripe para habilitar los pagos.",
+    "card_number": "Número de Tarjeta",
+    "expiry_date": "Fecha de Vencimiento",
+    "cvc": "CVC",
+    "price_summary": "Resumen de Precio",
+    "yearly_discount": "Descuento Anual (20%)",
+    "total": "Total",
+    "start_trial": "Iniciar Prueba Gratuita",
+    "processing": "Procesando...",
+    "secure_payment": "Pago seguro con Stripe",
+    "terms": "Al hacer clic en \"Iniciar Prueba Gratuita\", aceptas nuestros Términos de Servicio y Política de Privacidad.",
+    "trial_info": "Prueba gratuita de 14 días • Cancela en cualquier momento • No se requiere tarjeta de crédito",
+    "plan_not_found": "Plan no encontrado",
+    "view_plans": "Ver Planes"
+  }
+}

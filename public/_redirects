@@ -1,0 +1,7 @@
+/*    /index.html   200
+/login    /index.html   200
+/register    /index.html   200
+/planejamento    /index.html   200
+/command-center    /index.html   200
+/templates    /index.html   200
+/api/*    /api/:splat   200

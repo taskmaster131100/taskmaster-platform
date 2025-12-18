@@ -1,0 +1,44 @@
+{
+  "title": "Informes y Análisis",
+  "subtitle": "Ver métricas de rendimiento y análisis del sistema",
+  "export_pdf": "Exportar PDF",
+  "refresh": "Actualizar",
+  "metrics": {
+    "total_tasks": "Tareas Totales",
+    "completed": "completadas",
+    "completion_rate": "Tasa de Finalización",
+    "of_tasks": "de tareas",
+    "events": "Eventos",
+    "upcoming": "próximos",
+    "shows": "Shows",
+    "active_plannings": "Planificaciones Activas",
+    "of_total": "de {{total}} totales",
+    "artists": "Artistas",
+    "managed": "gestionados",
+    "kpis": "KPIs",
+    "achieved": "logrados",
+    "kpi_success_rate": "Tasa de Éxito de KPIs",
+    "goals_achieved": "objetivos logrados"
+  },
+  "charts": {
+    "task_distribution": "Distribución de Tareas",
+    "to_do": "Por Hacer",
+    "in_progress": "En Progreso",
+    "completed": "Completadas",
+    "done": "Hecho",
+    "shows_events": "Shows y Eventos",
+    "total_shows": "Shows Totales",
+    "upcoming_shows": "Próximos Shows",
+    "upcoming_events": "Próximos Eventos"
+  },
+  "summary": {
+    "title": "Resumen Ejecutivo",
+    "productivity": "Productividad",
+    "task_completion_rate": "Tasa de finalización de tareas",
+    "schedule": "Agenda",
+    "upcoming_activities": "Actividades próximas",
+    "planning": "Planificación",
+    "active_plannings": "Planificaciones activas",
+    "kpi_success": "Éxito de KPIs"
+  }
+}

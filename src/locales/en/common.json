@@ -1,0 +1,112 @@
+{
+  "app": {
+    "name": "TaskMaster",
+    "tagline": "Complete music management platform"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "calendar": "Calendar",
+    "reports": "Reports",
+    "kpis": "KPIs",
+    "planning": "Planning",
+    "artists": "Artists",
+    "shows": "Shows",
+    "music": "Music",
+    "files": "Files",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "actions": {
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "close": "Close",
+    "refresh": "Refresh",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "view": "View",
+    "add": "Add",
+    "remove": "Remove",
+    "update": "Update",
+    "submit": "Submit",
+    "reset": "Reset",
+    "clear": "Clear"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived",
+    "in_progress": "In Progress",
+    "todo": "To Do",
+    "done": "Done"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "this_week": "This Week",
+    "last_week": "Last Week",
+    "next_week": "Next Week",
+    "this_month": "This Month",
+    "last_month": "Last Month",
+    "next_month": "Next Month",
+    "this_year": "This Year",
+    "last_year": "Last Year"
+  },
+  "messages": {
+    "success": "Success!",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information",
+    "loading": "Loading...",
+    "no_data": "No data available",
+    "confirm_delete": "Are you sure you want to delete this item?",
+    "saved_successfully": "Saved successfully",
+    "deleted_successfully": "Deleted successfully",
+    "updated_successfully": "Updated successfully",
+    "created_successfully": "Created successfully"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalid_email": "Invalid email address",
+    "invalid_phone": "Invalid phone number",
+    "min_length": "Minimum {{count}} characters",
+    "max_length": "Maximum {{count}} characters",
+    "min_value": "Minimum value is {{value}}",
+    "max_value": "Maximum value is {{value}}"
+  },
+  "pagination": {
+    "showing": "Showing",
+    "of": "of",
+    "results": "results",
+    "per_page": "per page",
+    "previous": "Previous",
+    "next": "Next",
+    "first": "First",
+    "last": "Last"
+  },
+  "language": {
+    "select": "Select Language",
+    "en": "English",
+    "es": "Spanish",
+    "pt-BR": "Portuguese (Brazil)"
+  }
+}

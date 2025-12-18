@@ -1,0 +1,81 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/welcome",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/lobby",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mail",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "VITE_APP_ENV": "production",
+    "VITE_BETA_MODE": "true",
+    "VITE_INVITE_ONLY": "true",
+    "VITE_PUBLIC_SIGNUPS": "false",
+    "VITE_FEATURE_PIPELINE_V2": "true",
+    "VITE_FEATURE_APPROVALS": "true",
+    "VITE_FEATURE_COMMAND_CENTER": "true",
+    "VITE_FEATURE_PLANNING_COPILOT": "true",
+    "VITE_FEATURE_BILLING": "false",
+    "VITE_FEATURE_SUBSCRIPTIONS": "false",
+    "VITE_FEATURE_OWNERSHIP": "false"
+  }
+}
