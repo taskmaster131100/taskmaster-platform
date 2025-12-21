@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, HashRouter } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import App from './App.tsx';  // Main app with full functionality
 import { AuthProvider } from './components/auth/AuthProvider';
 import { OrganizationProvider } from './components/organization/OrganizationContext';
@@ -28,6 +29,7 @@ const renderApp = () => {
             <AuthProvider>
               <OrganizationProvider>
                 <App />
+                <SpeedInsights />
               </OrganizationProvider>
             </AuthProvider>
           </Router>
