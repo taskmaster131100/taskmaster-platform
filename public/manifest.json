@@ -64,6 +64,30 @@
           "sizes": "96x96"
         }
       ]
+    },
+    {
+      "name": "Financeiro",
+      "short_name": "Financeiro",
+      "description": "Gerenciar finanças",
+      "url": "/finance",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Equipe",
+      "short_name": "Equipe",
+      "description": "Gerenciar equipe",
+      "url": "/team",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ]
 }

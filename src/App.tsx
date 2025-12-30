@@ -62,6 +62,8 @@ const Changelog = React.lazy(() => import('./pages/DocsPages').then(module => ({
 const ToursManager = React.lazy(() => import('./pages/ToursManager'));
 const ContentManager = React.lazy(() => import('./pages/ContentManager'));
 const ReleasesManager = React.lazy(() => import('./pages/ReleasesManager'));
+const TeamPage = React.lazy(() => import('./pages/TeamPage'));
+const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 
 // Classic Routes Preview (feature flag controlled)
 const WelcomePreview = React.lazy(() => import('./pages/WelcomePreview'));
@@ -783,6 +785,18 @@ function App() {
         <Route path="/releases" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <ReleasesManager />
+          </React.Suspense>
+        } />
+
+        <Route path="/team" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <TeamPage />
+          </React.Suspense>
+        } />
+
+        <Route path="/finance" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <FinancePage />
           </React.Suspense>
         } />
 

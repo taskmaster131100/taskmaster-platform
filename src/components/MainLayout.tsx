@@ -5,7 +5,8 @@ import {
   Settings, LogOut, Menu, X, ChevronDown, ChevronRight,
   Sparkles, Library, TrendingUp, FileText, Eye, CheckSquare,
   MessageSquare, PieChart, Shield, User, Mic2, Radio, FolderArchive,
-  HelpCircle, BookOpen, FileQuestion, MapPin, Share2, Disc3
+  HelpCircle, BookOpen, FileQuestion, MapPin, Share2, Disc3,
+  DollarSign, UsersRound
 } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 
@@ -111,6 +112,13 @@ export default function MainLayout({
         { id: 'ai', label: 'Análise', icon: PieChart },
         { id: 'ia-texto', label: 'IA de Texto', icon: Sparkles, link: '/ia-texto' },
         { id: 'kpis', label: 'KPIs', icon: TrendingUp },
+      ]
+    },
+    {
+      title: 'GESTÃO',
+      items: [
+        { id: 'team', label: 'Equipe', icon: UsersRound, link: '/team' },
+        { id: 'finance', label: 'Financeiro', icon: DollarSign, link: '/finance' },
       ]
     },
     {
