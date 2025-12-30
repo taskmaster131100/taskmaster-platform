@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Music, Mail, Lock, AlertCircle, Target, Bot, Compass, CheckCircle } from 'lucide-react';
+import { Music, Mail, Lock, AlertCircle, Calendar, Rocket, DollarSign, FolderKanban, CheckCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
 
@@ -18,7 +18,6 @@ export default function LoginForm() {
     setError('');
     setLoading(true);
 
-    // Validações frontend
     if (!email || email.trim() === '') {
       setError('Digite seu email');
       setLoading(false);
@@ -44,15 +43,12 @@ export default function LoginForm() {
     }
 
     try {
-      // Check if it's demo mode
       if (email === 'usuario@exemplo.com' && password === 'senha123') {
         setIsDemoMode(true);
-        // Demo mode: store flag and redirect without real authentication
         localStorage.setItem('taskmaster_demo_mode', 'true');
         toast.success('Login realizado! Modo demonstração ativado.');
         navigate('/');
       } else {
-        // Real authentication
         localStorage.removeItem('taskmaster_demo_mode');
         await signIn(email, password);
         toast.success('Login realizado com sucesso!');
@@ -74,65 +70,81 @@ export default function LoginForm() {
 
   const features = [
     {
-      icon: Target,
-      title: 'Planejamento de Shows',
-      text: 'Organize turnês, riders técnicos e setlists em um só lugar. Nunca mais perca um detalhe importante.'
+      icon: Rocket,
+      title: 'Carreiras',
+      text: 'Gerencie a trajetória completa de artistas'
     },
     {
-      icon: Bot,
-      title: 'Gestão de Lançamentos',
-      text: 'Cronograma completo de releases com checklist automático e acompanhamento em tempo real.'
+      icon: Calendar,
+      title: 'Lançamentos',
+      text: 'Cronogramas e checklists automáticos'
     },
     {
       icon: Music,
-      title: 'Controle Financeiro',
-      text: 'Saiba exatamente quanto você ganha e gasta. Orçamentos, receitas e despesas organizados.'
+      title: 'Shows',
+      text: 'Turnês, riders e setlists organizados'
+    },
+    {
+      icon: FolderKanban,
+      title: 'Projetos',
+      text: 'Tudo em um só lugar, sem planilhas'
     }
   ];
 
+  const stats = [
+    { value: '+500', label: 'Artistas' },
+    { value: '+80', label: 'Escritórios' },
+    { value: '+20mil', label: 'Tarefas' },
+    { value: '+2mil', label: 'Lançamentos' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-orange-50 to-yellow-50 flex">
+    <div className="min-h-screen bg-[#FFFBF7] flex">
 
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-cyan-500 via-orange-500 to-yellow-400 p-12 flex-col justify-between relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-        </div>
+      <div className="hidden lg:flex lg:w-[55%] p-12 flex-col justify-between relative overflow-hidden">
+        
+        {/* Background Elements */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-[#FFAD85]/30 to-[#FEC89A]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-[#FFAD85]/20 to-transparent rounded-full blur-3xl translate-y-1/4 -translate-x-1/4"></div>
 
         {/* Content */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-              <Music className="w-7 h-7 text-cyan-600" />
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FFAD85]/30">
+              <Music className="w-6 h-6 text-white" />
             </div>
-            <span className="text-3xl font-bold text-white">TaskMaster</span>
+            <span className="text-2xl font-bold text-gray-800">TaskMaster</span>
           </div>
 
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-5xl font-bold text-white mb-4 leading-tight">
-                A plataforma que músicos, produtores e gestores usam para planejar shows, lançamentos e carreiras.
-              </h1>
-              <p className="text-xl text-white text-opacity-95 leading-relaxed">
-                Chega de planilhas e desorganização. Gerencie sua carreira musical com inteligência artificial e tenha tudo sob controle em um só lugar.
-              </p>
-            </div>
+          {/* Main Content */}
+          <div className="max-w-xl">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-[1.15] tracking-tight">
+              Gerencie carreiras, lançamentos, shows e projetos
+              <span className="text-[#FF9B6A]"> em um só lugar.</span>
+            </h1>
+            
+            <p className="text-xl text-gray-600 mb-12 leading-relaxed">
+              A plataforma completa para músicos, produtores e gestores organizarem tudo com inteligência artificial.
+            </p>
 
-            {/* Features */}
-            <div className="space-y-5">
+            {/* Features Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-12">
               {features.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
-                  <div key={index} className="bg-white bg-opacity-15 backdrop-blur-sm rounded-xl p-5 border border-white border-opacity-20">
+                  <div 
+                    key={index} 
+                    className="group p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 hover:border-[#FFAD85]/50 hover:shadow-lg hover:shadow-[#FFAD85]/10 transition-all duration-300"
+                  >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-6 h-6 text-orange-500" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#FFAD85]/20 to-[#FEC89A]/20 rounded-xl flex items-center justify-center group-hover:from-[#FFAD85] group-hover:to-[#FF9B6A] transition-all duration-300">
+                        <Icon className="w-5 h-5 text-[#FF9B6A] group-hover:text-white transition-colors duration-300" />
                       </div>
                       <div>
-                        <h3 className="text-white text-lg font-bold mb-2">{feature.title}</h3>
-                        <p className="text-white text-opacity-90 text-sm leading-relaxed">{feature.text}</p>
+                        <h3 className="text-gray-900 font-semibold mb-1">{feature.title}</h3>
+                        <p className="text-gray-500 text-sm leading-relaxed">{feature.text}</p>
                       </div>
                     </div>
                   </div>
@@ -141,71 +153,60 @@ export default function LoginForm() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-4 pt-8 border-t border-white border-opacity-20">
-              <div>
-                <div className="text-3xl font-bold text-white mb-1">+500</div>
-                <div className="text-xs text-white text-opacity-90">Artistas Usando</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-white mb-1">+80</div>
-                <div className="text-xs text-white text-opacity-90">Escritórios Usando</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-white mb-1">+20mil</div>
-                <div className="text-xs text-white text-opacity-90">Tarefas Organizadas</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-white mb-1">+2mil</div>
-                <div className="text-xs text-white text-opacity-90">Lançamentos Gerenciados</div>
-              </div>
+            <div className="flex items-center gap-8">
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-sm text-gray-500">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 text-white text-opacity-90 text-sm">
-          © 2025 TaskMaster. Desenvolvido por profissionais com mais de uma década de experiência na indústria musical.
+        <div className="relative z-10 text-gray-400 text-sm">
+          © 2025 TaskMaster. Desenvolvido por profissionais da indústria musical.
         </div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-md">
 
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-orange-500 rounded-xl flex items-center justify-center">
-              <Music className="w-7 h-7 text-white" />
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FFAD85]/30">
+              <Music className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">TaskMaster</span>
+            <span className="text-2xl font-bold text-gray-800">TaskMaster</span>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Login Card */}
+          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 lg:p-10">
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Bem-vindo de volta!
+                Bem-vindo de volta
               </h2>
-              <p className="text-gray-600">
-                Entre com suas credenciais para acessar a plataforma
+              <p className="text-gray-500">
+                Entre para continuar gerenciando seus projetos
               </p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     id="email"
                     type="email"
@@ -213,7 +214,7 @@ export default function LoginForm() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
                     required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-[#FFAD85] focus:bg-white transition-all text-gray-900 placeholder-gray-400"
                   />
                 </div>
               </div>
@@ -223,7 +224,7 @@ export default function LoginForm() {
                   Senha
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     id="password"
                     type="password"
@@ -231,17 +232,17 @@ export default function LoginForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-[#FFAD85] focus:bg-white transition-all text-gray-900 placeholder-gray-400"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input type="checkbox" className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                <label className="flex items-center cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 text-[#FFAD85] border-gray-300 rounded focus:ring-[#FFAD85]" />
                   <span className="ml-2 text-sm text-gray-600">Lembrar-me</span>
                 </label>
-                <Link to="/reset-password" className="text-sm text-cyan-600 hover:text-cyan-700 font-medium">
+                <Link to="/reset-password" className="text-sm text-[#FF9B6A] hover:text-[#FFAD85] font-medium transition-colors">
                   Esqueceu a senha?
                 </Link>
               </div>
@@ -249,7 +250,7 @@ export default function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:from-cyan-600 hover:to-orange-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                className="w-full bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:shadow-[#FFAD85]/30 focus:outline-none focus:ring-2 focus:ring-[#FFAD85] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -257,53 +258,59 @@ export default function LoginForm() {
                     Entrando...
                   </span>
                 ) : (
-                  'Entrar'
+                  <>
+                    Entrar
+                    <ArrowRight className="w-5 h-5" />
+                  </>
                 )}
               </button>
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-500">
                 Não tem uma conta?{' '}
-                <Link to="/register" className="text-cyan-600 hover:text-cyan-700 font-semibold">
+                <Link to="/register" className="text-[#FF9B6A] hover:text-[#FFAD85] font-semibold transition-colors">
                   Criar conta gratuita
                 </Link>
               </p>
             </div>
 
             {/* Demo Access */}
-            <div className="mt-6">
+            <div className="mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div className="w-full border-t border-gray-100"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">ou</span>
+                  <span className="px-4 bg-white text-gray-400">ou</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={handleDemoAccess}
-                className="mt-4 w-full border-2 border-cyan-200 bg-cyan-50 text-cyan-700 py-3 rounded-lg font-semibold hover:bg-cyan-100 hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 transition-all"
+                className="mt-6 w-full border-2 border-gray-100 bg-gray-50 text-gray-700 py-4 rounded-2xl font-semibold hover:bg-gray-100 hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-300"
               >
                 Acessar Demonstração Gratuita
               </button>
-              <p className="mt-2 text-xs text-center text-gray-500">
+              <p className="mt-3 text-xs text-center text-gray-400">
                 Explore a plataforma sem criar conta
               </p>
             </div>
           </div>
 
           {/* Trust Badges */}
-          <div className="mt-8 text-center space-y-2">
-            <p className="text-xs text-gray-500">Confiado por artistas e produtores musicais</p>
-            <div className="flex justify-center items-center gap-2 text-xs text-gray-400">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>Dados 100% Seguros</span>
-              <span>•</span>
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>Suporte 24/7</span>
+          <div className="mt-8 text-center space-y-3">
+            <p className="text-xs text-gray-400">Confiado por artistas e produtores musicais</p>
+            <div className="flex justify-center items-center gap-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                Dados Seguros
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                Suporte 24/7
+              </span>
             </div>
           </div>
         </div>
