@@ -75,18 +75,18 @@ export default function LoginForm() {
   const features = [
     {
       icon: Target,
-      title: 'Gestão Profissional Simplificada',
-      text: 'Acompanhe cada etapa da sua carreira — lançamentos, shows, equipe, finanças e conteúdo — em um só painel.'
+      title: 'Planejamento de Shows',
+      text: 'Organize turnês, riders técnicos e setlists em um só lugar. Nunca mais perca um detalhe importante.'
     },
     {
       icon: Bot,
-      title: 'IA Planejadora Inteligente',
-      text: 'Cronogramas automáticos, aprovações e alertas por WhatsApp para manter tudo no ritmo certo.'
+      title: 'Gestão de Lançamentos',
+      text: 'Cronograma completo de releases com checklist automático e acompanhamento em tempo real.'
     },
     {
       icon: Music,
-      title: 'Modo Palco & Offline',
-      text: 'Tenha acesso ao repertório, arranjos e estrutura do show mesmo sem internet.'
+      title: 'Controle Financeiro',
+      text: 'Saiba exatamente quanto você ganha e gasta. Orçamentos, receitas e despesas organizados.'
     }
   ];
 
@@ -113,10 +113,10 @@ export default function LoginForm() {
           <div className="space-y-8">
             <div>
               <h1 className="text-5xl font-bold text-white mb-4 leading-tight">
-                Sua carreira musical, sob controle total.
+                A plataforma que músicos, produtores e gestores usam para planejar shows, lançamentos e carreiras.
               </h1>
               <p className="text-xl text-white text-opacity-95 leading-relaxed">
-                A primeira plataforma completa que une gestão artística, planejamento inteligente e automação. Do estúdio ao palco, tudo que um artista precisa para crescer está aqui.
+                Chega de planilhas e desorganização. Gerencie sua carreira musical com inteligência artificial e tenha tudo sob controle em um só lugar.
               </p>
             </div>
 
@@ -143,16 +143,16 @@ export default function LoginForm() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white border-opacity-20">
               <div>
-                <div className="text-4xl font-bold text-white mb-1">95%</div>
-                <div className="text-sm text-white text-opacity-90">Processos Automatizados</div>
+                <div className="text-4xl font-bold text-white mb-1">500+</div>
+                <div className="text-sm text-white text-opacity-90">Artistas Usando</div>
               </div>
               <div>
-                <div className="text-4xl font-bold text-white mb-1">26</div>
-                <div className="text-sm text-white text-opacity-90">Bases de Dados Ativas</div>
+                <div className="text-4xl font-bold text-white mb-1">20mil+</div>
+                <div className="text-sm text-white text-opacity-90">Tarefas Organizadas</div>
               </div>
               <div>
-                <div className="text-4xl font-bold text-white mb-1">12</div>
-                <div className="text-sm text-white text-opacity-90">Módulos Integrados</div>
+                <div className="text-4xl font-bold text-white mb-1">2mil+</div>
+                <div className="text-sm text-white text-opacity-90">Lançamentos Gerenciados</div>
               </div>
             </div>
           </div>
