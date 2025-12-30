@@ -141,18 +141,22 @@ export default function LoginForm() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white border-opacity-20">
+            <div className="grid grid-cols-4 gap-4 pt-8 border-t border-white border-opacity-20">
               <div>
-                <div className="text-4xl font-bold text-white mb-1">500+</div>
-                <div className="text-sm text-white text-opacity-90">Artistas Usando</div>
+                <div className="text-3xl font-bold text-white mb-1">+500</div>
+                <div className="text-xs text-white text-opacity-90">Artistas Usando</div>
               </div>
               <div>
-                <div className="text-4xl font-bold text-white mb-1">20mil+</div>
-                <div className="text-sm text-white text-opacity-90">Tarefas Organizadas</div>
+                <div className="text-3xl font-bold text-white mb-1">+80</div>
+                <div className="text-xs text-white text-opacity-90">Escritórios Usando</div>
               </div>
               <div>
-                <div className="text-4xl font-bold text-white mb-1">2mil+</div>
-                <div className="text-sm text-white text-opacity-90">Lançamentos Gerenciados</div>
+                <div className="text-3xl font-bold text-white mb-1">+20mil</div>
+                <div className="text-xs text-white text-opacity-90">Tarefas Organizadas</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-white mb-1">+2mil</div>
+                <div className="text-xs text-white text-opacity-90">Lançamentos Gerenciados</div>
               </div>
             </div>
           </div>
