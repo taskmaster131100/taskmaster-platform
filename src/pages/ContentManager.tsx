@@ -166,7 +166,7 @@ export default function ContentManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85]"></div>
       </div>
     );
   }
@@ -183,7 +183,7 @@ export default function ContentManager() {
             resetForm();
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
         >
           <Plus className="w-5 h-5" />
           Novo Post
@@ -198,14 +198,14 @@ export default function ContentManager() {
             placeholder="Buscar posts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ContentStatus | '')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
           <option value="">Todos os Status</option>
           {CONTENT_STATUSES.map(status => (
@@ -216,7 +216,7 @@ export default function ContentManager() {
         <select
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value as Platform | '')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
           <option value="">Todas Plataformas</option>
           {PLATFORMS.map(platform => (
@@ -262,7 +262,7 @@ export default function ContentManager() {
               {post.hashtags && post.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-4">
                   {post.hashtags.slice(0, 3).map((tag, index) => (
-                    <span key={index} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                    <span key={index} className="text-xs bg-blue-50 text-[#FFAD85] px-2 py-1 rounded">
                       #{tag}
                     </span>
                   ))}
@@ -275,7 +275,7 @@ export default function ContentManager() {
               <div className="flex gap-2 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => handleEdit(post)}
-                  className="flex-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="flex-1 px-3 py-2 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   Editar
                 </button>
@@ -325,7 +325,7 @@ export default function ContentManager() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Ex: Post sobre novo single"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function ContentManager() {
                   <select
                     value={formData.platform}
                     onChange={(e) => setFormData({ ...formData, platform: e.target.value as Platform })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     {PLATFORMS.map(platform => (
                       <option key={platform.value} value={platform.value}>
@@ -355,7 +355,7 @@ export default function ContentManager() {
                   <select
                     value={formData.post_type}
                     onChange={(e) => setFormData({ ...formData, post_type: e.target.value as PostType })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     {POST_TYPES.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
@@ -370,7 +370,7 @@ export default function ContentManager() {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as ContentStatus })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     {CONTENT_STATUSES.map(status => (
                       <option key={status.value} value={status.value}>{status.label}</option>
@@ -389,7 +389,7 @@ export default function ContentManager() {
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   rows={6}
                   maxLength={charLimit}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Digite o conteúdo do post... Use # para hashtags e @ para mentions"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -407,7 +407,7 @@ export default function ContentManager() {
                     required
                     value={formData.scheduled_date}
                     onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
               )}
@@ -420,7 +420,7 @@ export default function ContentManager() {
                   type="text"
                   value={formData.engagement_goal}
                   onChange={(e) => setFormData({ ...formData, engagement_goal: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Ex: 1000 curtidas, 100 comentários"
                 />
               </div>
@@ -433,7 +433,7 @@ export default function ContentManager() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Observações internas..."
                 />
               </div>
@@ -451,7 +451,7 @@ export default function ContentManager() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   {selectedPost ? 'Atualizar' : 'Criar'} Post
                 </button>

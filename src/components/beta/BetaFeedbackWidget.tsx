@@ -18,18 +18,18 @@ export default function BetaFeedbackWidget() {
             </button>
           </div>
           <textarea
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent resize-none text-sm"
             rows={3}
             placeholder="Compartilhe sua experiência..."
           />
-          <button className="w-full mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm">
+          <button className="w-full mt-2 px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm">
             Enviar Feedback
           </button>
         </div>
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+          className="w-14 h-14 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         >
           <MessageSquare className="w-6 h-6" />
         </button>

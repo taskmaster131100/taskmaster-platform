@@ -18,9 +18,9 @@ export default function SupabaseConnection({ onConnectionSuccess, onUseLocalData
         <div className="grid md:grid-cols-2 gap-4">
           <button
             onClick={onUseLocalDatabase}
-            className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all border-2 border-transparent hover:border-blue-500 text-left"
+            className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all border-2 border-transparent hover:border-[#FFAD85] text-left"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-lg flex items-center justify-center mb-4">
               <HardDrive className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Modo Local</h3>
@@ -45,7 +45,7 @@ export default function SupabaseConnection({ onConnectionSuccess, onUseLocalData
             onClick={onConnectionSuccess}
             className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-500 text-left"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-[#FF9B6A] rounded-lg flex items-center justify-center mb-4">
               <Database className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Modo Nuvem</h3>

@@ -94,7 +94,7 @@ export function QRJoinButton({ setlistId, setlistTitle }: QRJoinButtonProps) {
             <div className="space-y-3">
               <button
                 onClick={handleDownload}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
               >
                 <Download className="w-5 h-5" />
                 Baixar QR Code

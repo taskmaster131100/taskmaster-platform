@@ -80,7 +80,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
                 onClick={() => handleExport('json')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
               >
-                <FileJson className="w-5 h-5 text-blue-600" />
+                <FileJson className="w-5 h-5 text-[#FFAD85]" />
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">Export as JSON</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">JavaScript Object Notation</p>

@@ -157,7 +157,7 @@ export default function ProjectFileUpload({ planningId, onComplete, onCancel }: 
             className={`
               border-2 border-dashed rounded-xl p-12 text-center transition-all
               ${dragActive
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-[#FFAD85] bg-blue-50'
                 : 'border-gray-300 hover:border-gray-400 bg-gray-50'
               }
             `}
@@ -169,7 +169,7 @@ export default function ProjectFileUpload({ planningId, onComplete, onCancel }: 
             <p className="text-sm text-gray-600 mb-4">
               Formatos aceitos: .txt, .md, .pdf, .docx (até 10MB)
             </p>
-            <label className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+            <label className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors cursor-pointer">
               <FileText className="w-5 h-5" />
               Selecionar Arquivo
               <input
@@ -184,7 +184,7 @@ export default function ProjectFileUpload({ planningId, onComplete, onCancel }: 
           <div className="space-y-4">
             {/* File Info */}
             <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <FileText className="w-10 h-10 text-blue-600 flex-shrink-0" />
+              <FileText className="w-10 h-10 text-[#FFAD85] flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 truncate">{file.name}</p>
                 <p className="text-sm text-gray-600">
@@ -228,7 +228,7 @@ export default function ProjectFileUpload({ planningId, onComplete, onCancel }: 
               <button
                 onClick={handleProcess}
                 disabled={processing}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors disabled:opacity-50"
               >
                 {processing ? (
                   <>

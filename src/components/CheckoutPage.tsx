@@ -21,7 +21,7 @@ const CheckoutPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Plan not found</h2>
           <button
             onClick={() => navigate('/pricing')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]"
           >
             View Plans
           </button>
@@ -75,7 +75,7 @@ const CheckoutPage: React.FC = () => {
         <div className="mb-8">
           <button
             onClick={() => navigate('/pricing')}
-            className="text-blue-600 hover:text-blue-700 mb-4"
+            className="text-[#FFAD85] hover:text-[#FF9B6A] mb-4"
           >
             ← Back to pricing
           </button>
@@ -224,7 +224,7 @@ const CheckoutPage: React.FC = () => {
               <button
                 onClick={handleCheckout}
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                className="w-full bg-[#FFAD85] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#FF9B6A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
               >
                 {loading ? 'Processing...' : 'Start Free Trial'}
               </button>

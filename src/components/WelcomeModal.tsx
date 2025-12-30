@@ -12,13 +12,13 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
       icon: Music,
       title: 'Produção Musical',
       description: 'Sistema completo de repertório, arranjos e setlists',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-[#FFAD85] to-[#FF9B6A]'
     },
     {
       icon: Calendar,
       title: 'Gestão de Projetos',
       description: 'Organize DVDs, Shows e Lançamentos',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-[#FF9B6A]'
     },
     {
       icon: Sparkles,
@@ -46,7 +46,7 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white relative">
+        <div className="bg-gradient-to-r from-[#FFAD85] via-purple-600 to-pink-600 p-8 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
@@ -139,7 +139,7 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
         <div className="px-8 pb-8">
           <button
             onClick={onClose}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+            className="w-full bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
           >
             Ir para Dashboard
           </button>

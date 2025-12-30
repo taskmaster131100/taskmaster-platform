@@ -32,10 +32,10 @@ export function FileCard({ file, onDelete, onEdit, onLink, onView }: FileCardPro
       contratos: 'bg-purple-100 text-purple-700',
       letras: 'bg-pink-100 text-pink-700',
       cifras: 'bg-green-100 text-green-700',
-      partituras: 'bg-blue-100 text-blue-700',
+      partituras: 'bg-blue-100 text-[#FF9B6A]',
       press_kit: 'bg-orange-100 text-orange-700',
       fotos: 'bg-red-100 text-red-700',
-      logos: 'bg-indigo-100 text-indigo-700',
+      logos: 'bg-[#FFF0E6] text-[#FF9B6A]',
       riders: 'bg-yellow-100 text-yellow-700',
       documentos: 'bg-gray-100 text-gray-700',
       outros: 'bg-slate-100 text-slate-700'
@@ -185,7 +185,7 @@ export function FileCard({ file, onDelete, onEdit, onLink, onView }: FileCardPro
         )}
 
         {file.linked_to_type && (
-          <div className="flex items-center gap-1 text-xs text-blue-600 mb-2">
+          <div className="flex items-center gap-1 text-xs text-[#FFAD85] mb-2">
             <LinkIcon className="w-3 h-3" />
             <span>Vinculado a {file.linked_to_type}</span>
           </div>

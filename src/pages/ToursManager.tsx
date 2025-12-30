@@ -140,7 +140,7 @@ export default function ToursManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85]"></div>
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function ToursManager() {
             resetForm();
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
         >
           <Plus className="w-5 h-5" />
           Nova Turnê
@@ -172,7 +172,7 @@ export default function ToursManager() {
             placeholder="Buscar turnês..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           />
         </div>
 
@@ -181,7 +181,7 @@ export default function ToursManager() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as TourStatus | '')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           >
             <option value="">Todos os Status</option>
             {TOUR_STATUSES.map(status => (
@@ -210,7 +210,7 @@ export default function ToursManager() {
                   <h3 className="text-xl font-bold text-gray-900 mb-2">{tour.name}</h3>
                   {getStatusBadge(tour.status)}
                 </div>
-                <MapPin className="w-6 h-6 text-blue-600" />
+                <MapPin className="w-6 h-6 text-[#FFAD85]" />
               </div>
 
               {tour.description && (
@@ -245,7 +245,7 @@ export default function ToursManager() {
                     e.stopPropagation();
                     handleEdit(tour);
                   }}
-                  className="flex-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="flex-1 px-3 py-2 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   Editar
                 </button>
@@ -292,7 +292,7 @@ export default function ToursManager() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Ex: Turnê Brasil 2025"
                 />
               </div>
@@ -305,7 +305,7 @@ export default function ToursManager() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Descrição da turnê..."
                 />
               </div>
@@ -320,7 +320,7 @@ export default function ToursManager() {
                     required
                     value={formData.start_date}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
 
@@ -333,7 +333,7 @@ export default function ToursManager() {
                     required
                     value={formData.end_date}
                     onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -345,7 +345,7 @@ export default function ToursManager() {
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as TourStatus })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   {TOUR_STATUSES.map(status => (
                     <option key={status.value} value={status.value}>{status.label}</option>
@@ -361,7 +361,7 @@ export default function ToursManager() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Observações adicionais..."
                 />
               </div>
@@ -379,7 +379,7 @@ export default function ToursManager() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   {selectedTour ? 'Atualizar' : 'Criar'} Turnê
                 </button>

@@ -170,7 +170,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                 required
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 placeholder="Ex: Arranjo para Show Acústico"
               />
             </div>
@@ -183,7 +183,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 placeholder="Descreva as características deste arranjo..."
               />
             </div>
@@ -196,7 +196,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 placeholder="Observações técnicas, mudanças em relação ao original..."
               />
             </div>
@@ -209,7 +209,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
             <button
               type="button"
               onClick={handleAddPart}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
             >
               <Plus className="w-4 h-4" />
               Adicionar Parte
@@ -223,7 +223,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
               <button
                 type="button"
                 onClick={handleAddPart}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                className="text-[#FFAD85] hover:text-[#FF9B6A] text-sm font-medium"
               >
                 Adicionar primeira parte
               </button>
@@ -251,7 +251,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                       <select
                         value={part.instrument || ''}
                         onChange={(e) => handlePartChange(index, 'instrument', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                       >
                         {instruments.map(inst => (
                           <option key={inst} value={inst}>{inst}</option>
@@ -269,7 +269,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                         max="12"
                         value={part.transpose_semitones || 0}
                         onChange={(e) => handlePartChange(index, 'transpose_semitones', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                       />
                     </div>
 
@@ -280,7 +280,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                       <select
                         value={part.clef || 'treble'}
                         onChange={(e) => handlePartChange(index, 'clef', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                       >
                         {clefs.map(clef => (
                           <option key={clef.value} value={clef.value}>{clef.label}</option>
@@ -295,7 +295,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                       <select
                         value={part.difficulty || 'intermediate'}
                         onChange={(e) => handlePartChange(index, 'difficulty', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                       >
                         {difficulties.map(diff => (
                           <option key={diff.value} value={diff.value}>{diff.label}</option>
@@ -312,7 +312,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
                       value={part.notes || ''}
                       onChange={(e) => handlePartChange(index, 'notes', e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
                       placeholder="Observações sobre esta parte..."
                     />
                   </div>
@@ -376,7 +376,7 @@ export function ArrangementEditor({ song, arrangement, onSave, onCancel }: Arran
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors disabled:opacity-50"
           >
             <Save className="w-5 h-5" />
             {saving ? 'Salvando...' : 'Salvar Arranjo'}

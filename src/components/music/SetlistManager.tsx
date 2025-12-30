@@ -122,7 +122,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 placeholder="Ex: Show Acústico - Teatro Municipal"
               />
             </div>
@@ -135,7 +135,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 placeholder="Descreva o show ou evento..."
               />
             </div>
@@ -150,7 +150,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
                   type="datetime-local"
                   value={formData.show_date}
                   onChange={(e) => setFormData(prev => ({ ...prev, show_date: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
 
@@ -163,7 +163,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
                   type="text"
                   value={formData.venue}
                   onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="Nome do local"
                 />
               </div>
@@ -182,7 +182,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
               >
                 Criar Setlist
               </button>
@@ -204,14 +204,14 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
               placeholder="Buscar setlists..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
         </div>
 
         <button
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
         >
           <Plus className="w-5 h-5" />
           Novo Setlist
@@ -220,7 +220,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando setlists...</p>
         </div>
       ) : filteredSetlists.length === 0 ? (
@@ -235,7 +235,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
           {!searchQuery && (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]"
             >
               <Plus className="w-5 h-5" />
               Criar Primeiro Setlist
@@ -293,7 +293,7 @@ export function SetlistManager({ artistId }: SetlistManagerProps) {
               <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
                 <button
                   onClick={() => handleEditSetlist(setlist)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <Edit2 className="w-4 h-4" />
                   {setlist.locked ? 'Visualizar' : 'Editar'}

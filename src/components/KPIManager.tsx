@@ -140,7 +140,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
 
   function getStatusColor(progress: number): string {
     if (progress >= 100) return 'text-green-600 bg-green-50';
-    if (progress >= 75) return 'text-blue-600 bg-blue-50';
+    if (progress >= 75) return 'text-[#FFAD85] bg-blue-50';
     if (progress >= 50) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
   }
@@ -155,7 +155,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#FFAD85]" />
       </div>
     );
   }
@@ -182,7 +182,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
               setEditingKpi(null);
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
           >
             <Plus className="w-4 h-4" />
             New KPI
@@ -198,7 +198,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
           <p className="text-gray-600 mb-4">Create your first KPI to start tracking performance</p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
           >
             <Plus className="w-4 h-4" />
             Create KPI
@@ -225,7 +225,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   <div className="flex gap-1 ml-2">
                     <button
                       onClick={() => handleEdit(kpi)}
-                      className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                      className="p-1 text-gray-400 hover:text-[#FFAD85] rounded"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -296,7 +296,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="e.g., Monthly Streams"
                 />
               </div>
@@ -308,7 +308,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   rows={2}
                   placeholder="Brief description of this KPI"
                 />
@@ -324,7 +324,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                     required
                     value={formData.current_value}
                     onChange={(e) => setFormData({ ...formData, current_value: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
 
@@ -337,7 +337,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                     required
                     value={formData.target_value}
                     onChange={(e) => setFormData({ ...formData, target_value: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -350,7 +350,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   type="text"
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   placeholder="e.g., streams, shows, $"
                 />
               </div>
@@ -362,7 +362,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   <option value="general">General</option>
                   <option value="streaming">Streaming</option>
@@ -387,7 +387,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
                 >
                   {editingKpi ? 'Update' : 'Create'}
                 </button>

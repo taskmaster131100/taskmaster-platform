@@ -128,7 +128,7 @@ const ReportsPage: React.FC = () => {
           </button>
           <button
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Download className="w-4 h-4" />
             Exportar PDF
@@ -195,7 +195,7 @@ const ReportsPage: React.FC = () => {
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{metrics.totalTasks - metrics.completedTasks}</p>
+                <p className="text-2xl font-bold text-[#FFAD85]">{metrics.totalTasks - metrics.completedTasks}</p>
                 <p className="text-sm text-gray-600">Pendentes</p>
               </div>
               <div>
@@ -224,9 +224,9 @@ const ReportsPage: React.FC = () => {
             <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
               <div>
                 <p className="text-sm text-gray-600">Eventos Próximos</p>
-                <p className="text-2xl font-bold text-blue-600">{metrics.upcomingEvents}</p>
+                <p className="text-2xl font-bold text-[#FFAD85]">{metrics.upcomingEvents}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-600" />
+              <TrendingUp className="w-8 h-8 text-[#FFAD85]" />
             </div>
 
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
@@ -244,7 +244,7 @@ const ReportsPage: React.FC = () => {
       <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Resumo Executivo</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="border-l-4 border-blue-500 pl-4">
+          <div className="border-l-4 border-[#FFAD85] pl-4">
             <p className="text-sm text-gray-600 mb-1">Produtividade</p>
             <p className="text-xl font-bold text-gray-900">{taskCompletionRate}%</p>
             <p className="text-xs text-gray-500 mt-1">Taxa de conclusão de tarefas</p>

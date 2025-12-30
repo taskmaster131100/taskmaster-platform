@@ -273,7 +273,7 @@ export default function PlanningDashboard() {
   const getStatusBadge = (status: string) => {
     const badges = {
       draft: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-blue-100 text-blue-700',
+      in_progress: 'bg-blue-100 text-[#FF9B6A]',
       under_review: 'bg-yellow-100 text-yellow-700',
       completed: 'bg-green-100 text-green-700',
       archived: 'bg-purple-100 text-purple-700'
@@ -370,7 +370,7 @@ export default function PlanningDashboard() {
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:opacity-90 transition-opacity"
             >
               <Plus className="w-5 h-5" />
               Novo Planejamento
@@ -387,13 +387,13 @@ export default function PlanningDashboard() {
               placeholder="Buscar planejamentos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           >
             <option value="all">Todos os Status</option>
             <option value="draft">Rascunho</option>
@@ -475,7 +475,7 @@ export default function PlanningDashboard() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleViewDetails(planning)}
-                          className="text-blue-600 hover:text-blue-900 transition-colors p-1"
+                          className="text-[#FFAD85] hover:text-blue-900 transition-colors p-1"
                           title="Ver Detalhes"
                         >
                           <Eye className="w-5 h-5" />
@@ -521,7 +521,7 @@ export default function PlanningDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setCreationType('ai')}
-                    className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                    className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#FFAD85] hover:bg-blue-50 transition-all group"
                   >
                     <Sparkles className="w-12 h-12 text-blue-500 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -556,7 +556,7 @@ export default function PlanningDashboard() {
                       onChange={(e) => setAiPrompt(e.target.value)}
                       placeholder="Exemplo: Planejar lançamento de EP com 5 músicas, incluindo clipe principal, estratégia de marketing digital e shows de divulgação"
                       rows={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent resize-none"
                     />
                   </div>
 
@@ -589,7 +589,7 @@ export default function PlanningDashboard() {
                     <button
                       onClick={handleCreateWithAI}
                       disabled={generating || !aiPrompt.trim()}
-                      className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-[#FFAD85] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {generating ? (
                         <>
@@ -622,7 +622,7 @@ export default function PlanningDashboard() {
                       />
                       <label
                         htmlFor="file-upload"
-                        className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
+                        className="cursor-pointer text-[#FFAD85] hover:text-blue-800 font-medium"
                       >
                         Clique para selecionar
                       </label>

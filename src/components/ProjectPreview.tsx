@@ -241,7 +241,7 @@ export default function ProjectPreview({ planning, fileInfo, onConfirm, onCancel
           {/* Summary */}
           <div className="mt-4 flex gap-4">
             <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
-              <Calendar className="w-5 h-5 text-blue-600" />
+              <Calendar className="w-5 h-5 text-[#FFAD85]" />
               <span className="text-sm font-medium text-gray-900">
                 {phaseCount} fases selecionadas
               </span>
@@ -272,7 +272,7 @@ export default function ProjectPreview({ planning, fileInfo, onConfirm, onCancel
                       onClick={() => togglePhase(phaseIndex)}
                       className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
                         phase.selected
-                          ? 'bg-blue-600 border-blue-600'
+                          ? 'bg-[#FFAD85] border-[#FFAD85]'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
@@ -330,7 +330,7 @@ export default function ProjectPreview({ planning, fileInfo, onConfirm, onCancel
                               {task.priority}
                             </span>
                             {task.dueDate && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                              <span className="px-2 py-1 bg-blue-100 text-[#FF9B6A] rounded">
                                 {task.dueDate}
                               </span>
                             )}
@@ -367,7 +367,7 @@ export default function ProjectPreview({ planning, fileInfo, onConfirm, onCancel
               <button
                 onClick={handleConfirm}
                 disabled={saving || phaseCount === 0}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
                   <>

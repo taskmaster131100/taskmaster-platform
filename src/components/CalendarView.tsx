@@ -281,7 +281,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             </button>
             <button
               onClick={goToToday}
-              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="px-3 py-1 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
             >
               Hoje
             </button>
@@ -297,7 +297,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           >
             {eventTypes.map(type => (
               <option key={type.id} value={type.id}>{type.label}</option>
@@ -308,7 +308,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               setSelectedDate(new Date());
               setShowCreateModal(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Plus className="w-5 h-5" />
             Novo Evento
@@ -343,7 +343,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 {dayObj.day && (
                   <>
                     <div className={`text-sm font-semibold mb-1 ${
-                      isToday(dayObj.day) ? 'text-blue-600' : 'text-gray-900'
+                      isToday(dayObj.day) ? 'text-[#FFAD85]' : 'text-gray-900'
                     }`}>
                       {dayObj.day}
                     </div>
@@ -388,7 +388,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="text-sm text-gray-600">Total de Eventos</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <div className="text-2xl font-bold text-blue-600">
+          <div className="text-2xl font-bold text-[#FFAD85]">
             {events.filter(e => e.event_type === 'task').length}
           </div>
           <div className="text-sm text-gray-600">Tarefas</div>
@@ -499,7 +499,7 @@ function EventFormModal({
                 type="text"
                 required
                 defaultValue={event?.title}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
 
@@ -511,7 +511,7 @@ function EventFormModal({
                 name="description"
                 rows={3}
                 defaultValue={event?.description}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
 
@@ -522,7 +522,7 @@ function EventFormModal({
               <select
                 name="event_type"
                 defaultValue={event?.event_type || 'event'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               >
                 {eventTypes.map(type => (
                   <option key={type.id} value={type.id}>{type.label}</option>
@@ -539,7 +539,7 @@ function EventFormModal({
                   name="start_time"
                   type="time"
                   defaultValue={event?.start_time}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
               <div>
@@ -550,7 +550,7 @@ function EventFormModal({
                   name="end_time"
                   type="time"
                   defaultValue={event?.end_time}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
             </div>
@@ -564,13 +564,13 @@ function EventFormModal({
                 type="text"
                 defaultValue={event?.location}
                 placeholder="Ex: Sala de Reunião, Teatro..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
 
             {date && !event && (
               <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="text-sm text-blue-700">
+                <div className="text-sm text-[#FF9B6A]">
                   Data: {date.toLocaleDateString('pt-BR', {
                     day: '2-digit',
                     month: 'long',
@@ -601,7 +601,7 @@ function EventFormModal({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
               >
                 {event ? 'Salvar' : 'Criar Evento'}
               </button>

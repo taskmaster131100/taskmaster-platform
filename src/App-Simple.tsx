@@ -7,7 +7,7 @@ function AppSimple() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando TaskMaster...</p>
         </div>
       </div>
@@ -24,7 +24,7 @@ function AppSimple() {
           </p>
           <button
             onClick={() => window.location.href = '/login'}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            className="w-full bg-[#FFAD85] hover:bg-[#FF9B6A] text-white font-medium py-3 px-4 rounded-lg transition-colors"
           >
             Ir para Login
           </button>
@@ -53,7 +53,7 @@ function AppSimple() {
           </div>
           <button
             onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            className="bg-[#FFAD85] hover:bg-[#FF9B6A] text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
             Recarregar
           </button>

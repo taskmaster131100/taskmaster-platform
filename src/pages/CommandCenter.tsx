@@ -8,8 +8,8 @@ import {
 
 export default function CommandCenter() {
   const stats = [
-    { label: 'Projetos Ativos', value: '0', icon: FolderOpen, color: 'from-blue-500 to-blue-600' },
-    { label: 'Tarefas Pendentes', value: '0', icon: Clock, color: 'from-purple-500 to-purple-600' },
+    { label: 'Projetos Ativos', value: '0', icon: FolderOpen, color: 'from-[#FFAD85] to-[#FF9B6A]' },
+    { label: 'Tarefas Pendentes', value: '0', icon: Clock, color: 'from-purple-500 to-[#FF9B6A]' },
     { label: 'Artistas', value: '0', icon: Users, color: 'from-green-500 to-green-600' },
     { label: 'Eventos Próximos', value: '0', icon: Calendar, color: 'from-orange-500 to-orange-600' }
   ];
@@ -20,14 +20,14 @@ export default function CommandCenter() {
       description: 'Criar DVD, Show, ou Lançamento',
       icon: FolderOpen,
       link: '/',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-[#FFAD85] to-[#FF9B6A]'
     },
     {
       title: 'Produção Musical',
       description: 'Repertório, arranjos e setlists',
       icon: Music,
       link: '/music',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-[#FF9B6A]'
     },
     {
       title: 'Planejamento IA',
@@ -66,7 +66,7 @@ export default function CommandCenter() {
             </div>
             <Link
               to="/"
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg flex items-center gap-2"
             >
               <FolderOpen className="w-4 h-4" />
               Novo Projeto
@@ -108,11 +108,11 @@ export default function CommandCenter() {
                   <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mb-4`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-[#FFAD85] transition-colors">
                     {action.title}
                   </h3>
                   <p className="text-sm text-gray-600 mb-3">{action.description}</p>
-                  <div className="flex items-center text-sm text-blue-600 font-medium">
+                  <div className="flex items-center text-sm text-[#FFAD85] font-medium">
                     Acessar
                     <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -134,7 +134,7 @@ export default function CommandCenter() {
             <div className="space-y-4">
               {recentActivity.map((activity, index) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-[#FFAD85] flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm text-gray-700">{activity.message}</p>
                     <span className="text-xs text-gray-500 mt-1">{activity.time}</span>
@@ -161,7 +161,7 @@ export default function CommandCenter() {
         {/* Productivity Tips */}
         <div className="mt-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-sm p-6 border border-blue-100">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-lg flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
@@ -171,7 +171,7 @@ export default function CommandCenter() {
               </p>
               <Link
                 to="/planejamento"
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#FFAD85] hover:text-[#FF9B6A]"
               >
                 Experimentar Planning Copilot
                 <ArrowRight className="w-4 h-4" />

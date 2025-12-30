@@ -126,7 +126,7 @@ const NotificationCenter: React.FC = () => {
       case 'error':
         return <AlertCircle className="w-5 h-5 text-red-600" />;
       default:
-        return <Info className="w-5 h-5 text-blue-600" />;
+        return <Info className="w-5 h-5 text-[#FFAD85]" />;
     }
   }
 
@@ -196,7 +196,7 @@ const NotificationCenter: React.FC = () => {
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllAsRead}
-                      className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                      className="text-sm text-[#FFAD85] hover:text-[#FF9B6A] flex items-center gap-1"
                     >
                       <CheckCheck className="w-4 h-4" />
                       Mark all read
@@ -215,7 +215,7 @@ const NotificationCenter: React.FC = () => {
               <div className="flex-1 overflow-y-auto">
                 {loading ? (
                   <div className="p-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFAD85] mx-auto"></div>
                     <p className="mt-2 text-sm text-gray-600">Loading...</p>
                   </div>
                 ) : notifications.length === 0 ? (
@@ -251,7 +251,7 @@ const NotificationCenter: React.FC = () => {
                                 {notification.title}
                               </p>
                               {!notification.is_read && (
-                                <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-1"></span>
+                                <span className="flex-shrink-0 w-2 h-2 bg-[#FFAD85] rounded-full mt-1"></span>
                               )}
                             </div>
                             <p className="text-sm text-gray-600 mt-1 line-clamp-2">
@@ -271,7 +271,7 @@ const NotificationCenter: React.FC = () => {
               {/* Footer */}
               {notifications.length > 0 && (
                 <div className="p-3 border-t border-gray-200 text-center">
-                  <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  <button className="text-sm text-[#FFAD85] hover:text-[#FF9B6A] font-medium">
                     View all notifications
                   </button>
                 </div>

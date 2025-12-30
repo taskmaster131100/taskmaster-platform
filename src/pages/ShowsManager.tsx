@@ -79,7 +79,7 @@ export default function ShowsManager() {
   const getStatusBadgeColor = (status: ShowStatus) => {
     const colors = {
       consultado: 'bg-gray-100 text-gray-700',
-      proposto: 'bg-blue-100 text-blue-700',
+      proposto: 'bg-blue-100 text-[#FF9B6A]',
       fechado: 'bg-green-100 text-green-700',
       pago: 'bg-purple-100 text-purple-700'
     };
@@ -98,7 +98,7 @@ export default function ShowsManager() {
           </div>
           <button
             onClick={handleCreateShow}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] flex items-center gap-2 transition-colors"
           >
             <Plus className="w-5 h-5" />
             Novo Show
@@ -113,14 +113,14 @@ export default function ShowsManager() {
               placeholder="Buscar shows..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
 
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-4 py-2 border rounded-lg flex items-center gap-2 transition-colors ${
-              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
+              showFilters ? 'bg-blue-50 border-blue-300 text-[#FF9B6A]' : 'border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="w-5 h-5" />
@@ -135,7 +135,7 @@ export default function ShowsManager() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as ShowStatus | '')}
-                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               >
                 <option value="">Todos</option>
                 {SHOW_STATUSES.map(status => (
@@ -148,7 +148,7 @@ export default function ShowsManager() {
               {selectedStatus && (
                 <button
                   onClick={() => setSelectedStatus('')}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-[#FFAD85] hover:text-[#FF9B6A]"
                 >
                   Limpar
                 </button>
@@ -159,7 +159,7 @@ export default function ShowsManager() {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85] mx-auto"></div>
             <p className="text-gray-600 mt-4">Carregando shows...</p>
           </div>
         ) : filteredShows.length === 0 ? (
@@ -173,7 +173,7 @@ export default function ShowsManager() {
             </p>
             <button
               onClick={handleCreateShow}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
             >
               Criar Show
             </button>
@@ -235,7 +235,7 @@ export default function ShowsManager() {
                       e.stopPropagation();
                       handleViewDetails(show);
                     }}
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    className="text-sm text-[#FFAD85] hover:text-[#FF9B6A] flex items-center gap-1"
                   >
                     <Eye className="w-4 h-4" />
                     Ver detalhes

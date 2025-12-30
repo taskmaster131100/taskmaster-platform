@@ -258,7 +258,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           <select
             value={filterWorkstream}
             onChange={(e) => setFilterWorkstream(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           >
             {workstreams.map(ws => (
               <option key={ws.id} value={ws.id}>{ws.label}</option>
@@ -266,7 +266,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           </select>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Plus className="w-5 h-5" />
             Nova Tarefa
@@ -310,7 +310,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                                 className={`p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-move ${
-                                  snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
+                                  snapshot.isDragging ? 'shadow-lg ring-2 ring-[#FFAD85]' : ''
                                 }`}
                               >
                                 <div className="flex items-start justify-between mb-2">
@@ -321,7 +321,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                         setSelectedTask(task);
                                         setShowEditModal(true);
                                       }}
-                                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                      className="p-1 text-gray-400 hover:text-[#FFAD85] transition-colors"
                                     >
                                       <Edit2 className="w-4 h-4" />
                                     </button>
@@ -343,7 +343,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                     {getPriorityLabel(task.metadata)}
                                   </span>
                                   {task.workstream && (
-                                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-[#FF9B6A]">
                                       {workstreams.find(w => w.id === task.workstream)?.label}
                                     </span>
                                   )}
@@ -455,7 +455,7 @@ function TaskFormModal({
                 type="text"
                 required
                 defaultValue={task?.title}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
 
@@ -467,7 +467,7 @@ function TaskFormModal({
                 name="description"
                 rows={3}
                 defaultValue={task?.description}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
 
@@ -479,7 +479,7 @@ function TaskFormModal({
                 <select
                   name="workstream"
                   defaultValue={task?.workstream || 'geral'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   {workstreams.map(ws => (
                     <option key={ws.id} value={ws.id}>{ws.label}</option>
@@ -494,7 +494,7 @@ function TaskFormModal({
                 <select
                   name="priority"
                   defaultValue={task?.metadata?.priority || 'medium'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   <option value="low">Baixa</option>
                   <option value="medium">Média</option>
@@ -511,7 +511,7 @@ function TaskFormModal({
                 name="deadline"
                 type="date"
                 defaultValue={task?.deadline?.split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
           </div>
@@ -526,7 +526,7 @@ function TaskFormModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
             >
               {task ? 'Salvar' : 'Criar Tarefa'}
             </button>

@@ -244,7 +244,7 @@ export default function TeamPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85]"></div>
       </div>
     );
   }
@@ -255,7 +255,7 @@ export default function TeamPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="w-7 h-7 text-indigo-600" />
+            <Users className="w-7 h-7 text-[#FFAD85]" />
             Equipe
           </h1>
           <p className="text-gray-600 mt-1">
@@ -266,7 +266,7 @@ export default function TeamPage() {
         {canManageTeam && (
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <UserPlus className="w-5 h-5" />
             Convidar Membro
@@ -278,8 +278,8 @@ export default function TeamPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Users className="w-5 h-5 text-indigo-600" />
+            <div className="p-2 bg-[#FFF0E6] rounded-lg">
+              <Users className="w-5 h-5 text-[#FFAD85]" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{members.length}</p>
@@ -481,7 +481,7 @@ export default function TeamPage() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="email@exemplo.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-[#FFAD85]"
                 />
               </div>
               
@@ -492,7 +492,7 @@ export default function TeamPage() {
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-[#FFAD85]"
                 >
                   <option value="admin">Administrador - Acesso total</option>
                   <option value="manager">Gerente - Pode gerenciar projetos</option>
@@ -512,7 +512,7 @@ export default function TeamPage() {
               <button
                 onClick={handleInviteMember}
                 disabled={sending}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors disabled:opacity-50"
               >
                 {sending ? 'Enviando...' : 'Enviar Convite'}
               </button>

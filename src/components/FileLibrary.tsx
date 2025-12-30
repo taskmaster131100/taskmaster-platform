@@ -158,7 +158,7 @@ export default function FileLibrary() {
           </div>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] flex items-center gap-2 transition-colors"
           >
             <Upload className="w-5 h-5" />
             Upload
@@ -173,14 +173,14 @@ export default function FileLibrary() {
               placeholder="Buscar arquivos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
 
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-4 py-2 border rounded-lg flex items-center gap-2 transition-colors ${
-              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
+              showFilters ? 'bg-blue-50 border-blue-300 text-[#FF9B6A]' : 'border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="w-5 h-5" />
@@ -195,7 +195,7 @@ export default function FileLibrary() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value as FileCategory | '')}
-                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               >
                 <option value="">Todas</option>
                 {FILE_CATEGORIES.map(cat => (
@@ -208,7 +208,7 @@ export default function FileLibrary() {
               {selectedCategory && (
                 <button
                   onClick={() => setSelectedCategory('')}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-[#FFAD85] hover:text-[#FF9B6A]"
                 >
                   Limpar
                 </button>
@@ -219,7 +219,7 @@ export default function FileLibrary() {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85] mx-auto"></div>
             <p className="text-gray-600 mt-4">Carregando arquivos...</p>
           </div>
         ) : filteredFiles.length === 0 ? (
@@ -233,7 +233,7 @@ export default function FileLibrary() {
             </p>
             <button
               onClick={() => setShowUploadModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
             >
               Fazer Upload
             </button>
@@ -281,7 +281,7 @@ export default function FileLibrary() {
                 <select
                   value={uploadCategory}
                   onChange={(e) => setUploadCategory(e.target.value as FileCategory)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   {FILE_CATEGORIES.map(cat => (
                     <option key={cat.value} value={cat.value}>
@@ -300,7 +300,7 @@ export default function FileLibrary() {
                   onChange={(e) => setUploadDescription(e.target.value)}
                   placeholder="Adicione uma descrição..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
 
@@ -313,7 +313,7 @@ export default function FileLibrary() {
                   value={uploadTags}
                   onChange={(e) => setUploadTags(e.target.value)}
                   placeholder="Ex: urgente, 2024, contrato"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
 
@@ -327,7 +327,7 @@ export default function FileLibrary() {
                 <button
                   onClick={handleUpload}
                   disabled={selectedFiles.length === 0 || uploading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {uploading ? 'Enviando...' : `Enviar (${selectedFiles.length})`}
                 </button>
@@ -367,7 +367,7 @@ export default function FileLibrary() {
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value as FileCategory)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   {FILE_CATEGORIES.map(cat => (
                     <option key={cat.value} value={cat.value}>
@@ -385,7 +385,7 @@ export default function FileLibrary() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
 
@@ -397,7 +397,7 @@ export default function FileLibrary() {
                   type="text"
                   value={editTags}
                   onChange={(e) => setEditTags(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export default function FileLibrary() {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   Salvar
                 </button>
@@ -439,7 +439,7 @@ export default function FileLibrary() {
               </p>
               <button
                 onClick={() => setShowLinkModal(false)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
               >
                 Entendido
               </button>

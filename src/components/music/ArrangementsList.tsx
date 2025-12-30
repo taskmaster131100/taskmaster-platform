@@ -141,7 +141,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
                 placeholder="Buscar músicas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>
           </div>
@@ -186,7 +186,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
             <div>
               <button
                 onClick={() => setSelectedSong(null)}
-                className="text-blue-600 hover:text-blue-700 text-sm mb-2"
+                className="text-[#FFAD85] hover:text-[#FF9B6A] text-sm mb-2"
               >
                 ← Voltar para lista
               </button>
@@ -197,7 +197,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
             </div>
             <button
               onClick={handleCreateArrangement}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
             >
               <Plus className="w-5 h-5" />
               Novo Arranjo
@@ -206,7 +206,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
               <p className="text-gray-600">Carregando arranjos...</p>
             </div>
           ) : arrangements.length === 0 ? (
@@ -218,7 +218,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
               </p>
               <button
                 onClick={handleCreateArrangement}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]"
               >
                 <Plus className="w-5 h-5" />
                 Adicionar Primeiro Arranjo
@@ -276,7 +276,7 @@ export function ArrangementsList({ artistId, songs }: ArrangementsListProps) {
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
                     <button
                       onClick={() => handleViewArrangement(arrangement)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                       Visualizar

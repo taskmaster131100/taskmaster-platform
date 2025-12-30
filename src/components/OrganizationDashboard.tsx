@@ -163,10 +163,10 @@ export default function OrganizationDashboard({
               <input
                 type="text"
                 placeholder="Buscar artistas..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
               />
             </div>
-            <select className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white">
+            <select className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm bg-white">
               <option>Todos os status</option>
               <option>Ativo</option>
               <option>Inativo</option>
@@ -246,7 +246,7 @@ export default function OrganizationDashboard({
                         e.stopPropagation();
                         onSelectArtist(artist.id);
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <MoreVertical className="w-4 h-4" />
                       Ver Detalhes
@@ -266,7 +266,7 @@ export default function OrganizationDashboard({
             <p className="text-gray-400 text-sm mb-4">Comece adicionando seu primeiro talento</p>
             <button
               onClick={onCreateArtist}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors text-sm font-medium"
             >
               Adicionar Artista
             </button>

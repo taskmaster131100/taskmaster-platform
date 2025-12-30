@@ -244,7 +244,7 @@ export default function AttachmentUploader({
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
           ${dragActive 
-            ? 'border-indigo-500 bg-indigo-50' 
+            ? 'border-[#FFAD85] bg-[#FFF8F3]' 
             : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
           }
           ${uploading ? 'pointer-events-none opacity-50' : ''}
@@ -267,7 +267,7 @@ export default function AttachmentUploader({
               <div className="w-full max-w-xs mt-2">
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-indigo-500 transition-all"
+                    className="h-full bg-[#FFF8F3]0 transition-all"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
@@ -278,7 +278,7 @@ export default function AttachmentUploader({
           <div className="flex flex-col items-center">
             <Upload className="w-8 h-8 text-gray-400 mb-2" />
             <p className="text-sm text-gray-600">
-              <span className="font-medium text-indigo-600">Clique para enviar</span> ou arraste arquivos aqui
+              <span className="font-medium text-[#FFAD85]">Clique para enviar</span> ou arraste arquivos aqui
             </p>
             <p className="text-xs text-gray-500 mt-1">
               PDF, DOC, XLS, imagens até {maxSize}MB
@@ -327,7 +327,7 @@ export default function AttachmentUploader({
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleDownload(attachment)}
-                      className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                      className="p-1.5 text-gray-500 hover:text-[#FFAD85] hover:bg-[#FFF8F3] rounded"
                       title="Download"
                     >
                       <Download className="w-4 h-4" />

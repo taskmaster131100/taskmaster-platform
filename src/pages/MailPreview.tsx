@@ -11,13 +11,13 @@ export default function MailPreview() {
       icon: Music,
       title: 'Produção Musical Completa',
       description: 'Gerencie repertório, arranjos, ensaios e setlists em uma única plataforma. Modo palco offline, QR codes para músicos e sincronização em tempo real.',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-[#FFAD85] to-[#FF9B6A]'
     },
     {
       icon: Sparkles,
       title: 'IA com 10+ Anos de Expertise',
       description: 'Planning Copilot baseado em experiência real da indústria musical. Gera automaticamente fases, tarefas, orçamentos e cronogramas otimizados.',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-[#FF9B6A]'
     },
     {
       icon: Calendar,
@@ -88,7 +88,7 @@ export default function MailPreview() {
       </div>
 
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#FFAD85] via-purple-600 to-pink-600 text-white overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
@@ -172,7 +172,7 @@ export default function MailPreview() {
                 >
                   <div className="flex items-start gap-6">
                     <div className="flex-shrink-0">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-[#FFAD85] to-purple-500 rounded-xl flex items-center justify-center">
                         <Icon className="w-8 h-8 text-white" />
                       </div>
                     </div>
@@ -222,7 +222,7 @@ export default function MailPreview() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-20 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
+      <div className="py-20 bg-gradient-to-br from-[#FFAD85] via-purple-600 to-pink-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Pronto para transformar sua carreira musical?

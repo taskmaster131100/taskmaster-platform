@@ -7,13 +7,13 @@ export default function Templates() {
       name: 'Template D-30',
       description: 'Lançamento de single em 30 dias',
       icon: Calendar,
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-[#FFAD85] to-[#FF9B6A]'
     },
     {
       name: 'Template D-45',
       description: 'Projeto de DVD em 45 dias',
       icon: Music,
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-[#FF9B6A]'
     },
     {
       name: 'Template D-90',

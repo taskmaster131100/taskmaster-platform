@@ -70,7 +70,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <Music className="w-8 h-8 text-blue-600" />
+              <Music className="w-8 h-8 text-[#FFAD85]" />
               <span className="text-xl font-bold text-gray-900">TaskMaster</span>
             </div>
             <div className="flex items-center gap-4">
@@ -82,7 +82,7 @@ const LandingPage: React.FC = () => {
               </button>
               <button
                 onClick={() => navigate('/register')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] font-medium transition-colors"
               >
                 Start Free Trial
               </button>
@@ -101,7 +101,7 @@ const LandingPage: React.FC = () => {
           >
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
               The Operating System for
-              <span className="text-blue-600"> Music Careers</span>
+              <span className="text-[#FFAD85]"> Music Careers</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Manage artists, plan releases, track performance, and grow careers—all in one powerful platform trusted by managers, labels, and agencies worldwide.
@@ -109,7 +109,7 @@ const LandingPage: React.FC = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/register')}
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg transition-colors flex items-center gap-2"
+                className="px-8 py-4 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] font-medium text-lg transition-colors flex items-center gap-2"
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5" />
@@ -150,7 +150,7 @@ const LandingPage: React.FC = () => {
                 viewport={{ once: true }}
                 className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-[#FFAD85] mb-4">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -203,7 +203,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-blue-600 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 bg-[#FFAD85] px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-white mb-4">
             Ready to transform your music business?
@@ -213,7 +213,7 @@ const LandingPage: React.FC = () => {
           </p>
           <button
             onClick={() => navigate('/register')}
-            className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-medium text-lg transition-colors inline-flex items-center gap-2"
+            className="px-8 py-4 bg-white text-[#FFAD85] rounded-lg hover:bg-gray-100 font-medium text-lg transition-colors inline-flex items-center gap-2"
           >
             Start Your Free Trial
             <ArrowRight className="w-5 h-5" />

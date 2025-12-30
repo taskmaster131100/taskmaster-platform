@@ -35,7 +35,7 @@ const PricingPage: React.FC = () => {
               onClick={() => setBillingInterval('month')}
               className={`px-6 py-2 rounded-full transition-all ${
                 billingInterval === 'month'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#FFAD85] text-white'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -45,7 +45,7 @@ const PricingPage: React.FC = () => {
               onClick={() => setBillingInterval('year')}
               className={`px-6 py-2 rounded-full transition-all ${
                 billingInterval === 'year'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#FFAD85] text-white'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -72,7 +72,7 @@ const PricingPage: React.FC = () => {
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    <span className="inline-flex items-center gap-1 bg-[#FFAD85] text-white px-4 py-1 rounded-full text-sm font-medium">
                       <Zap className="w-4 h-4" />
                       Most Popular
                     </span>
@@ -106,7 +106,7 @@ const PricingPage: React.FC = () => {
                     onClick={() => handleSelectPlan(plan.id)}
                     className={`w-full py-3 px-6 rounded-lg font-medium transition-all mb-6 ${
                       plan.popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-[#FFAD85] text-white hover:bg-[#FF9B6A]'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                   >

@@ -42,12 +42,12 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
     html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img alt="$1" src="$2" class="max-w-full h-auto my-4 rounded-lg" />');
-    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-600 hover:text-blue-700 underline">$1</a>');
+    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-[#FFAD85] hover:text-[#FF9B6A] underline">$1</a>');
 
     html = html.replace(/^\- (.*$)/gim, '<li class="ml-6 my-2">$1</li>');
     html = html.replace(/(<li.*<\/li>)/s, '<ul class="list-disc">$1</ul>');
 
-    html = html.replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 text-gray-700">$1</blockquote>');
+    html = html.replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-[#FFAD85] pl-4 py-2 my-4 bg-blue-50 text-gray-700">$1</blockquote>');
 
     html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono">$1</code>');
 
@@ -69,7 +69,7 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando documento...</p>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
 
           <button
             onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Download className="w-5 h-5" />
             Baixar PDF
@@ -99,7 +99,7 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print:shadow-none print:border-0">
           <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
-            <BookOpen className="w-8 h-8 text-blue-600" />
+            <BookOpen className="w-8 h-8 text-[#FFAD85]" />
             <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
           </div>
 

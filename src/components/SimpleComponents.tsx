@@ -20,7 +20,7 @@ const createSimpleComponent = (title: string, icon: React.ReactNode, description
 
 export const Schedule = createSimpleComponent(
   'Agenda',
-  <Calendar className="w-8 h-8 text-indigo-600" />,
+  <Calendar className="w-8 h-8 text-[#FFAD85]" />,
   'Gerenciamento de agenda e cronograma de projetos'
 );
 
@@ -32,7 +32,7 @@ export const WhatsAppManager = createSimpleComponent(
 
 export const GoogleIntegration = createSimpleComponent(
   'Integração Google',
-  <Calendar className="w-8 h-8 text-blue-600" />,
+  <Calendar className="w-8 h-8 text-[#FFAD85]" />,
   'Integração com Google Calendar e Google Drive'
 );
 
@@ -80,7 +80,7 @@ export const MindMap = createSimpleComponent(
 
 export const UserManagement = createSimpleComponent(
   'Gerenciamento de Usuários',
-  <Users className="w-8 h-8 text-indigo-600" />,
+  <Users className="w-8 h-8 text-[#FFAD85]" />,
   'Administração de usuários e permissões'
 );
 
@@ -92,7 +92,7 @@ export const UserPreferences = createSimpleComponent(
 
 export const UserRoleFeatures = createSimpleComponent(
   'Funcionalidades por Perfil',
-  <User className="w-8 h-8 text-blue-600" />,
+  <User className="w-8 h-8 text-[#FFAD85]" />,
   'Recursos disponíveis por tipo de usuário'
 );
 
@@ -146,7 +146,7 @@ export const ProjectForm = ({ onSubmit, onCancel }: { onSubmit: (data: any) => v
         </div>
         <div className="mt-6 flex gap-3 justify-end">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">Cancelar</button>
-          <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Criar</button>
+          <button type="submit" className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]">Criar</button>
         </div>
       </form>
     </div>
@@ -230,7 +230,7 @@ export const ArtistForm = ({ onSubmit, onCancel }: { onSubmit: (data: any) => vo
         </div>
         <div className="mt-6 flex gap-3 justify-end">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">Cancelar</button>
-          <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Criar</button>
+          <button type="submit" className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]">Criar</button>
         </div>
       </form>
     </div>

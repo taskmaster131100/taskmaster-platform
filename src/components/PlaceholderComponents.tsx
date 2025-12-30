@@ -175,7 +175,7 @@ export function ArtistDetails({ artistId, onBack, onSelectProject, onCreateProje
   if (!artist) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="mb-4 text-blue-600 hover:text-blue-700">← Voltar</button>
+        <button onClick={onBack} className="mb-4 text-[#FFAD85] hover:text-[#FF9B6A]">← Voltar</button>
         <p className="text-gray-600">Carregando artista...</p>
       </div>
     );
@@ -194,7 +194,7 @@ export function ArtistDetails({ artistId, onBack, onSelectProject, onCreateProje
     <div className="p-6 bg-gray-50 min-h-screen">
       <button
         onClick={onBack}
-        className="mb-6 px-4 py-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2"
+        className="mb-6 px-4 py-2 text-[#FFAD85] hover:text-[#FF9B6A] hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2"
       >
         ← Voltar para Artistas
       </button>
@@ -293,7 +293,7 @@ export function ArtistDetails({ artistId, onBack, onSelectProject, onCreateProje
           <p className="text-gray-600 mb-4">Nenhum projeto vinculado ainda</p>
           <button
             onClick={onCreateProject}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+            className="px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
           >
             Criar Projeto
           </button>
@@ -320,7 +320,7 @@ export function ProjectDashboard({ project, tasks = [], departments, onTaskUpdat
     {
       label: 'Tarefas Totais',
       value: totalTasks,
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-[#FFAD85] to-[#FF9B6A]',
       icon: FileText
     },
     {
@@ -332,7 +332,7 @@ export function ProjectDashboard({ project, tasks = [], departments, onTaskUpdat
     {
       label: 'Progresso',
       value: `${Math.round(progress)}%`,
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-purple-500 to-[#FF9B6A]',
       icon: BarChart3
     },
     {
@@ -462,7 +462,7 @@ export function TaskBoard({ tasks = [], departments, project, onTasksChange }: a
 
   const columnConfig = [
     { id: 'backlog', title: 'Backlog', color: 'from-gray-500 to-gray-600', tasks: columns.backlog },
-    { id: 'todo', title: 'A Fazer', color: 'from-blue-500 to-blue-600', tasks: columns.todo },
+    { id: 'todo', title: 'A Fazer', color: 'from-[#FFAD85] to-[#FF9B6A]', tasks: columns.todo },
     { id: 'inProgress', title: 'Em Progresso', color: 'from-yellow-500 to-yellow-600', tasks: columns.inProgress },
     { id: 'done', title: 'Concluído', color: 'from-green-500 to-green-600', tasks: columns.done }
   ];
@@ -476,7 +476,7 @@ export function TaskBoard({ tasks = [], departments, project, onTasksChange }: a
         </div>
         <button
           onClick={handleNewTask}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+          className="px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
         >
           + Nova Tarefa
         </button>
@@ -581,7 +581,7 @@ export function Calendar({ tasks = [], onTaskUpdate }: any) {
         <h2 className="text-2xl font-bold text-gray-900">Calendário</h2>
         <button
           onClick={handleNewEvent}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
+          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-[#FF9B6A] text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
         >
           + Novo Evento
         </button>
@@ -629,11 +629,11 @@ export function Calendar({ tasks = [], onTaskUpdate }: any) {
               <div
                 key={day}
                 className={`aspect-square border rounded-lg p-2 hover:bg-gray-50 transition-colors ${
-                  isToday ? 'bg-blue-50 border-blue-500' : 'border-gray-200'
+                  isToday ? 'bg-blue-50 border-[#FFAD85]' : 'border-gray-200'
                 }`}
               >
                 <div className={`font-semibold mb-1 ${
-                  isToday ? 'text-blue-600' : 'text-gray-900'
+                  isToday ? 'text-[#FFAD85]' : 'text-gray-900'
                 }`}>
                   {day}
                 </div>
@@ -875,7 +875,7 @@ export function UserProfile() {
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-[#FF9B6A] text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all"
             >
               {isEditing ? 'Cancelar' : 'Editar Perfil'}
             </button>
@@ -934,7 +934,7 @@ export function UserProfile() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all"
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-[#FF9B6A] text-white rounded-lg hover:from-cyan-700 hover:to-blue-700 transition-all"
                 >
                   Salvar Alterações
                 </button>
@@ -1057,7 +1057,7 @@ export function ProjectForm({ onSubmit, onCancel }: any) {
               name="name"
               type="text"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
           <div>
@@ -1065,14 +1065,14 @@ export function ProjectForm({ onSubmit, onCancel }: any) {
             <textarea
               name="description"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
             <select
               name="project_type"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
             >
               <option value="artist_management">Gestão de Artista</option>
               <option value="dvd">DVD</option>
@@ -1091,7 +1091,7 @@ export function ProjectForm({ onSubmit, onCancel }: any) {
           </button>
           <button
             type="submit"
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
           >
             Criar Projeto
           </button>

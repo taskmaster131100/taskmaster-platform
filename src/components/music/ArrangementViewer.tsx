@@ -91,7 +91,7 @@ export function ArrangementViewer({ arrangement, onClose, onEdit }: ArrangementV
         <div className="flex items-center gap-2">
           <button
             onClick={onEdit}
-            className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
           >
             <Edit2 className="w-5 h-5" />
             Editar
@@ -171,7 +171,7 @@ export function ArrangementViewer({ arrangement, onClose, onEdit }: ArrangementV
 
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FFAD85] mx-auto"></div>
             </div>
           ) : parts.length === 0 ? (
             <div className="text-center py-8 text-gray-500">

@@ -330,7 +330,7 @@ export default function FinancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85]"></div>
       </div>
     );
   }
@@ -402,7 +402,7 @@ export default function FinancePage() {
                   </p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-lg">
-                  <PieChart className="w-6 h-6 text-blue-600" />
+                  <PieChart className="w-6 h-6 text-[#FFAD85]" />
                 </div>
               </div>
             </div>
@@ -487,7 +487,7 @@ export default function FinancePage() {
               <h3 className="text-lg font-semibold text-gray-900">Transações Recentes</h3>
               <button
                 onClick={() => setShowTransactionModal(true)}
-                className="text-sm text-indigo-600 hover:text-indigo-800"
+                className="text-sm text-[#FFAD85] hover:text-indigo-800"
               >
                 + Adicionar
               </button>
@@ -569,7 +569,7 @@ export default function FinancePage() {
                         setSelectedBudget(budget);
                         setShowItemModal(true);
                       }}
-                      className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      className="text-sm text-[#FFAD85] hover:text-indigo-800 flex items-center gap-1"
                     >
                       <Plus className="w-4 h-4" />
                       Adicionar Item
@@ -657,7 +657,7 @@ export default function FinancePage() {
             <h3 className="font-semibold text-gray-900">Todas as Transações</h3>
             <button
               onClick={() => setShowTransactionModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#FFAD85] text-white rounded-lg text-sm hover:bg-[#FF9B6A]"
             >
               <Plus className="w-4 h-4" />
               Nova Transação
@@ -891,7 +891,7 @@ export default function FinancePage() {
                   type="text"
                   value={transactionForm.description}
                   onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -901,7 +901,7 @@ export default function FinancePage() {
                     type="number"
                     value={transactionForm.amount}
                     onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
                   />
                 </div>
                 <div>
@@ -910,7 +910,7 @@ export default function FinancePage() {
                     type="date"
                     value={transactionForm.transaction_date}
                     onChange={(e) => setTransactionForm({ ...transactionForm, transaction_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
                   />
                 </div>
               </div>
@@ -919,7 +919,7 @@ export default function FinancePage() {
                 <select
                   value={transactionForm.category}
                   onChange={(e) => setTransactionForm({ ...transactionForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -931,7 +931,7 @@ export default function FinancePage() {
               <button onClick={() => setShowTransactionModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                 Cancelar
               </button>
-              <button onClick={handleAddTransaction} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <button onClick={handleAddTransaction} className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]">
                 Adicionar
               </button>
             </div>

@@ -125,7 +125,7 @@ export function FileUploadZone({
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           isDragging
-            ? 'border-blue-500 bg-blue-50'
+            ? 'border-[#FFAD85] bg-blue-50'
             : 'border-gray-300 hover:border-gray-400'
         }`}
         onDragEnter={handleDragEnter}
@@ -150,7 +150,7 @@ export function FileUploadZone({
         />
         <label
           htmlFor="file-input"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors"
+          className="inline-block px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] cursor-pointer transition-colors"
         >
           Selecionar Arquivos
         </label>

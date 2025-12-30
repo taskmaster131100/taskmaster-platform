@@ -130,7 +130,7 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
                 </div>
 
                 <button
-                  className="w-full mt-4 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-sm font-medium"
+                  className="w-full mt-4 px-4 py-2 text-[#FFAD85] hover:bg-[#FFF8F3] rounded-lg transition-colors text-sm font-medium"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectArtist?.(artist.id);

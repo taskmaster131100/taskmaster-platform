@@ -194,7 +194,7 @@ export default function ReleasesManager() {
       case 'completed':
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
       case 'in_progress':
-        return <Circle className="w-5 h-5 text-blue-600 animate-pulse" />;
+        return <Circle className="w-5 h-5 text-[#FFAD85] animate-pulse" />;
       default:
         return <Circle className="w-5 h-5 text-gray-400" />;
     }
@@ -211,7 +211,7 @@ export default function ReleasesManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85]"></div>
       </div>
     );
   }
@@ -228,7 +228,7 @@ export default function ReleasesManager() {
             resetForm();
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
         >
           <Plus className="w-5 h-5" />
           Novo Lançamento
@@ -243,14 +243,14 @@ export default function ReleasesManager() {
             placeholder="Buscar lançamentos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ReleaseStatus | '')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
           <option value="">Todos os Status</option>
           {RELEASE_STATUSES.map(status => (
@@ -261,7 +261,7 @@ export default function ReleasesManager() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as ReleaseType | '')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
           <option value="">Todos os Tipos</option>
           {RELEASE_TYPES.map(type => (
@@ -289,7 +289,7 @@ export default function ReleasesManager() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Music className="w-5 h-5 text-blue-600" />
+                      <Music className="w-5 h-5 text-[#FFAD85]" />
                       <span className="text-sm text-gray-600">
                         {RELEASE_TYPES.find(t => t.value === release.release_type)?.label}
                       </span>
@@ -328,7 +328,7 @@ export default function ReleasesManager() {
                       e.stopPropagation();
                       handleEdit(release);
                     }}
-                    className="flex-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="flex-1 px-3 py-2 text-sm text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     Editar
                   </button>
@@ -377,7 +377,7 @@ export default function ReleasesManager() {
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="Ex: Meu Novo Single"
                   />
                 </div>
@@ -391,7 +391,7 @@ export default function ReleasesManager() {
                     required
                     value={formData.artist_name}
                     onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="Nome do artista"
                   />
                 </div>
@@ -403,7 +403,7 @@ export default function ReleasesManager() {
                   <select
                     value={formData.release_type}
                     onChange={(e) => setFormData({ ...formData, release_type: e.target.value as ReleaseType })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     {RELEASE_TYPES.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
@@ -420,7 +420,7 @@ export default function ReleasesManager() {
                     required
                     value={formData.release_date}
                     onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   />
                 </div>
 
@@ -431,7 +431,7 @@ export default function ReleasesManager() {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as ReleaseStatus })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     {RELEASE_STATUSES.map(status => (
                       <option key={status.value} value={status.value}>{status.label}</option>
@@ -447,7 +447,7 @@ export default function ReleasesManager() {
                     type="text"
                     value={formData.isrc}
                     onChange={(e) => setFormData({ ...formData, isrc: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="BR-XXX-XX-XXXXX"
                   />
                 </div>
@@ -460,7 +460,7 @@ export default function ReleasesManager() {
                     type="text"
                     value={formData.upc}
                     onChange={(e) => setFormData({ ...formData, upc: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="000000000000"
                   />
                 </div>
@@ -473,7 +473,7 @@ export default function ReleasesManager() {
                     type="text"
                     value={formData.distributor}
                     onChange={(e) => setFormData({ ...formData, distributor: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="Ex: CD Baby, DistroKid, ONErpm"
                   />
                 </div>
@@ -486,7 +486,7 @@ export default function ReleasesManager() {
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     placeholder="Anotações sobre o lançamento..."
                   />
                 </div>
@@ -513,7 +513,7 @@ export default function ReleasesManager() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   {selectedRelease ? 'Atualizar' : 'Criar'} Lançamento
                 </button>
@@ -605,7 +605,7 @@ export default function ReleasesManager() {
                             <select
                               value={phase.status}
                               onChange={(e) => handlePhaseStatusChange(phase.id, e.target.value as any)}
-                              className="text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-[#FFAD85]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <option value="pending">Pendente</option>
@@ -635,7 +635,7 @@ export default function ReleasesManager() {
                 </h3>
 
                 <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
                     <label className="cursor-pointer flex flex-col items-center gap-2">
                       <Upload className="w-6 h-6 text-gray-400" />
                       <span className="text-sm text-gray-600">Capa</span>
@@ -649,7 +649,7 @@ export default function ReleasesManager() {
                     </label>
                   </div>
 
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
                     <label className="cursor-pointer flex flex-col items-center gap-2">
                       <Upload className="w-6 h-6 text-gray-400" />
                       <span className="text-sm text-gray-600">Press Kit</span>
@@ -663,7 +663,7 @@ export default function ReleasesManager() {
                     </label>
                   </div>
 
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
                     <label className="cursor-pointer flex flex-col items-center gap-2">
                       <Upload className="w-6 h-6 text-gray-400" />
                       <span className="text-sm text-gray-600">Áudio</span>
@@ -679,7 +679,7 @@ export default function ReleasesManager() {
                 </div>
 
                 {uploading && (
-                  <p className="text-sm text-blue-600 mb-4">Enviando arquivo...</p>
+                  <p className="text-sm text-[#FFAD85] mb-4">Enviando arquivo...</p>
                 )}
 
                 {attachments.length > 0 ? (
@@ -699,7 +699,7 @@ export default function ReleasesManager() {
                           href={attachment.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700"
+                          className="text-sm text-[#FFAD85] hover:text-[#FF9B6A]"
                         >
                           Baixar
                         </a>

@@ -110,7 +110,7 @@ export default function PlanningDetails({
   const getStatusBadge = (status: string) => {
     const badges = {
       draft: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-blue-100 text-blue-700',
+      in_progress: 'bg-blue-100 text-[#FF9B6A]',
       under_review: 'bg-yellow-100 text-yellow-700',
       completed: 'bg-green-100 text-green-700',
       archived: 'bg-purple-100 text-purple-700'
@@ -156,18 +156,18 @@ export default function PlanningDetails({
                     type="text"
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    className="text-2xl font-bold text-gray-900 border-b-2 border-blue-500 w-full focus:outline-none"
+                    className="text-2xl font-bold text-gray-900 border-b-2 border-[#FFAD85] w-full focus:outline-none"
                   />
                   <textarea
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
-                    className="text-sm text-gray-600 border border-gray-300 rounded-lg w-full p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="text-sm text-gray-600 border border-gray-300 rounded-lg w-full p-2 focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     rows={2}
                   />
                   <select
                     value={editedStatus}
                     onChange={(e) => setEditedStatus(e.target.value)}
-                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   >
                     <option value="draft">Rascunho</option>
                     <option value="in_progress">Em andamento</option>
@@ -223,7 +223,7 @@ export default function PlanningDetails({
                 <>
                   <button
                     onClick={() => setEditing(true)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
                     title="Editar"
                   >
                     <Edit2 className="w-5 h-5" />
@@ -246,7 +246,7 @@ export default function PlanningDetails({
               onClick={() => setActiveTab('timeline')}
               className={`pb-3 px-1 border-b-2 transition-colors ${
                 activeTab === 'timeline'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-[#FFAD85] text-[#FFAD85]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -259,7 +259,7 @@ export default function PlanningDetails({
               onClick={() => setActiveTab('tasks')}
               className={`pb-3 px-1 border-b-2 transition-colors ${
                 activeTab === 'tasks'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-[#FFAD85] text-[#FFAD85]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -275,7 +275,7 @@ export default function PlanningDetails({
               onClick={() => setActiveTab('logs')}
               className={`pb-3 px-1 border-b-2 transition-colors ${
                 activeTab === 'logs'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-[#FFAD85] text-[#FFAD85]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -352,7 +352,7 @@ export default function PlanningDetails({
               <div className="text-sm text-gray-600">Fases</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-[#FFAD85]">
                 {phases.filter(p => p.status === 'in_progress').length}
               </div>
               <div className="text-sm text-gray-600">Em Andamento</div>

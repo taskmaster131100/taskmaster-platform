@@ -183,7 +183,7 @@ export function StageMode({ setlistId, onExit }: StageModeProps) {
             {isOnline && !isCached && (
               <button
                 onClick={handleDownloadForOffline}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-[#FFAD85] text-white rounded hover:bg-[#FF9B6A]"
               >
                 <Download className="w-4 h-4" />
                 Baixar para Offline
@@ -284,7 +284,7 @@ export function StageMode({ setlistId, onExit }: StageModeProps) {
               )}
 
               {currentItem.cues && (
-                <div className="mt-4 p-4 bg-blue-100 border-l-4 border-blue-500 rounded">
+                <div className="mt-4 p-4 bg-blue-100 border-l-4 border-[#FFAD85] rounded">
                   <p className="text-blue-900 text-xl">
                     <strong>Cues:</strong> {currentItem.cues}
                   </p>

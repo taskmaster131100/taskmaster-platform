@@ -69,7 +69,7 @@ export default function WelcomePreview() {
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] p-6 text-white relative">
           <Link
             to="/"
             className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
@@ -118,7 +118,7 @@ export default function WelcomePreview() {
           {currentStep === 1 && (
             <div className="grid md:grid-cols-2 gap-4 mb-6">
               <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-                <Check className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <Check className="w-5 h-5 text-[#FFAD85] flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-gray-900">Geração de Conteúdo</h4>
                   <p className="text-sm text-gray-600">DVDs, videoclipes, singles e álbuns</p>
@@ -152,7 +152,7 @@ export default function WelcomePreview() {
           {currentStep === 4 && (
             <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">95%</div>
+                <div className="text-2xl font-bold text-[#FFAD85]">95%</div>
                 <div className="text-xs text-gray-600">Funcionalidades</div>
               </div>
               <div className="text-center">
@@ -190,7 +190,7 @@ export default function WelcomePreview() {
             {currentStep < steps.length - 1 ? (
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
               >
                 Próximo
                 <ChevronRight className="w-4 h-4" />
@@ -198,7 +198,7 @@ export default function WelcomePreview() {
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
               >
                 Criar Conta
                 <ChevronRight className="w-4 h-4" />

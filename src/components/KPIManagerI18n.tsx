@@ -149,7 +149,7 @@ const KPIManagerI18n: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFAD85] mx-auto"></div>
           <p className="mt-4 text-gray-600">{t('common:messages.loading')}</p>
         </div>
       </div>
@@ -169,7 +169,7 @@ const KPIManagerI18n: React.FC = () => {
             setEditingKpi(null);
             setShowModal(true);
           }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
         >
           <Plus className="w-4 h-4" />
           {t('new_kpi')}
@@ -183,7 +183,7 @@ const KPIManagerI18n: React.FC = () => {
           <p className="text-gray-600 mb-4">{t('empty_state.description')}</p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Plus className="w-4 h-4" />
             {t('empty_state.action')}
@@ -206,7 +206,7 @@ const KPIManagerI18n: React.FC = () => {
                   <div className="flex gap-2 ml-2">
                     <button
                       onClick={() => openEditModal(kpi)}
-                      className="p-1 text-gray-600 hover:text-blue-600 transition-colors"
+                      className="p-1 text-gray-600 hover:text-[#FFAD85] transition-colors"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -283,7 +283,7 @@ const KPIManagerI18n: React.FC = () => {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder={t('placeholders.title')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   required
                 />
               </div>
@@ -296,7 +296,7 @@ const KPIManagerI18n: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder={t('placeholders.description')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   rows={3}
                 />
               </div>
@@ -310,7 +310,7 @@ const KPIManagerI18n: React.FC = () => {
                     type="number"
                     value={formData.current_value}
                     onChange={(e) => setFormData({ ...formData, current_value: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     required
                   />
                 </div>
@@ -323,7 +323,7 @@ const KPIManagerI18n: React.FC = () => {
                     type="number"
                     value={formData.target_value}
                     onChange={(e) => setFormData({ ...formData, target_value: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                     required
                   />
                 </div>
@@ -338,7 +338,7 @@ const KPIManagerI18n: React.FC = () => {
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   placeholder={t('placeholders.unit')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   required
                 />
               </div>
@@ -350,7 +350,7 @@ const KPIManagerI18n: React.FC = () => {
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   <option value="general">{t('categories.general')}</option>
                   <option value="streaming">{t('categories.streaming')}</option>
@@ -375,7 +375,7 @@ const KPIManagerI18n: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   {t('common:actions.save')}
                 </button>

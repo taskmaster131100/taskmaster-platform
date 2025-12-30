@@ -173,7 +173,7 @@ export default function MainLayout({
           {sidebarOpen ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 via-orange-500 to-yellow-500 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] rounded-lg flex items-center justify-center">
                   <Music className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-bold text-gray-900">TaskMaster</span>
@@ -234,7 +234,7 @@ export default function MainLayout({
                               onClick={() => handleNavClick(item)}
                               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                                 isActive
-                                  ? 'bg-blue-50 text-blue-600'
+                                  ? 'bg-blue-50 text-[#FFAD85]'
                                   : 'text-gray-600 hover:bg-gray-50'
                               }`}
                             >
@@ -257,7 +257,7 @@ export default function MainLayout({
                           onClick={() => handleNavClick(item)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                             isActive
-                              ? 'bg-blue-50 text-blue-600'
+                              ? 'bg-blue-50 text-[#FFAD85]'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                           title={!sidebarOpen ? item.label : undefined}
@@ -280,7 +280,7 @@ export default function MainLayout({
           {sidebarOpen ? (
             <div className="space-y-2">
               <div className="flex items-center gap-3 px-2 py-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 via-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
                     {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </span>
@@ -334,7 +334,7 @@ export default function MainLayout({
           <div className="flex items-center gap-2">
             <button
               onClick={onCreateProject}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-orange-500 to-yellow-500 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
+              className="px-4 py-2 bg-gradient-to-r from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
             >
               + Criar Projeto
             </button>

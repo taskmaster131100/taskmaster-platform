@@ -62,7 +62,7 @@ const UserProfilePage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-8">
           <div className="flex items-start justify-between mb-8">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-[#FF9B6A] flex items-center justify-center text-white text-3xl font-bold">
                 {getInitials()}
               </div>
 
@@ -76,7 +76,7 @@ const UserProfilePage: React.FC = () => {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 text-[#FFAD85] hover:bg-[#FFF8F3] rounded-lg transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Editar Perfil
@@ -85,7 +85,7 @@ const UserProfilePage: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   <Save className="w-4 h-4" />
                   Salvar
@@ -114,7 +114,7 @@ const UserProfilePage: React.FC = () => {
                   type="text"
                   value={profileData.name}
                   onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               ) : (
                 <p className="text-gray-900 px-4 py-2">{profileData.name}</p>
@@ -145,7 +145,7 @@ const UserProfilePage: React.FC = () => {
                   value={profileData.phone}
                   onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                   placeholder="(00) 00000-0000"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               ) : (
                 <p className="text-gray-900 px-4 py-2">{profileData.phone || 'Não informado'}</p>
@@ -161,7 +161,7 @@ const UserProfilePage: React.FC = () => {
                   type="text"
                   value={profileData.role}
                   onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               ) : (
                 <p className="text-gray-900 px-4 py-2">{profileData.role}</p>
@@ -179,7 +179,7 @@ const UserProfilePage: React.FC = () => {
                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                 rows={4}
                 placeholder="Conte um pouco sobre você..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             ) : (
               <p className="text-gray-900 px-4 py-2 bg-gray-50 rounded-lg">
@@ -200,8 +200,8 @@ const UserProfilePage: React.FC = () => {
               { action: 'Exportou relatório financeiro', date: 'Há 3 dias' }
             ].map((activity, i) => (
               <div key={i} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
+                <div className="w-10 h-10 rounded-full bg-[#FFF0E6] flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#FFAD85]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-gray-900">{activity.action}</p>

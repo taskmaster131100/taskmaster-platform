@@ -91,7 +91,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               {showHomeButton && (
                 <button
                   onClick={this.handleGoHome}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                 >
                   <Home className="w-4 h-4" />
                   Voltar ao Início
@@ -140,7 +140,7 @@ export function RouteErrorFallback({ error, resetErrorBoundary }: { error: Error
 
           <button
             onClick={() => window.location.href = '/'}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Home className="w-4 h-4" />
             Dashboard

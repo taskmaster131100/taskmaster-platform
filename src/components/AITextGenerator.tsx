@@ -147,7 +147,7 @@ export function AITextGenerator() {
               <h2 className="text-xl font-bold text-gray-900">Histórico de Gerações</h2>
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                className="text-sm text-[#FFAD85] hover:text-[#FF9B6A]"
               >
                 Voltar
               </button>
@@ -186,7 +186,7 @@ export function AITextGenerator() {
                       <div className="flex gap-2 ml-4">
                         <button
                           onClick={() => handleLoadFromHistory(gen)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="p-2 text-[#FFAD85] hover:bg-blue-50 rounded transition-colors"
                           title="Carregar"
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -338,7 +338,7 @@ export function AITextGenerator() {
                   <h3 className="text-sm font-medium text-blue-900 mb-2">
                     💡 Dica
                   </h3>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-[#FF9B6A]">
                     Você pode editar o texto gerado diretamente no resultado antes de copiar ou exportar.
                     A IA é uma ferramenta de apoio - sinta-se livre para personalizar!
                   </p>

@@ -131,7 +131,7 @@ export function SetlistBuilder({ setlist, onUpdate, onClose }: SetlistBuilderPro
   if (loading) {
     return (
       <div className="p-6 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
         <p className="text-gray-600">Carregando setlist...</p>
       </div>
     );
@@ -285,7 +285,7 @@ export function SetlistBuilder({ setlist, onUpdate, onClose }: SetlistBuilderPro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={setlist.locked}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent disabled:opacity-50"
             />
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
