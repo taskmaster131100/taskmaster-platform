@@ -10,78 +10,124 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Mobile-friendly input styles */
-.mobile-friendly-input {
-  font-size: 16px; /* Prevents iOS zoom on focus */
+/* Mobile-friendly input styles - prevents iOS zoom on focus */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+@media (min-width: 1024px) {
+  input, select, textarea {
+    font-size: 14px !important;
+  }
 }
 
 /* Mobile-friendly button styles */
 .touch-button {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove tap highlight on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS safe area handling */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 0);
 }
 
 /* Mobile navigation styles */
 .mobile-nav-item {
   @apply flex flex-col items-center justify-center;
-  width: 20%;
+  min-width: 64px;
+  min-height: 48px;
 }
 
 .mobile-nav-text {
   @apply text-xs mt-1;
 }
 
-/* iOS safe area handling */
-.ios-safe-area-top {
-  padding-top: env(safe-area-inset-top, 0);
-}
-
-.ios-safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-.notch-padding {
-  padding-top: env(safe-area-inset-top, 0);
-}
-
 /* Mobile layout adjustments */
-@media (max-width: 768px) {
-  .mobile-header {
-    padding-top: env(safe-area-inset-top, 0);
-  }
-  
-  .mobile-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-  
-  .mobile-main-content {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0));
-  }
-  
-  .mobile-friendly-button {
+@media (max-width: 1023px) {
+  /* Ensure minimum touch target size */
+  button, a, [role="button"] {
     min-height: 44px;
-    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .mobile-spacing {
+    padding: 1rem;
+  }
+  
+  /* Card adjustments for mobile */
+  .mobile-card {
+    @apply rounded-xl p-4;
+  }
+  
+  /* Table responsiveness */
+  .mobile-table {
+    @apply block overflow-x-auto;
+  }
+  
+  /* Form adjustments */
+  .mobile-form-group {
+    @apply space-y-4;
+  }
+  
+  /* Modal adjustments */
+  .mobile-modal {
+    @apply mx-4 max-h-[90vh] overflow-y-auto;
   }
 }
 
 /* Tablet layout adjustments */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .tablet-sidebar {
-    width: 4rem;
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-grid {
+    @apply grid-cols-2;
   }
   
-  .tablet-main-content {
-    margin-left: 4rem;
+  .tablet-sidebar {
+    width: 5rem;
   }
 }
 
-/* Hover lift effect */
-.hover-lift {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+/* Desktop adjustments */
+@media (min-width: 1024px) {
+  .desktop-grid {
+    @apply grid-cols-3;
+  }
 }
 
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+/* Large desktop */
+@media (min-width: 1280px) {
+  .xl-grid {
+    @apply grid-cols-4;
+  }
+}
+
+/* Hover lift effect - only on devices that support hover */
+@media (hover: hover) {
+  .hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
 }
 
 /* Tutorial highlight */
@@ -114,6 +160,14 @@
   animation: slideUp 0.3s ease-in-out;
 }
 
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -134,6 +188,24 @@
   }
 }
 
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
@@ -144,48 +216,136 @@
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Custom scrollbar for desktop */
+@media (min-width: 1024px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
 /* Theme color schemes */
 :root {
-  --primary: theme('colors.indigo.600');
-  --primary-hover: theme('colors.indigo.700');
-  --primary-light: theme('colors.indigo.100');
-  --secondary: theme('colors.purple.600');
-  --secondary-hover: theme('colors.purple.700');
-  --secondary-light: theme('colors.purple.100');
+  --primary: #FFAD85;
+  --primary-hover: #FF9B6A;
+  --primary-light: #FFD4B8;
+  --secondary: #FEC89A;
+  --secondary-hover: #FDBA74;
+  --secondary-light: #FEF3C7;
 }
 
-.theme-blue {
-  --primary: theme('colors.blue.600');
-  --primary-hover: theme('colors.blue.700');
-  --primary-light: theme('colors.blue.100');
-  --secondary: theme('colors.cyan.600');
-  --secondary-hover: theme('colors.cyan.700');
-  --secondary-light: theme('colors.cyan.100');
+/* Responsive text utilities */
+.text-responsive-sm {
+  @apply text-xs sm:text-sm;
 }
 
-.theme-purple {
-  --primary: theme('colors.purple.600');
-  --primary-hover: theme('colors.purple.700');
-  --primary-light: theme('colors.purple.100');
-  --secondary: theme('colors.pink.600');
-  --secondary-hover: theme('colors.pink.700');
-  --secondary-light: theme('colors.pink.100');
+.text-responsive-base {
+  @apply text-sm sm:text-base;
 }
 
-.theme-green {
-  --primary: theme('colors.green.600');
-  --primary-hover: theme('colors.green.700');
-  --primary-light: theme('colors.green.100');
-  --secondary: theme('colors.emerald.600');
-  --secondary-hover: theme('colors.emerald.700');
-  --secondary-light: theme('colors.emerald.100');
+.text-responsive-lg {
+  @apply text-base sm:text-lg md:text-xl;
 }
 
-.theme-orange {
-  --primary: theme('colors.orange.600');
-  --primary-hover: theme('colors.orange.700');
-  --primary-light: theme('colors.orange.100');
-  --secondary: theme('colors.amber.600');
-  --secondary-hover: theme('colors.amber.700');
-  --secondary-light: theme('colors.amber.100');
+.text-responsive-xl {
+  @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+}
+
+/* Responsive padding utilities */
+.p-responsive {
+  @apply p-3 sm:p-4 md:p-6;
+}
+
+.px-responsive {
+  @apply px-3 sm:px-4 md:px-6;
+}
+
+.py-responsive {
+  @apply py-3 sm:py-4 md:py-6;
+}
+
+/* Responsive gap utilities */
+.gap-responsive {
+  @apply gap-2 sm:gap-3 md:gap-4;
+}
+
+/* Card component for mobile */
+.card-mobile {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6;
+}
+
+/* Button sizes for mobile */
+.btn-mobile {
+  @apply px-4 py-3 text-sm font-medium rounded-xl min-h-[44px];
+}
+
+.btn-mobile-sm {
+  @apply px-3 py-2 text-xs font-medium rounded-lg min-h-[36px];
+}
+
+/* Grid responsive utilities */
+.grid-responsive-1-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2;
+}
+
+.grid-responsive-1-2-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.grid-responsive-1-2-4 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+}
+
+.grid-responsive-2-3-4 {
+  @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4;
+}
+
+/* Fix for iOS input zoom */
+@supports (-webkit-touch-callout: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Landscape mode adjustments for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-compact {
+    @apply py-2;
+  }
+  
+  .landscape-hide {
+    @apply hidden;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
 }

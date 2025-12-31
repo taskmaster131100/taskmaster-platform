@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, TrendingUp, TrendingDown, PieChart, Plus, 
   Filter, Download, Calendar, MoreVertical, Edit2, Trash2,
-  ChevronDown, ChevronRight, AlertCircle, CheckCircle, Clock
+  ChevronDown, ChevronRight, AlertCircle, CheckCircle, Clock, X
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -336,134 +336,138 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <DollarSign className="w-7 h-7 text-green-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <DollarSign className="w-6 sm:w-7 h-6 sm:h-7 text-green-600" />
             Financeiro
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Gerencie orçamentos, receitas e despesas
           </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 text-gray-700 rounded-xl sm:rounded-lg hover:bg-gray-50 transition-colors text-sm"
           >
-            <Download className="w-5 h-5" />
-            Exportar CSV
+            <Download className="w-4 sm:w-5 h-4 sm:h-5" />
+            <span className="hidden sm:inline">Exportar CSV</span>
+            <span className="sm:hidden">CSV</span>
           </button>
           <button
             onClick={() => setShowBudgetModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-green-600 text-white rounded-xl sm:rounded-lg hover:bg-green-700 transition-colors text-sm"
           >
-            <Plus className="w-5 h-5" />
-            Novo Orçamento
+            <Plus className="w-4 sm:w-5 h-4 sm:h-5" />
+            <span className="hidden sm:inline">Novo Orçamento</span>
+            <span className="sm:hidden">Novo</span>
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-8">
-        {[
-          { id: 'overview', label: 'Visão Geral' },
-          { id: 'budgets', label: 'Orçamentos' },
-          { id: 'transactions', label: 'Transações' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.id 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs - Scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 sm:mb-8">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit min-w-full sm:min-w-0">
+          {[
+            { id: 'overview', label: 'Visão Geral' },
+            { id: 'budgets', label: 'Orçamentos' },
+            { id: 'transactions', label: 'Transações' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 sm:flex-none px-4 py-2.5 sm:py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Stats Cards - Responsive Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Orçamento Total</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">Orçamento Total</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
                     R$ {totalBudget.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <PieChart className="w-6 h-6 text-[#FFAD85]" />
+                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg flex-shrink-0">
+                  <PieChart className="w-5 sm:w-6 h-5 sm:h-6 text-[#FFAD85]" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Gasto</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">Total Gasto</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
                     R$ {totalSpent.toLocaleString('pt-BR')}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                     {((totalSpent / totalBudget) * 100).toFixed(1)}% do orçamento
                   </p>
                 </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <TrendingDown className="w-6 h-6 text-orange-600" />
+                <div className="p-2 sm:p-3 bg-orange-100 rounded-lg flex-shrink-0">
+                  <TrendingDown className="w-5 sm:w-6 h-5 sm:h-6 text-orange-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Receitas</p>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">Receitas</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">
                     R$ {totalRevenue.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-lg flex-shrink-0">
+                  <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-green-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Saldo</p>
-                  <p className={`text-2xl font-bold ${totalBudget - totalSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600">Saldo</p>
+                  <p className={`text-lg sm:text-2xl font-bold truncate ${totalBudget - totalSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     R$ {(totalBudget - totalSpent).toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${totalBudget - totalSpent >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                  <DollarSign className={`w-6 h-6 ${totalBudget - totalSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${totalBudget - totalSpent >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <DollarSign className={`w-5 sm:w-6 h-5 sm:h-6 ${totalBudget - totalSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Budget Progress */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Progresso dos Orçamentos</h3>
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Progresso dos Orçamentos</h3>
             <div className="space-y-4">
               {budgets.map(budget => {
                 const progress = (budget.spent_amount / budget.total_amount) * 100;
                 return (
                   <div key={budget.id} className="space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col sm:flex-row sm:justify-between text-sm gap-1">
                       <span className="font-medium text-gray-900">{budget.name}</span>
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 text-xs sm:text-sm">
                         R$ {budget.spent_amount.toLocaleString('pt-BR')} / R$ {budget.total_amount.toLocaleString('pt-BR')}
                       </span>
                     </div>
@@ -482,12 +486,12 @@ export default function FinancePage() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Transações Recentes</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Transações Recentes</h3>
               <button
                 onClick={() => setShowTransactionModal(true)}
-                className="text-sm text-[#FFAD85] hover:text-indigo-800"
+                className="text-sm text-[#FFAD85] hover:text-[#FF9B6A] font-medium"
               >
                 + Adicionar
               </button>
@@ -495,21 +499,21 @@ export default function FinancePage() {
             <div className="space-y-3">
               {transactions.slice(0, 5).map(transaction => (
                 <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${transaction.type === 'revenue' ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${transaction.type === 'revenue' ? 'bg-green-100' : 'bg-red-100'}`}>
                       {transaction.type === 'revenue' ? (
                         <TrendingUp className="w-4 h-4 text-green-600" />
                       ) : (
                         <TrendingDown className="w-4 h-4 text-red-600" />
                       )}
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{transaction.description}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{transaction.description}</p>
                       <p className="text-xs text-gray-500">{new Date(transaction.transaction_date).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className={`font-semibold text-sm ${transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
                       {transaction.type === 'revenue' ? '+' : '-'} R$ {transaction.amount.toLocaleString('pt-BR')}
                     </p>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[transaction.status]}`}>
@@ -529,28 +533,28 @@ export default function FinancePage() {
           {budgets.map(budget => (
             <div key={budget.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div 
-                className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-gray-50 gap-3"
                 onClick={() => toggleBudgetExpand(budget.id)}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   {expandedBudgets.has(budget.id) ? (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   )}
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-semibold text-gray-900">{budget.name}</h3>
-                    <p className="text-sm text-gray-500">{budget.description}</p>
+                    <p className="text-sm text-gray-500 truncate">{budget.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Gasto / Total</p>
-                    <p className="font-semibold text-gray-900">
+                <div className="flex items-center gap-4 sm:gap-6 ml-8 sm:ml-0">
+                  <div className="text-right min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-600">Gasto / Total</p>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       R$ {budget.spent_amount.toLocaleString('pt-BR')} / R$ {budget.total_amount.toLocaleString('pt-BR')}
                     </p>
                   </div>
-                  <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-20 sm:w-32 h-2 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
                     <div 
                       className="h-full bg-green-500 rounded-full"
                       style={{ width: `${(budget.spent_amount / budget.total_amount) * 100}%` }}
@@ -569,79 +573,124 @@ export default function FinancePage() {
                         setSelectedBudget(budget);
                         setShowItemModal(true);
                       }}
-                      className="text-sm text-[#FFAD85] hover:text-indigo-800 flex items-center gap-1"
+                      className="text-sm text-[#FFAD85] hover:text-[#FF9B6A] flex items-center gap-1 font-medium"
                     >
                       <Plus className="w-4 h-4" />
-                      Adicionar Item
+                      Adicionar
                     </button>
                   </div>
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Planejado</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Real</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {budget.items.map(item => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
+                  
+                  {/* Mobile: Cards / Desktop: Table */}
+                  <div className="lg:hidden divide-y divide-gray-200">
+                    {budget.items.map(item => (
+                      <div key={item.id} className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <span className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-full ${
                               CATEGORIES.find(c => c.id === item.category)?.color || 'bg-gray-500'
                             } text-white`}>
                               {CATEGORIES.find(c => c.id === item.category)?.label || item.category}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            R$ {item.planned_amount.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            R$ {item.actual_amount.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[item.status]}`}>
-                              {STATUS_LABELS[item.status]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {item.status === 'pending' && (
-                              <button
-                                onClick={() => handleMarkAsPaid(budget.id, item.id)}
-                                className="text-green-600 hover:text-green-800 text-xs font-medium"
-                              >
-                                Marcar Pago
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {budget.items.length === 0 && (
+                            <p className="text-sm font-medium text-gray-900 mt-2">{item.description}</p>
+                          </div>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[item.status]}`}>
+                            {STATUS_LABELS[item.status]}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                          <div className="text-xs text-gray-500">
+                            <span>Planejado: R$ {item.planned_amount.toLocaleString('pt-BR')}</span>
+                            <span className="mx-2">|</span>
+                            <span>Real: R$ {item.actual_amount.toLocaleString('pt-BR')}</span>
+                          </div>
+                          {item.status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(budget.id, item.id)}
+                              className="text-green-600 text-xs font-medium px-3 py-1.5 bg-green-50 rounded-lg"
+                            >
+                              Marcar Pago
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {budget.items.length === 0 && (
+                      <div className="p-8 text-center text-gray-500">
+                        Nenhum item adicionado ainda
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            Nenhum item adicionado ainda
-                          </td>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Planejado</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Real</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {budget.items.map(item => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
+                                CATEGORIES.find(c => c.id === item.category)?.color || 'bg-gray-500'
+                              } text-white`}>
+                                {CATEGORIES.find(c => c.id === item.category)?.label || item.category}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              R$ {item.planned_amount.toLocaleString('pt-BR')}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              R$ {item.actual_amount.toLocaleString('pt-BR')}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[item.status]}`}>
+                                {STATUS_LABELS[item.status]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {item.status === 'pending' && (
+                                <button
+                                  onClick={() => handleMarkAsPaid(budget.id, item.id)}
+                                  className="text-green-600 hover:text-green-800 text-xs font-medium"
+                                >
+                                  Marcar Pago
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {budget.items.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                              Nenhum item adicionado ainda
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
           ))}
 
           {budgets.length === 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center">
               <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orçamento criado</h3>
-              <p className="text-gray-500 mb-4">Crie seu primeiro orçamento para começar a controlar suas finanças</p>
+              <p className="text-gray-500 mb-4 text-sm">Crie seu primeiro orçamento para começar a controlar suas finanças</p>
               <button
                 onClick={() => setShowBudgetModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700"
               >
                 Criar Orçamento
               </button>
@@ -657,136 +706,177 @@ export default function FinancePage() {
             <h3 className="font-semibold text-gray-900">Todas as Transações</h3>
             <button
               onClick={() => setShowTransactionModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-[#FFAD85] text-white rounded-lg text-sm hover:bg-[#FF9B6A]"
+              className="flex items-center gap-2 px-3 py-2 bg-[#FFAD85] text-white rounded-xl text-sm hover:bg-[#FF9B6A]"
             >
               <Plus className="w-4 h-4" />
-              Nova Transação
+              <span className="hidden sm:inline">Nova Transação</span>
+              <span className="sm:hidden">Nova</span>
             </button>
           </div>
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {transactions.map(transaction => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(transaction.transaction_date).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded ${transaction.type === 'revenue' ? 'bg-green-100' : 'bg-red-100'}`}>
-                        {transaction.type === 'revenue' ? (
-                          <TrendingUp className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 text-red-600" />
-                        )}
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">{transaction.description}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">
-                      {CATEGORIES.find(c => c.id === transaction.category)?.label || transaction.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`font-semibold ${transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
-                      {transaction.type === 'revenue' ? '+' : '-'} R$ {transaction.amount.toLocaleString('pt-BR')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[transaction.status]}`}>
-                      {STATUS_LABELS[transaction.status]}
-                    </span>
-                  </td>
+          
+          {/* Mobile: Cards */}
+          <div className="lg:hidden divide-y divide-gray-200">
+            {transactions.map(transaction => (
+              <div key={transaction.id} className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`p-2 rounded-lg flex-shrink-0 ${transaction.type === 'revenue' ? 'bg-green-100' : 'bg-red-100'}`}>
+                    {transaction.type === 'revenue' ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{transaction.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(transaction.transaction_date).toLocaleDateString('pt-BR')} • {CATEGORIES.find(c => c.id === transaction.category)?.label || transaction.category}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0 ml-2">
+                  <p className={`font-semibold text-sm ${transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
+                    {transaction.type === 'revenue' ? '+' : '-'} R$ {transaction.amount.toLocaleString('pt-BR')}
+                  </p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[transaction.status]}`}>
+                    {STATUS_LABELS[transaction.status]}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {transactions.map(transaction => (
+                  <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {new Date(transaction.transaction_date).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded ${transaction.type === 'revenue' ? 'bg-green-100' : 'bg-red-100'}`}>
+                          {transaction.type === 'revenue' ? (
+                            <TrendingUp className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-red-600" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{transaction.description}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600">
+                        {CATEGORIES.find(c => c.id === transaction.category)?.label || transaction.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`font-semibold ${transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
+                        {transaction.type === 'revenue' ? '+' : '-'} R$ {transaction.amount.toLocaleString('pt-BR')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[transaction.status]}`}>
+                        {STATUS_LABELS[transaction.status]}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Budget Modal */}
+      {/* Budget Modal - Responsive */}
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Novo Orçamento</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Novo Orçamento</h3>
+              <button onClick={() => setShowBudgetModal(false)} className="p-2 hover:bg-gray-100 rounded-lg sm:hidden">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome</label>
                 <input
                   type="text"
                   value={budgetForm.name}
                   onChange={(e) => setBudgetForm({ ...budgetForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   placeholder="Ex: Orçamento Q1 2025"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
                 <textarea
                   value={budgetForm.description}
                   onChange={(e) => setBudgetForm({ ...budgetForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   rows={2}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor Total</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor Total</label>
                   <input
                     type="number"
                     value={budgetForm.total_amount}
                     onChange={(e) => setBudgetForm({ ...budgetForm, total_amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Moeda</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Moeda</label>
                   <select
                     value={budgetForm.currency}
                     onChange={(e) => setBudgetForm({ ...budgetForm, currency: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   >
                     <option value="BRL">BRL (R$)</option>
                     <option value="USD">USD ($)</option>
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data Início</label>
                   <input
                     type="date"
                     value={budgetForm.start_date}
                     onChange={(e) => setBudgetForm({ ...budgetForm, start_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data Fim</label>
                   <input
                     type="date"
                     value={budgetForm.end_date}
                     onChange={(e) => setBudgetForm({ ...budgetForm, end_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowBudgetModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
+              <button onClick={() => setShowBudgetModal(false)} className="w-full sm:w-auto px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl">
                 Cancelar
               </button>
-              <button onClick={handleCreateBudget} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              <button onClick={handleCreateBudget} className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700">
                 Criar Orçamento
               </button>
             </div>
@@ -794,18 +884,23 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* Item Modal */}
+      {/* Item Modal - Responsive */}
       {showItemModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Adicionar Item</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Adicionar Item</h3>
+              <button onClick={() => setShowItemModal(false)} className="p-2 hover:bg-gray-100 rounded-lg sm:hidden">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
                 <select
                   value={itemForm.category}
                   onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -813,40 +908,40 @@ export default function FinancePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
                 <input
                   type="text"
                   value={itemForm.description}
                   onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor Planejado</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor Planejado</label>
                   <input
                     type="number"
                     value={itemForm.planned_amount}
                     onChange={(e) => setItemForm({ ...itemForm, planned_amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Vencimento</label>
                   <input
                     type="date"
                     value={itemForm.due_date}
                     onChange={(e) => setItemForm({ ...itemForm, due_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 text-base"
                   />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowItemModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
+              <button onClick={() => setShowItemModal(false)} className="w-full sm:w-auto px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl">
                 Cancelar
               </button>
-              <button onClick={handleAddItem} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              <button onClick={handleAddItem} className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700">
                 Adicionar
               </button>
             </div>
@@ -854,18 +949,23 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* Transaction Modal */}
+      {/* Transaction Modal - Responsive */}
       {showTransactionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nova Transação</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Nova Transação</h3>
+              <button onClick={() => setShowTransactionModal(false)} className="p-2 hover:bg-gray-100 rounded-lg sm:hidden">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setTransactionForm({ ...transactionForm, type: 'expense' })}
-                    className={`flex-1 py-2 rounded-lg border ${
+                    className={`flex-1 py-3 rounded-xl border text-sm font-medium ${
                       transactionForm.type === 'expense' 
                         ? 'bg-red-50 border-red-500 text-red-700' 
                         : 'border-gray-300 text-gray-700'
@@ -875,7 +975,7 @@ export default function FinancePage() {
                   </button>
                   <button
                     onClick={() => setTransactionForm({ ...transactionForm, type: 'revenue' })}
-                    className={`flex-1 py-2 rounded-lg border ${
+                    className={`flex-1 py-3 rounded-xl border text-sm font-medium ${
                       transactionForm.type === 'revenue' 
                         ? 'bg-green-50 border-green-500 text-green-700' 
                         : 'border-gray-300 text-gray-700'
@@ -886,40 +986,40 @@ export default function FinancePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
                 <input
                   type="text"
                   value={transactionForm.description}
                   onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#FFAD85] text-base"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor</label>
                   <input
                     type="number"
                     value={transactionForm.amount}
                     onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#FFAD85] text-base"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
                   <input
                     type="date"
                     value={transactionForm.transaction_date}
                     onChange={(e) => setTransactionForm({ ...transactionForm, transaction_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#FFAD85] text-base"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
                 <select
                   value={transactionForm.category}
                   onChange={(e) => setTransactionForm({ ...transactionForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#FFAD85] text-base"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -927,11 +1027,11 @@ export default function FinancePage() {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowTransactionModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
+              <button onClick={() => setShowTransactionModal(false)} className="w-full sm:w-auto px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl">
                 Cancelar
               </button>
-              <button onClick={handleAddTransaction} className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]">
+              <button onClick={handleAddTransaction} className="w-full sm:w-auto px-4 py-3 bg-[#FFAD85] text-white rounded-xl hover:bg-[#FF9B6A]">
                 Adicionar
               </button>
             </div>
