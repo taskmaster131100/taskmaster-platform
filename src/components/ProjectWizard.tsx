@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Upload, MessageSquare, FileText, Check, Loader2, Send, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Upload, MessageSquare, FileText, Check, Loader2, Send, ArrowRight, ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
 
 interface ProjectWizardProps {
   onComplete: (projectData: any) => void;
@@ -22,12 +22,180 @@ interface ProjectData {
   description: string;
 }
 
+// Função para extrair texto de PDF usando pdf.js
+async function extractTextFromPDF(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const typedArray = new Uint8Array(e.target?.result as ArrayBuffer);
+        
+        // Usar pdf.js via CDN
+        const pdfjsLib = (window as any).pdfjsLib;
+        if (!pdfjsLib) {
+          // Carregar pdf.js dinamicamente
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          script.onload = async () => {
+            (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            const text = await extractPDFText(typedArray);
+            resolve(text);
+          };
+          document.head.appendChild(script);
+        } else {
+          const text = await extractPDFText(typedArray);
+          resolve(text);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function extractPDFText(typedArray: Uint8Array): Promise<string> {
+  const pdfjsLib = (window as any).pdfjsLib;
+  const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+  let fullText = '';
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    fullText += pageText + '\n\n';
+  }
+  
+  return fullText;
+}
+
+// Função para analisar projeto com IA
+async function analyzeProjectWithAI(text: string): Promise<ProjectData> {
+  try {
+    // Usar a API do OpenAI via proxy ou diretamente
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || ''}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Você é um assistente especializado em gestão de projetos musicais. 
+            Analise o texto do projeto e extraia as informações em formato JSON com os seguintes campos:
+            - name: nome do projeto
+            - artistName: nome do artista
+            - genre: gênero musical
+            - objective: objetivo principal
+            - duration: duração prevista
+            - phases: array com as fases do projeto
+            - tasks: array com as principais tarefas identificadas
+            - description: descrição resumida do projeto
+            
+            Responda APENAS com o JSON, sem markdown ou explicações.`
+          },
+          {
+            role: 'user',
+            content: `Analise este projeto artístico e extraia as informações:\n\n${text.substring(0, 8000)}`
+          }
+        ],
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro na API');
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    // Tentar parsear o JSON
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    
+    throw new Error('Resposta inválida');
+  } catch (error) {
+    console.error('Erro ao analisar com IA:', error);
+    // Fallback: extrair informações básicas do texto
+    return extractBasicInfo(text);
+  }
+}
+
+// Fallback: extrair informações básicas do texto sem IA
+function extractBasicInfo(text: string): ProjectData {
+  const lines = text.split('\n').filter(l => l.trim());
+  
+  // Tentar encontrar nome do artista
+  let artistName = 'Artista';
+  const artistMatch = text.match(/artista[:\s]+([^\n]+)/i) || 
+                      text.match(/projeto[:\s]+([^\n]+)/i) ||
+                      text.match(/nome[:\s]+([^\n]+)/i);
+  if (artistMatch) artistName = artistMatch[1].trim();
+  
+  // Tentar encontrar gênero
+  let genre = 'A definir';
+  const genreMatch = text.match(/gênero[:\s]+([^\n]+)/i) ||
+                     text.match(/estilo[:\s]+([^\n]+)/i);
+  if (genreMatch) genre = genreMatch[1].trim();
+  
+  // Identificar fases
+  const phases: string[] = [];
+  const phaseMatches = text.match(/fase\s*\d+[:\s-]+([^\n]+)/gi);
+  if (phaseMatches) {
+    phaseMatches.forEach(m => {
+      const phaseName = m.replace(/fase\s*\d+[:\s-]+/i, '').trim();
+      if (phaseName) phases.push(phaseName);
+    });
+  }
+  
+  // Identificar tarefas/atividades
+  const tasks: string[] = [];
+  const taskKeywords = ['gravação', 'produção', 'lançamento', 'show', 'conteúdo', 'distribuição', 'marketing', 'audiovisual'];
+  taskKeywords.forEach(keyword => {
+    const regex = new RegExp(`[^.]*${keyword}[^.]*`, 'gi');
+    const matches = text.match(regex);
+    if (matches) {
+      matches.slice(0, 2).forEach(m => {
+        const task = m.trim().substring(0, 100);
+        if (task && !tasks.includes(task)) tasks.push(task);
+      });
+    }
+  });
+  
+  // Adicionar tarefas padrão se não encontrou
+  if (tasks.length === 0) {
+    tasks.push('Definir cronograma do projeto');
+    tasks.push('Montar equipe de trabalho');
+    tasks.push('Criar estratégia de divulgação');
+  }
+  
+  return {
+    name: `Projeto ${artistName}`,
+    artistName,
+    genre,
+    objective: 'Desenvolvimento artístico e lançamento',
+    duration: '12 meses',
+    phases: phases.length > 0 ? phases : ['Pré-produção', 'Produção', 'Lançamento'],
+    tasks,
+    description: lines.slice(0, 3).join(' ').substring(0, 200)
+  };
+}
+
 export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
-  const [step, setStep] = useState<'choice' | 'upload' | 'chat' | 'processing' | 'review'>('choice');
+  const [step, setStep] = useState<'choice' | 'upload' | 'chat' | 'processing' | 'review' | 'error'>('choice');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [projectData, setProjectData] = useState<ProjectData>({
     name: '',
     artistName: '',
@@ -106,35 +274,60 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
 
     setUploadedFile(file);
     setStep('processing');
+    setProcessingStatus('Lendo arquivo...');
     
-    // Simular processamento do PDF com IA
-    setTimeout(() => {
-      // Dados extraídos do PDF (simulado - na versão real usaria API)
-      const extractedData: ProjectData = {
-        name: 'Projeto Artístico - ' + file.name.replace('.pdf', ''),
-        artistName: 'Artista do Projeto',
-        genre: 'A definir',
-        objective: 'Lançamento e construção de marca',
-        duration: '12 meses',
-        phases: ['Fase 1 - Conteúdo', 'Fase 2 - Audiovisual', 'Fase 3 - Shows'],
-        tasks: [
-          'Gravação de áudio em estúdio',
-          'Produção de 400-600 cortes curtos',
-          'Gravação de imagem em locações',
-          'Distribuição em 10 contas de apoio',
-          'Vendas de shows'
-        ],
-        description: 'Projeto importado do arquivo: ' + file.name
+    try {
+      // Extrair texto do PDF
+      setProcessingStatus('Extraindo texto do documento...');
+      let text = '';
+      
+      if (file.type === 'application/pdf') {
+        text = await extractTextFromPDF(file);
+      } else {
+        // Para DOC/DOCX, ler como texto
+        text = await file.text();
+      }
+      
+      if (!text || text.trim().length < 50) {
+        throw new Error('Não foi possível extrair texto suficiente do documento');
+      }
+      
+      // Analisar com IA
+      setProcessingStatus('Analisando projeto com IA...');
+      const extractedData = await analyzeProjectWithAI(text);
+      
+      setProcessingStatus('Organizando informações...');
+      
+      // Garantir que temos dados válidos
+      const validatedData: ProjectData = {
+        name: extractedData.name || `Projeto - ${file.name.replace(/\.[^/.]+$/, '')}`,
+        artistName: extractedData.artistName || 'A definir',
+        genre: extractedData.genre || 'A definir',
+        objective: extractedData.objective || 'Desenvolvimento artístico',
+        duration: extractedData.duration || '12 meses',
+        phases: Array.isArray(extractedData.phases) && extractedData.phases.length > 0 
+          ? extractedData.phases 
+          : ['Pré-produção', 'Produção', 'Lançamento'],
+        tasks: Array.isArray(extractedData.tasks) && extractedData.tasks.length > 0
+          ? extractedData.tasks
+          : ['Definir cronograma', 'Montar equipe', 'Criar estratégia'],
+        description: extractedData.description || `Projeto importado de: ${file.name}`
       };
       
-      setProjectData(extractedData);
+      setProjectData(validatedData);
       setStep('review');
-    }, 2000);
+      
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Erro ao processar o arquivo');
+      setStep('error');
+    }
   };
 
   // Processar projeto (chat ou upload)
   const processProject = async (source: 'chat' | 'upload') => {
     setStep('processing');
+    setProcessingStatus('Gerando tarefas automaticamente...');
     
     // Gerar tarefas automaticamente baseado nos dados
     const generatedTasks = generateTasks(projectData);
@@ -146,7 +339,7 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
         tasks: generatedTasks
       }));
       setStep('review');
-    }, 2000);
+    }, 1500);
   };
 
   // Gerar tarefas automaticamente
@@ -164,6 +357,12 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
       tasks.push('Definir identidade visual');
       tasks.push('Criar perfis em redes sociais');
       tasks.push('Desenvolver estratégia de conteúdo');
+    }
+    
+    if (data.objective.toLowerCase().includes('show') || data.objective.toLowerCase().includes('turnê')) {
+      tasks.push('Mapear casas de show');
+      tasks.push('Preparar rider técnico');
+      tasks.push('Criar material de divulgação de shows');
     }
     
     // Tarefas baseadas nas fases
@@ -196,72 +395,80 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
     });
   };
 
+  // Tentar novamente após erro
+  const handleRetry = () => {
+    setStep('choice');
+    setErrorMessage('');
+    setUploadedFile(null);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] p-6 text-white">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
+        <div className="flex items-center gap-3">
           <Sparkles className="w-6 h-6" />
-          Assistente de Projeto
-        </h2>
-        <p className="text-white/80 mt-1">
+          <h2 className="text-xl font-bold">Assistente de Projeto</h2>
+        </div>
+        <p className="text-orange-100 mt-1">
           {step === 'choice' && 'Como você gostaria de criar seu projeto?'}
           {step === 'upload' && 'Faça upload do seu projeto'}
-          {step === 'chat' && 'Vamos criar seu projeto juntos'}
-          {step === 'processing' && 'Processando seu projeto...'}
-          {step === 'review' && 'Seu projeto está pronto!'}
+          {step === 'chat' && 'Vamos criar juntos!'}
+          {step === 'processing' && processingStatus}
+          {step === 'review' && 'Revise seu projeto'}
+          {step === 'error' && 'Ops! Algo deu errado'}
         </p>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Step: Choice */}
+        {/* Escolha inicial */}
         {step === 'choice' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setStep('upload')}
-              className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#FFAD85] hover:bg-orange-50 transition-all group"
+              className="p-6 border-2 border-dashed border-orange-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group"
             >
-              <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400 group-hover:text-[#FFAD85]" />
-              <h3 className="font-semibold text-lg mb-2">Já tenho um projeto</h3>
-              <p className="text-sm text-gray-500">
+              <Upload className="w-12 h-12 mx-auto text-orange-400 group-hover:text-orange-500 mb-3" />
+              <h3 className="font-semibold text-gray-800">Já tenho um projeto</h3>
+              <p className="text-sm text-gray-500 mt-1">
                 Faça upload do PDF e a IA vai organizar tudo automaticamente
               </p>
             </button>
-
+            
             <button
               onClick={startChat}
-              className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#FFAD85] hover:bg-orange-50 transition-all group"
+              className="p-6 border-2 border-dashed border-blue-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group"
             >
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-400 group-hover:text-[#FFAD85]" />
-              <h3 className="font-semibold text-lg mb-2">Criar do zero</h3>
-              <p className="text-sm text-gray-500">
+              <MessageSquare className="w-12 h-12 mx-auto text-blue-400 group-hover:text-blue-500 mb-3" />
+              <h3 className="font-semibold text-gray-800">Criar do zero</h3>
+              <p className="text-sm text-gray-500 mt-1">
                 Responda algumas perguntas e criamos seu projeto juntos
               </p>
             </button>
           </div>
         )}
 
-        {/* Step: Upload */}
+        {/* Upload */}
         {step === 'upload' && (
           <div className="text-center">
             <input
-              type="file"
               ref={fileInputRef}
-              onChange={handleFileUpload}
+              type="file"
               accept=".pdf,.doc,.docx"
+              onChange={handleFileUpload}
               className="hidden"
+              id="project-file-upload"
             />
-            
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-[#FFAD85] hover:bg-orange-50 transition-all"
+            <label
+              htmlFor="project-file-upload"
+              className="block p-12 border-2 border-dashed border-gray-300 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer"
             >
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium mb-2">Clique para selecionar o arquivo</p>
-              <p className="text-sm text-gray-500">PDF, DOC ou DOCX (máx. 10MB)</p>
-            </div>
-
+              <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 font-medium">Clique para selecionar o arquivo</p>
+              <p className="text-sm text-gray-400 mt-1">PDF, DOC ou DOCX (máx. 10MB)</p>
+            </label>
+            
             <button
               onClick={() => setStep('choice')}
               className="mt-4 text-gray-500 hover:text-gray-700 flex items-center gap-2 mx-auto"
@@ -272,19 +479,19 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
           </div>
         )}
 
-        {/* Step: Chat */}
+        {/* Chat */}
         {step === 'chat' && (
           <div className="flex flex-col h-[400px]">
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-              {messages.map((msg, idx) => (
+              {messages.map((msg, i) => (
                 <div
-                  key={idx}
+                  key={i}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-[80%] p-3 rounded-lg ${
                       msg.role === 'user'
-                        ? 'bg-[#FFAD85] text-white'
+                        ? 'bg-orange-500 text-white'
                         : 'bg-gray-100 text-gray-800'
                     }`}
                   >
@@ -293,7 +500,7 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
                 </div>
               ))}
             </div>
-
+            
             <div className="flex gap-2">
               <input
                 type="text"
@@ -301,12 +508,12 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
                 onChange={(e) => setCurrentInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleChatSubmit()}
                 placeholder="Digite sua resposta..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <button
                 onClick={handleChatSubmit}
                 disabled={!currentInput.trim()}
-                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -314,105 +521,112 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
           </div>
         )}
 
-        {/* Step: Processing */}
+        {/* Processing */}
         {step === 'processing' && (
           <div className="text-center py-12">
-            <Loader2 className="w-16 h-16 mx-auto mb-4 text-[#FFAD85] animate-spin" />
-            <p className="text-lg font-medium mb-2">Processando seu projeto...</p>
-            <p className="text-sm text-gray-500">
-              A IA está analisando e organizando tudo para você
-            </p>
+            <Loader2 className="w-16 h-16 mx-auto text-orange-500 animate-spin mb-4" />
+            <p className="text-gray-600 font-medium">{processingStatus}</p>
+            <p className="text-sm text-gray-400 mt-2">Isso pode levar alguns segundos...</p>
           </div>
         )}
 
-        {/* Step: Review */}
+        {/* Error */}
+        {step === 'error' && (
+          <div className="text-center py-12">
+            <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+            <p className="text-gray-800 font-medium">Erro ao processar o arquivo</p>
+            <p className="text-sm text-gray-500 mt-2">{errorMessage}</p>
+            <button
+              onClick={handleRetry}
+              className="mt-6 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {/* Review */}
         {step === 'review' && (
           <div className="space-y-6">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-              <Check className="w-6 h-6 text-green-600" />
-              <p className="text-green-800 font-medium">Projeto organizado com sucesso!</p>
+              <Check className="w-6 h-6 text-green-500" />
+              <p className="text-green-700 font-medium">Projeto analisado com sucesso!</p>
             </div>
-
-            <div className="space-y-4">
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Projeto</label>
                 <input
                   type="text"
-                  value={projectData.name || `Projeto ${projectData.artistName}`}
+                  value={projectData.name}
                   onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Artista</label>
-                  <input
-                    type="text"
-                    value={projectData.artistName}
-                    onChange={(e) => setProjectData(prev => ({ ...prev, artistName: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gênero</label>
-                  <input
-                    type="text"
-                    value={projectData.genre}
-                    onChange={(e) => setProjectData(prev => ({ ...prev, genre: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Objetivo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Artista</label>
                 <input
                   type="text"
-                  value={projectData.objective}
-                  onChange={(e) => setProjectData(prev => ({ ...prev, objective: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  value={projectData.artistName}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, artistName: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gênero</label>
+                <input
+                  type="text"
+                  value={projectData.genre}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, genre: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Duração</label>
                 <input
                   type="text"
                   value={projectData.duration}
                   onChange={(e) => setProjectData(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-
-              {projectData.phases.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fases do Projeto</label>
-                  <div className="flex flex-wrap gap-2">
-                    {projectData.phases.map((phase, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                        {phase}
-                      </span>
-                    ))}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Objetivo</label>
+              <input
+                type="text"
+                value={projectData.objective}
+                onChange={(e) => setProjectData(prev => ({ ...prev, objective: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fases do Projeto ({projectData.phases.length})
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {projectData.phases.map((phase, i) => (
+                  <span key={i} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    {phase}
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tarefas Identificadas ({projectData.tasks.length})
+              </label>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {projectData.tasks.map((task, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-green-500" />
+                    {task}
                   </div>
-                </div>
-              )}
-
-              {projectData.tasks.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tarefas Geradas ({projectData.tasks.length})
-                  </label>
-                  <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
-                    {projectData.tasks.map((task, idx) => (
-                      <div key={idx} className="flex items-center gap-2 py-1">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <span className="text-sm">{task}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -426,11 +640,11 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
         >
           Cancelar
         </button>
-
+        
         {step === 'review' && (
           <button
             onClick={handleComplete}
-            className="px-6 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-[#FF9B6A] hover:to-[#FF8A5A] flex items-center gap-2"
+            className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2"
           >
             Criar Projeto
             <ArrowRight className="w-4 h-4" />
