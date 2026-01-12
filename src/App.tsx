@@ -50,6 +50,7 @@ const BetaFeedbackWidget = React.lazy(() => import('./components/beta/BetaFeedba
 const MusicHub = React.lazy(() => import('./components/music/MusicHub'));
 const FileLibrary = React.lazy(() => import('./components/FileLibrary'));
 const AITextGenerator = React.lazy(() => import('./components/AITextGenerator'));
+const MusicProduction = React.lazy(() => import('./components/MusicProduction'));
 const ShowsManager = React.lazy(() => import('./pages/ShowsManager'));
 
 const ManualUsuario = React.lazy(() => import('./pages/DocsPages').then(module => ({ default: module.ManualUsuario })));
@@ -307,6 +308,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       navigate('/artists');
     } else if (tab === 'shows') {
       navigate('/shows');
+    } else if (tab === 'producao-musical') {
+      navigate('/producao-musical');
     } else if (tab === 'whatsapp') {
       navigate('/whatsapp');
     } else if (tab === 'google') {
@@ -726,6 +729,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/ia-texto" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <AITextGenerator />
+          </React.Suspense>
+        } />
+
+        <Route path="/producao-musical" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <MusicProduction />
           </React.Suspense>
         } />
 
