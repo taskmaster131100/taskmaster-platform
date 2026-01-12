@@ -96,6 +96,7 @@ function App() {
 
   // Importar componentes necessários
   const ProjectForm = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.ProjectForm })));
+const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   const ArtistForm = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.ArtistForm })));
 
   // Setup cleanup on component mount
@@ -841,8 +842,8 @@ function App() {
               </div>
             </div>
           }>
-            <ProjectForm
-              onSubmit={handleProjectSubmit}
+            <ProjectWizard
+              onComplete={handleProjectSubmit}
               onCancel={() => setShowCreateProject(false)}
             />
           </React.Suspense>
