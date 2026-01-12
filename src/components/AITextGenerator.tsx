@@ -351,3 +351,5 @@ export function AITextGenerator() {
     </div>
   );
 }
+export default AITextGenerator;
+
