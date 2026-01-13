@@ -37,6 +37,7 @@ export interface ShowTask {
   show_id: string;
   title: string;
   description?: string;
+  category?: string;
   status: TaskStatus;
   due_date?: string;
   assigned_to?: string;
@@ -55,17 +56,49 @@ export const SHOW_STATUSES: { value: ShowStatus; label: string; color: string }[
   { value: 'pago', label: 'Pago', color: 'purple' }
 ];
 
+// Checklist completo para shows - organizado por fase
+const SHOW_CHECKLIST = {
+  // Tarefas ANTES do show
+  before: [
+    { title: 'Contrato assinado', days_before: 30, category: 'legal' },
+    { title: 'Rider tecnico enviado', days_before: 21, category: 'production' },
+    { title: 'Rider de camarim enviado', days_before: 21, category: 'production' },
+    { title: 'Entrada (50%) recebida', days_before: 14, category: 'financial' },
+    { title: 'Transporte confirmado', days_before: 7, category: 'logistics' },
+    { title: 'Hospedagem confirmada', days_before: 7, category: 'logistics' },
+    { title: 'Passagem de som agendada', days_before: 3, category: 'production' },
+    { title: 'Setlist definido', days_before: 3, category: 'production' },
+    { title: 'Equipe tecnica confirmada', days_before: 3, category: 'team' },
+    { title: 'Materiais de divulgacao enviados', days_before: 7, category: 'marketing' },
+  ],
+  // Tarefas NO DIA do show
+  day: [
+    { title: 'Check-in no local', days_before: 0, category: 'logistics' },
+    { title: 'Passagem de som realizada', days_before: 0, category: 'production' },
+    { title: 'Camarim OK', days_before: 0, category: 'production' },
+    { title: 'Show realizado', days_before: 0, category: 'production' },
+  ],
+  // Tarefas APOS o show
+  after: [
+    { title: 'Saldo (50%) recebido', days_after: 7, category: 'financial' },
+    { title: 'Fotos/videos coletados', days_after: 3, category: 'marketing' },
+    { title: 'Feedback do contratante', days_after: 7, category: 'marketing' },
+    { title: 'Relatorio do show', days_after: 7, category: 'admin' },
+  ]
+};
+
+// Tarefas basicas para shows consultados/propostos
 const DEFAULT_SHOW_TASKS = [
-  { title: 'Enviar rider técnico', days_before: 30 },
-  { title: 'Confirmar horários de soundcheck', days_before: 7 },
-  { title: 'Confirmar camarim e alimentação', days_before: 7 },
+  { title: 'Enviar rider tecnico', days_before: 30 },
+  { title: 'Confirmar horarios de soundcheck', days_before: 7 },
+  { title: 'Confirmar camarim e alimentacao', days_before: 7 },
   { title: 'Preparar setlist', days_before: 3 },
   { title: 'Conferir equipamento', days_before: 1 }
 ];
 
 export async function createShow(showData: Partial<Show>): Promise<Show> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
+  if (!user) throw new Error('Usuario nao autenticado');
 
   const { data, error } = await supabase
     .from('shows')
@@ -78,7 +111,13 @@ export async function createShow(showData: Partial<Show>): Promise<Show> {
 
   if (error) throw error;
 
-  await createDefaultTasks(data.id, data.show_date);
+  // Se ja esta criando como fechado, criar checklist completo
+  if (data.status === 'fechado') {
+    await createCompleteChecklist(data.id, data.show_date, user.id);
+    await createFinancialEntry(data);
+  } else {
+    await createDefaultTasks(data.id, data.show_date);
+  }
 
   await createCalendarEvent(data);
 
@@ -107,6 +146,77 @@ async function createDefaultTasks(showId: string, showDate: string): Promise<voi
   await supabase.from('show_tasks').insert(tasks);
 }
 
+async function createCompleteChecklist(showId: string, showDate: string, userId: string): Promise<void> {
+  const showDateObj = new Date(showDate);
+  const tasks: any[] = [];
+
+  // Tarefas ANTES do show
+  for (const item of SHOW_CHECKLIST.before) {
+    const dueDate = new Date(showDateObj);
+    dueDate.setDate(dueDate.getDate() - item.days_before);
+    
+    tasks.push({
+      show_id: showId,
+      title: item.title,
+      category: item.category,
+      status: 'pending',
+      due_date: dueDate.toISOString().split('T')[0],
+      created_by: userId
+    });
+  }
+
+  // Tarefas NO DIA do show
+  for (const item of SHOW_CHECKLIST.day) {
+    tasks.push({
+      show_id: showId,
+      title: item.title,
+      category: item.category,
+      status: 'pending',
+      due_date: showDate,
+      created_by: userId
+    });
+  }
+
+  // Tarefas APOS o show
+  for (const item of SHOW_CHECKLIST.after) {
+    const dueDate = new Date(showDateObj);
+    dueDate.setDate(dueDate.getDate() + (item.days_after || 0));
+    
+    tasks.push({
+      show_id: showId,
+      title: item.title,
+      category: item.category,
+      status: 'pending',
+      due_date: dueDate.toISOString().split('T')[0],
+      created_by: userId
+    });
+  }
+
+  await supabase.from('show_tasks').insert(tasks);
+}
+
+async function createFinancialEntry(show: Show): Promise<void> {
+  if (!show.value || show.value <= 0) return;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Criar transacao de receita no financeiro
+  await supabase.from('financial_transactions').insert({
+    type: 'revenue',
+    category: 'shows',
+    description: `Cache: ${show.title} - ${show.artist_name}`,
+    amount: show.value,
+    currency: show.currency || 'BRL',
+    status: 'pending',
+    due_date: show.show_date,
+    reference_type: 'show',
+    reference_id: show.id,
+    notes: `Local: ${show.venue || ''}, ${show.city}`,
+    created_by: user.id
+  });
+}
+
 async function createCalendarEvent(show: Show): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -128,7 +238,9 @@ async function createCalendarEvent(show: Show): Promise<void> {
   });
 }
 
-export async function updateShow(id: string, updates: Partial<Show>): Promise<Show> {
+export async function updateShow(id: string, updates: Partial<Show>, previousStatus?: ShowStatus): Promise<Show> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
   const { data, error } = await supabase
     .from('shows')
     .update(updates)
@@ -138,8 +250,35 @@ export async function updateShow(id: string, updates: Partial<Show>): Promise<Sh
 
   if (error) throw error;
 
+  // Atualizar evento no calendario se dados relevantes mudaram
   if (updates.show_date || updates.show_time || updates.title || updates.venue) {
     await updateCalendarEvent(data);
+  }
+
+  // Se o status mudou para 'fechado', criar checklist completo e entrada financeira
+  if (updates.status === 'fechado' && previousStatus && previousStatus !== 'fechado') {
+    // Remover tarefas basicas existentes
+    await supabase.from('show_tasks').delete().eq('show_id', id);
+    
+    // Criar checklist completo
+    if (user) {
+      await createCompleteChecklist(id, data.show_date, user.id);
+    }
+    
+    // Criar entrada no financeiro
+    await createFinancialEntry(data);
+  }
+
+  // Se o status mudou para 'pago', atualizar entrada no financeiro
+  if (updates.status === 'pago' && previousStatus !== 'pago') {
+    await supabase
+      .from('financial_transactions')
+      .update({
+        status: 'paid',
+        paid_date: new Date().toISOString().split('T')[0]
+      })
+      .eq('reference_type', 'show')
+      .eq('reference_id', id);
   }
 
   return data;
@@ -171,10 +310,18 @@ export async function deleteShow(id: string): Promise<void> {
 
   if (error) throw error;
 
+  // Deletar evento do calendario
   await supabase
     .from('calendar_events')
     .delete()
     .eq('metadata->>show_id', id);
+
+  // Deletar transacoes financeiras relacionadas
+  await supabase
+    .from('financial_transactions')
+    .delete()
+    .eq('reference_type', 'show')
+    .eq('reference_id', id);
 }
 
 export async function listShows(filters?: {
@@ -224,7 +371,7 @@ export async function uploadContract(
   file: File
 ): Promise<ShowContract> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
+  if (!user) throw new Error('Usuario nao autenticado');
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -295,7 +442,7 @@ export async function deleteContract(id: string): Promise<void> {
 
 export async function createTask(taskData: Partial<ShowTask>): Promise<ShowTask> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
+  if (!user) throw new Error('Usuario nao autenticado');
 
   const { data, error } = await supabase
     .from('show_tasks')
@@ -344,6 +491,36 @@ export async function deleteTask(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+// Funcao para calcular lucro do show
+export async function getShowProfit(showId: string): Promise<{
+  revenue: number;
+  expenses: number;
+  profit: number;
+  profitMargin: number;
+}> {
+  const { data: transactions } = await supabase
+    .from('financial_transactions')
+    .select('*')
+    .eq('reference_id', showId)
+    .neq('status', 'cancelled');
+
+  let revenue = 0;
+  let expenses = 0;
+
+  for (const t of transactions || []) {
+    if (t.type === 'revenue') {
+      revenue += parseFloat(t.amount);
+    } else {
+      expenses += parseFloat(t.amount);
+    }
+  }
+
+  const profit = revenue - expenses;
+  const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+  return { revenue, expenses, profit, profitMargin };
 }
 
 export function formatCurrency(value: number, currency: string = 'BRL'): string {
