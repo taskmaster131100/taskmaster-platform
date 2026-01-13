@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye } from 'lucide-react';
+import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Show,
@@ -11,6 +11,8 @@ import {
   formatDate,
   getStatusColor
 } from '../services/showService';
+import ShowForm from '../components/ShowForm';
+import ShowDetails from '../components/ShowDetails';
 
 export default function ShowsManager() {
   const [shows, setShows] = useState<Show[]>([]);
@@ -41,7 +43,8 @@ export default function ShowsManager() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm('Tem certeza que deseja excluir este show?')) return;
 
     try {
@@ -64,9 +67,19 @@ export default function ShowsManager() {
     setShowFormModal(true);
   };
 
-  const handleEditShow = (show: Show) => {
+  const handleEditShow = (show: Show, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedShow(show);
     setShowFormModal(true);
+  };
+
+  const handleFormClose = () => {
+    setShowFormModal(false);
+    setSelectedShow(null);
+  };
+
+  const handleFormSave = () => {
+    loadShows();
   };
 
   const filteredShows = shows.filter(show =>
@@ -79,7 +92,7 @@ export default function ShowsManager() {
   const getStatusBadgeColor = (status: ShowStatus) => {
     const colors = {
       consultado: 'bg-gray-100 text-gray-700',
-      proposto: 'bg-blue-100 text-[#FF9B6A]',
+      proposto: 'bg-blue-100 text-blue-700',
       fechado: 'bg-green-100 text-green-700',
       pago: 'bg-purple-100 text-purple-700'
     };
@@ -120,7 +133,7 @@ export default function ShowsManager() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-4 py-2 border rounded-lg flex items-center gap-2 transition-colors ${
-              showFilters ? 'bg-blue-50 border-blue-300 text-[#FF9B6A]' : 'border-gray-300 hover:bg-gray-50'
+              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="w-5 h-5" />
@@ -240,6 +253,20 @@ export default function ShowsManager() {
                     <Eye className="w-4 h-4" />
                     Ver detalhes
                   </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleEditShow(show, e)}
+                      className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(show.id, e)}
+                      className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -247,34 +274,93 @@ export default function ShowsManager() {
         )}
       </div>
 
+      {/* Modal de Formulário de Show */}
       {showFormModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {selectedShow ? 'Editar Show' : 'Novo Show'}
-            </h2>
-            <p className="text-gray-600">Formulário de show será implementado</p>
-            <button
-              onClick={() => setShowFormModal(false)}
-              className="mt-4 px-4 py-2 bg-gray-200 rounded-lg"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
+        <ShowForm
+          show={selectedShow}
+          onClose={handleFormClose}
+          onSave={handleFormSave}
+        />
       )}
 
+      {/* Modal de Detalhes do Show */}
       {showDetailsModal && selectedShow && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Detalhes do Show</h2>
-            <p className="text-gray-600">Detalhes completos serão implementados</p>
-            <button
-              onClick={() => setShowDetailsModal(false)}
-              className="mt-4 px-4 py-2 bg-gray-200 rounded-lg"
-            >
-              Fechar
-            </button>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Detalhes do Show</h2>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Título</p>
+                  <p className="font-medium">{selectedShow.title}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Artista</p>
+                  <p className="font-medium">{selectedShow.artist_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Data</p>
+                  <p className="font-medium">{formatDate(selectedShow.show_date)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Local</p>
+                  <p className="font-medium">{selectedShow.venue || selectedShow.city}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Valor</p>
+                  <p className="font-medium">{selectedShow.value ? formatCurrency(selectedShow.value, selectedShow.currency) : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedShow.status)}`}>
+                    {SHOW_STATUSES.find(s => s.value === selectedShow.status)?.label}
+                  </span>
+                </div>
+              </div>
+
+              {selectedShow.contractor_name && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium mb-2">Contratante</h3>
+                  <p>{selectedShow.contractor_name}</p>
+                  {selectedShow.contractor_contact && <p className="text-sm text-gray-500">{selectedShow.contractor_contact}</p>}
+                </div>
+              )}
+
+              {selectedShow.notes && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium mb-2">Observações</h3>
+                  <p className="text-gray-600">{selectedShow.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedShow(selectedShow);
+                  setShowFormModal(true);
+                }}
+                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
+              >
+                Editar Show
+              </button>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
