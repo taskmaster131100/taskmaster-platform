@@ -252,14 +252,7 @@ export default function LoginForm() {
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-500">
-                Não tem uma conta?{' '}
-                <Link to="/register" className="text-[#FF9B6A] hover:text-[#FFAD85] font-semibold transition-colors">
-                  Criar conta gratuita
-                </Link>
-              </p>
-            </div>
+
           </div>
 
           {/* Trust Badges */}
