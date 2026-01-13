@@ -28,19 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for demo mode first
-    const isDemoMode = localStorage.getItem('taskmaster_demo_mode') === 'true';
-
-    if (isDemoMode) {
-      setUser({
-        id: 'demo-user',
-        email: 'usuario@exemplo.com',
-        name: 'Usuário Demo'
-      });
-      setLoading(false);
-      return;
-    }
-
     // Real auth check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -61,11 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: session.user.user_metadata?.name
         });
       } else {
-        // Check demo mode again
-        const isDemoMode = localStorage.getItem('taskmaster_demo_mode') === 'true';
-        if (!isDemoMode) {
-          setUser(null);
-        }
+        setUser(null);
       }
     });
 
@@ -116,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('taskmaster_demo_mode');
     await supabase.auth.signOut();
     setUser(null);
   };

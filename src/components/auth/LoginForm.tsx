@@ -9,7 +9,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -43,17 +42,9 @@ export default function LoginForm() {
     }
 
     try {
-      if (email === 'usuario@exemplo.com' && password === 'senha123') {
-        setIsDemoMode(true);
-        localStorage.setItem('taskmaster_demo_mode', 'true');
-        toast.success('Login realizado! Modo demonstração ativado.');
-        navigate('/');
-      } else {
-        localStorage.removeItem('taskmaster_demo_mode');
-        await signIn(email, password);
-        toast.success('Login realizado com sucesso!');
-        navigate('/');
-      }
+      await signIn(email, password);
+      toast.success('Login realizado com sucesso!');
+      navigate('/');
     } catch (err: any) {
       const errorMessage = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
       setError(errorMessage);
@@ -61,11 +52,6 @@ export default function LoginForm() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoAccess = () => {
-    setEmail('usuario@exemplo.com');
-    setPassword('senha123');
   };
 
   const features = [
@@ -272,29 +258,6 @@ export default function LoginForm() {
                 <Link to="/register" className="text-[#FF9B6A] hover:text-[#FFAD85] font-semibold transition-colors">
                   Criar conta gratuita
                 </Link>
-              </p>
-            </div>
-
-            {/* Demo Access */}
-            <div className="mt-8">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-100"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-400">ou</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDemoAccess}
-                className="mt-6 w-full border-2 border-gray-100 bg-gray-50 text-gray-700 py-4 rounded-2xl font-semibold hover:bg-gray-100 hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-300"
-              >
-                Acessar Demonstração Gratuita
-              </button>
-              <p className="mt-3 text-xs text-center text-gray-400">
-                Explore a plataforma sem criar conta
               </p>
             </div>
           </div>
