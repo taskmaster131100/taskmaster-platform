@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, MoreVertical, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, MoreVertical, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface OrganizationDashboardProps {
   onSelectArtist: (id: string) => void;
@@ -17,92 +18,160 @@ export default function OrganizationDashboard({
   onCreateArtist,
   onSelectProject,
   onCreateProject,
-  projects,
+  projects: initialProjects,
   departments,
   users
 }: OrganizationDashboardProps) {
   const navigate = useNavigate();
-
-  // Mock data para demonstração - será substituído por dados reais do Supabase
-  const mockArtists = [
-    {
-      id: '1',
-      name: 'João Silva',
-      artisticName: 'João Músico',
-      genre: 'Pop Rock',
-      status: 'active',
-      projects: 2,
-      contract: 'Não definido',
-      exclusive: true,
-      avatar: 'JS'
-    },
-    {
-      id: '2',
-      name: 'Maria Oliveira',
-      artisticName: 'Maria Voz',
-      genre: 'MPB',
-      status: 'active',
-      projects: 0,
-      contract: 'Não definido',
-      exclusive: false,
-      avatar: 'MO'
-    },
-    {
-      id: '3',
-      name: 'Darlan',
-      artisticName: 'Cantor Darlan',
-      genre: 'Samba e Pagode',
-      status: 'active',
-      projects: 0,
-      contract: 'Não definido',
-      exclusive: true,
-      avatar: 'D'
-    }
-  ];
-
-  const stats = [
+  const [loading, setLoading] = useState(true);
+  const [artists, setArtists] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>(initialProjects || []);
+  const [stats, setStats] = useState([
     {
       icon: Music,
       label: 'Artistas',
-      value: '3',
-      subtitle: 'de 3 talentos',
+      value: '0',
+      subtitle: 'carregando...',
       color: 'from-cyan-500 to-cyan-600',
       iconColor: 'text-cyan-600',
-      onClick: () => navigate('/artistas')
+      onClick: () => navigate('/artists')
     },
     {
       icon: Rocket,
       label: 'Projetos',
-      value: '2',
-      subtitle: 'de 2 sonhos',
+      value: '0',
+      subtitle: 'carregando...',
       color: 'from-orange-500 to-orange-600',
       iconColor: 'text-orange-600',
-      onClick: () => navigate('/projects')
+      onClick: () => navigate('/planejamento')
     },
     {
       icon: DollarSign,
       label: 'Faturamento',
-      value: 'R$ 85.000,00',
-      subtitle: '+15% que mês passado',
+      value: 'R$ 0,00',
+      subtitle: 'este mês',
       trend: 'up',
       color: 'from-green-500 to-green-600',
       iconColor: 'text-green-600',
-      onClick: () => navigate('/reports')
+      onClick: () => navigate('/finance')
     },
     {
       icon: Calendar,
       label: 'Próximos Shows',
-      value: '6',
-      subtitle: '5 shows 1 lançamentos',
+      value: '0',
+      subtitle: 'carregando...',
       color: 'from-yellow-500 to-yellow-600',
       iconColor: 'text-yellow-600',
       onClick: () => navigate('/shows')
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  async function loadDashboardData() {
+    try {
+      setLoading(true);
+      
+      // 1. Carregar Artistas
+      const { data: artistsData } = await supabase
+        .from('artists')
+        .select('*')
+        .order('name');
+      
+      const artistsList = artistsData || [];
+      setArtists(artistsList);
+
+      // 2. Carregar Projetos/Planejamentos
+      const { data: planningsData } = await supabase
+        .from('plannings')
+        .select('*');
+      
+      const planningsList = planningsData || [];
+      setProjects(planningsList);
+
+      // 3. Carregar Shows
+      const { data: showsData } = await supabase
+        .from('shows')
+        .select('*')
+        .gte('show_date', new Date().toISOString().split('T')[0]);
+      
+      const showsCount = showsData?.length || 0;
+
+      // 4. Carregar Financeiro (Faturamento do mês)
+      const firstDayOfMonth = new Date();
+      firstDayOfMonth.setDate(1);
+      const { data: financeData } = await supabase
+        .from('financial_transactions')
+        .select('amount')
+        .eq('type', 'revenue')
+        .eq('status', 'paid')
+        .gte('transaction_date', firstDayOfMonth.toISOString().split('T')[0]);
+      
+      const totalRevenue = financeData?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+
+      // Atualizar Stats
+      setStats([
+        {
+          icon: Music,
+          label: 'Artistas',
+          value: artistsList.length.toString(),
+          subtitle: `${artistsList.length} talentos ativos`,
+          color: 'from-cyan-500 to-cyan-600',
+          iconColor: 'text-cyan-600',
+          onClick: () => navigate('/artists')
+        },
+        {
+          icon: Rocket,
+          label: 'Projetos',
+          value: planningsList.length.toString(),
+          subtitle: `${planningsList.length} planejamentos`,
+          color: 'from-orange-500 to-orange-600',
+          iconColor: 'text-orange-600',
+          onClick: () => navigate('/planejamento')
+        },
+        {
+          icon: DollarSign,
+          label: 'Faturamento',
+          value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue),
+          subtitle: 'receita confirmada',
+          trend: 'up',
+          color: 'from-green-500 to-green-600',
+          iconColor: 'text-green-600',
+          onClick: () => navigate('/finance')
+        },
+        {
+          icon: Calendar,
+          label: 'Próximos Shows',
+          value: showsCount.toString(),
+          subtitle: 'agenda futura',
+          color: 'from-yellow-500 to-yellow-600',
+          iconColor: 'text-yellow-600',
+          onClick: () => navigate('/shows')
+        }
+      ]);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-[#FFAD85] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">Carregando seu escritório virtual...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-
       {/* Header with Stats */}
       <div className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -112,7 +181,7 @@ export default function OrganizationDashboard({
               <div
                 key={index}
                 onClick={stat.onClick}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-[#FFAD85] transition-all cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-lg flex items-center justify-center`}>
@@ -130,7 +199,6 @@ export default function OrganizationDashboard({
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
                 <div className="text-xs text-gray-500 flex items-center gap-1">
-                  {stat.trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
                   {stat.subtitle}
                 </div>
               </div>
@@ -149,7 +217,7 @@ export default function OrganizationDashboard({
             </div>
             <button
               onClick={onCreateArtist}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-orange-500 to-yellow-500 text-white rounded-lg hover:shadow-lg transition-all shadow-sm flex items-center gap-2 text-sm font-medium"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition-all shadow-sm flex items-center gap-2 text-sm font-medium"
             >
               <Music className="w-4 h-4" />
               Novo Talento
@@ -166,11 +234,6 @@ export default function OrganizationDashboard({
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
               />
             </div>
-            <select className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm bg-white">
-              <option>Todos os status</option>
-              <option>Ativo</option>
-              <option>Inativo</option>
-            </select>
           </div>
         </div>
 
@@ -189,9 +252,6 @@ export default function OrganizationDashboard({
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Projetos
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Contrato
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -200,7 +260,7 @@ export default function OrganizationDashboard({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {mockArtists.map((artist) => (
+              {artists.map((artist) => (
                 <tr
                   key={artist.id}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -208,12 +268,12 @@ export default function OrganizationDashboard({
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 via-orange-500 to-yellow-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {artist.avatar}
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {artist.artistic_name?.charAt(0) || artist.name?.charAt(0) || 'A'}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{artist.name}</div>
-                        <div className="text-sm text-gray-500">{artist.artisticName}</div>
+                        <div className="font-semibold text-gray-900">{artist.artistic_name || artist.name}</div>
+                        <div className="text-sm text-gray-500">{artist.genre}</div>
                       </div>
                     </div>
                   </td>
@@ -221,23 +281,16 @@ export default function OrganizationDashboard({
                     <span className="text-sm text-gray-700">{artist.genre}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                      Ativo
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      artist.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${artist.status === 'ativo' ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                      {artist.status || 'Ativo'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Rocket className="w-4 h-4 text-orange-500" />
-                      {artist.projects} projetos
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
-                      <div className="text-gray-700">{artist.contract}</div>
-                      <div className="text-xs text-gray-500">
-                        {artist.exclusive ? '✓ Exclusivo' : 'Não exclusivo'}
-                      </div>
+                      <div className="text-gray-700 capitalize">{artist.contract_type?.replace('_', ' ') || 'Não definido'}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -246,7 +299,7 @@ export default function OrganizationDashboard({
                         e.stopPropagation();
                         onSelectArtist(artist.id);
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#FFAD85] hover:bg-blue-50 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#FF9B6A] hover:bg-orange-50 rounded-lg transition-colors"
                     >
                       <MoreVertical className="w-4 h-4" />
                       Ver Detalhes
@@ -259,7 +312,7 @@ export default function OrganizationDashboard({
         </div>
 
         {/* Empty State */}
-        {mockArtists.length === 0 && (
+        {artists.length === 0 && (
           <div className="text-center py-12">
             <Music className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium mb-1">Nenhum artista cadastrado</p>
@@ -273,7 +326,6 @@ export default function OrganizationDashboard({
           </div>
         )}
       </div>
-
     </div>
   );
 }
