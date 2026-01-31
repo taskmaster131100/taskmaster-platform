@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal scroll on mobile (common iOS Safari issue) */
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  overflow-x: hidden;
+}
+
 /* Custom styles for the glass effect */
 .glass {
   background: rgba(255, 255, 255, 0.1);
