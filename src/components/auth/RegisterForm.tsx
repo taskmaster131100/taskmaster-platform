@@ -227,7 +227,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-8">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 sm:p-8 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md">
 
         {/* Logo */}
@@ -238,12 +238,12 @@ export default function RegisterForm() {
           <span className="text-2xl font-bold text-gray-900">TaskMaster</span>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Crie sua conta gratuita
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm sm:text-base">
               Comece a gerenciar sua carreira artística com inteligência e controle total
             </p>
           </div>
@@ -407,7 +407,7 @@ export default function RegisterForm() {
               <label htmlFor="accountType" className="block text-sm font-medium text-gray-700 mb-2">
                 Tipo de Conta
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setAccountType('artist')}

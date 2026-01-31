@@ -106,7 +106,7 @@ export default function LoginForm() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FFFBF7] flex">
+    <div className="min-h-[100dvh] bg-[#FFFBF7] flex safe-area-top safe-area-bottom">
 
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-[55%] p-12 flex-col justify-between relative overflow-hidden">
@@ -178,7 +178,7 @@ export default function LoginForm() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
         <div className="w-full max-w-md">
 
           {/* Mobile Logo */}
@@ -190,7 +190,7 @@ export default function LoginForm() {
           </div>
 
           {/* Login Card */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 lg:p-10">
+          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-6 sm:p-8 lg:p-10">
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Bem-vindo de volta
