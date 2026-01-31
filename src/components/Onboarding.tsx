@@ -65,8 +65,8 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] p-6 text-white relative">
@@ -106,7 +106,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-6 sm:p-8 overflow-y-auto">
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">{step.image}</div>
             <p className="text-gray-700 text-lg leading-relaxed">
@@ -168,7 +168,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-gray-50 border-t flex items-center justify-between">
+        <div className="p-4 sm:p-6 bg-gray-50 border-t flex items-center justify-between sticky bottom-0">
           <button
             onClick={onSkip}
             className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
