@@ -65,11 +65,11 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto safe-area-top safe-area-bottom">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] flex flex-col">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] p-4 sm:p-6 text-white relative">
           <button
             onClick={onSkip}
             className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
@@ -77,13 +77,13 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
               <Icon className="w-8 h-8" />
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-1">{step.title}</h2>
-              <p className="text-blue-100">{step.description}</p>
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">{step.title}</h2>
+              <p className="text-blue-100 text-sm sm:text-base">{step.description}</p>
             </div>
           </div>
 
@@ -106,10 +106,10 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         </div>
 
         {/* Content */}
-        <div className="p-6 sm:p-8 overflow-y-auto">
+        <div className="p-4 sm:p-8 overflow-y-auto">
           <div className="text-center mb-8">
-            <div className="text-6xl mb-4">{step.image}</div>
-            <p className="text-gray-700 text-lg leading-relaxed">
+            <div className="text-5xl sm:text-6xl mb-4">{step.image}</div>
+            <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
               {step.content}
             </p>
           </div>
@@ -150,7 +150,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
 
           {/* Stats */}
           {currentStep === 4 && (
-            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
               <div className="text-center">
                 <div className="text-2xl font-bold text-[#FFAD85]">95%</div>
                 <div className="text-xs text-gray-600">Funcionalidades</div>
@@ -168,10 +168,10 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-6 bg-gray-50 border-t flex items-center justify-between sticky bottom-0">
+        <div className="p-4 sm:p-6 bg-gray-50 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky bottom-0">
           <button
             onClick={onSkip}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors w-full sm:w-auto text-left sm:text-center"
           >
             Pular Tutorial
           </button>
@@ -180,7 +180,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
             {currentStep > 0 && (
               <button
                 onClick={handlePrevious}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Anterior
@@ -189,7 +189,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
 
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
             >
               {currentStep === steps.length - 1 ? 'Começar' : 'Próximo'}
               <ChevronRight className="w-4 h-4" />
