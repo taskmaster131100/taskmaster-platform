@@ -8,13 +8,16 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, resendSignupConfirmation } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setShowResendConfirmation(false);
     setLoading(true);
 
     if (!email || email.trim() === '') {
@@ -46,11 +49,29 @@ export default function LoginForm() {
       toast.success('Login realizado com sucesso!');
       navigate('/');
     } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
+      const errorMessage = err?.message || 'Erro ao fazer login. Verifique suas credenciais.';
       setError(errorMessage);
+
+      // Common Supabase message when email confirmations are enabled
+      const isNotConfirmed = /email not confirmed/i.test(errorMessage);
+      setShowResendConfirmation(isNotConfirmed);
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    try {
+      setResendingConfirmation(true);
+      await resendSignupConfirmation(email);
+      toast.success('Confirmação reenviada! Verifique sua caixa de entrada e o Spam/Lixo eletrônico.');
+    } catch (err: any) {
+      const msg = err?.message || 'Não foi possível reenviar a confirmação.';
+      toast.error(msg);
+    } finally {
+      setResendingConfirmation(false);
     }
   };
 
@@ -180,9 +201,27 @@ export default function LoginForm() {
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+
+                {showResendConfirmation && (
+                  <div className="flex flex-col gap-2 pl-8">
+                    <p className="text-xs text-red-700/80">
+                      Dica: confira o Spam/Lixo eletrônico. Se não encontrar, você pode reenviar o e-mail de confirmação.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      disabled={resendingConfirmation || !email}
+                      className="w-fit text-sm font-semibold text-[#FF9B6A] hover:text-[#FFAD85] disabled:opacity-50"
+                    >
+                      {resendingConfirmation ? 'Reenviando...' : 'Reenviar confirmação'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

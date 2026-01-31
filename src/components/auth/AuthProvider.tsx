@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
+  resendSignupConfirmation: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: async () => {},
   signUp: async () => {},
+  resendSignupConfirmation: async () => {},
   signOut: async () => {}
 });
 
@@ -98,13 +100,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resendSignupConfirmation = async (email: string) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Digite um email válido para reenviar a confirmação.');
+    }
+
+    // Supabase v2: resend confirmation email for signup
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: cleanEmail,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, resendSignupConfirmation, signOut }}>
       {children}
     </AuthContext.Provider>
   );
