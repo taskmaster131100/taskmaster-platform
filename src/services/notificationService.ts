@@ -371,7 +371,7 @@ export async function notifyTaskAssigned(task: {
 }): Promise<void> {
   // Buscar nome de quem atribuiu
   const { data: assigner } = await supabase
-    .from('profiles')
+    .from('user_profiles')
     .select('full_name')
     .eq('id', task.assignedBy)
     .single();

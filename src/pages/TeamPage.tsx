@@ -3,6 +3,7 @@ import { Users, UserPlus, Mail, Shield, MoreVertical, Check, X, Clock, Trash2, E
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
+import { shortId } from '../utils/team';
 
 interface TeamMember {
   id: string;
@@ -11,12 +12,10 @@ interface TeamMember {
   role: 'admin' | 'manager' | 'member' | 'viewer';
   status: 'active' | 'pending' | 'inactive';
   created_at: string;
-  user?: {
-    email: string;
-    user_metadata?: {
-      full_name?: string;
-    };
+  profile?: {
+    full_name?: string;
   };
+
 }
 
 interface Invite {
@@ -91,20 +90,30 @@ export default function TeamPage() {
 
       if (membersError) throw membersError;
 
-      // Get user emails for each member
-      const membersWithEmails = await Promise.all(
-        (membersData || []).map(async (member) => {
-          const { data: userData } = await supabase.auth.admin.getUserById(member.user_id);
-          return {
-            ...member,
-            email: userData?.user?.email || 'Email não disponível',
-            status: 'active' as const,
-            user: userData?.user
-          };
-        })
-      );
+      // NOTE: do NOT use supabase.auth.admin on the client (requires service role).
+      // Fetch profile info (when available) from public table.
+      const userIds = (membersData || []).map(m => m.user_id);
 
-      setMembers(membersWithEmails);
+      const { data: profilesData } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const profileByUserId = new Map<string, any>();
+      (profilesData || []).forEach((p: any) => profileByUserId.set(p.id, p));
+
+      const membersWithProfiles = (membersData || []).map((member) => {
+        const profile = profileByUserId.get(member.user_id);
+        const email = 'Email não disponível';
+        return {
+          ...member,
+          email,
+          status: 'active' as const,
+          profile
+        };
+      });
+
+      setMembers(membersWithProfiles);
 
       // Get pending invites
       const { data: invitesData } = await supabase
@@ -355,7 +364,7 @@ export default function TeamPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">
-                      {member.user?.user_metadata?.full_name || member.email?.split('@')[0]}
+                      {member.profile?.full_name || member.email?.split('@')[0] || shortId(member.user_id)}
                     </div>
                     <div className="text-xs text-gray-500 truncate">{member.email}</div>
                   </div>
@@ -432,7 +441,7 @@ export default function TeamPage() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {member.user?.user_metadata?.full_name || member.email}
+                          {member.profile?.full_name || member.email || shortId(member.user_id)}
                         </div>
                         <div className="text-sm text-gray-500">{member.email}</div>
                       </div>

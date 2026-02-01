@@ -137,13 +137,13 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       }
 
       // Get user's organization
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: orgData } = await supabase
+        .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user.user.id)
         .single();
 
-      if (!profile?.organization_id) {
+      if (!orgData?.organization_id) {
         toast.error('Você precisa estar vinculado a uma organização');
         return;
       }
@@ -151,7 +151,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       const { error } = await supabase
         .from('tasks')
         .insert({
-          organization_id: profile.organization_id,
+          organization_id: orgData.organization_id,
           title: taskData.title.trim(),
           description: taskData.description?.trim() || null,
           status: 'todo',
