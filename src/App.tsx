@@ -65,6 +65,7 @@ const ContentManager = React.lazy(() => import('./pages/ContentManager'));
 const ReleasesManager = React.lazy(() => import('./pages/ReleasesManager'));
 const TeamPage = React.lazy(() => import('./pages/TeamPage'));
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
+const InvitePage = React.lazy(() => import('./pages/InvitePage'));
 
 // Classic Routes Preview (feature flag controlled)
 const WelcomePreview = React.lazy(() => import('./pages/WelcomePreview'));
@@ -440,6 +441,19 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             </React.Suspense>
           } />
 
+          <Route path="/invite/:token" element={
+            <React.Suspense fallback={
+              <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85] mx-auto mb-4"></div>
+                  <p className="text-gray-600">Carregando...</p>
+                </div>
+              </div>
+            }>
+              <InvitePage />
+            </React.Suspense>
+          } />
+
           {/* Classic Routes Preview (feature flag controlled) */}
           {ENABLE_CLASSIC_ROUTES && (
             <>
@@ -654,6 +668,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/reset-password" element={<Navigate to="/" replace />} />
+
+        <Route path="/invite/:token" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <InvitePage />
+          </React.Suspense>
+        } />
 
         {/* Redirects for old routes */}
         <Route path="/dashboard" element={

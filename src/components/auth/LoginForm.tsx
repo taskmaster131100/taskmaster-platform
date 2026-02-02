@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Music, Mail, Lock, AlertCircle, Calendar, Rocket, DollarSign, FolderKanban, CheckCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
@@ -8,13 +8,17 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, resendSignupConfirmation } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setShowResendConfirmation(false);
     setLoading(true);
 
     if (!email || email.trim() === '') {
@@ -44,13 +48,37 @@ export default function LoginForm() {
     try {
       await signIn(email, password);
       toast.success('Login realizado com sucesso!');
-      navigate('/');
+
+      const redirect = searchParams.get('redirect');
+      if (redirect && redirect.startsWith('/')) {
+        navigate(redirect);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
+      const errorMessage = err?.message || 'Erro ao fazer login. Verifique suas credenciais.';
       setError(errorMessage);
+
+      // Common Supabase message when email confirmations are enabled
+      const isNotConfirmed = /email not confirmed/i.test(errorMessage);
+      setShowResendConfirmation(isNotConfirmed);
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    try {
+      setResendingConfirmation(true);
+      await resendSignupConfirmation(email);
+      toast.success('Confirmação reenviada! Verifique sua caixa de entrada e o Spam/Lixo eletrônico.');
+    } catch (err: any) {
+      const msg = err?.message || 'Não foi possível reenviar a confirmação.';
+      toast.error(msg);
+    } finally {
+      setResendingConfirmation(false);
     }
   };
 
@@ -85,7 +113,7 @@ export default function LoginForm() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FFFBF7] flex">
+    <div className="min-h-[100dvh] bg-[#FFFBF7] flex safe-area-top safe-area-bottom">
 
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-[55%] p-12 flex-col justify-between relative overflow-hidden">
@@ -157,7 +185,7 @@ export default function LoginForm() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
         <div className="w-full max-w-md">
 
           {/* Mobile Logo */}
@@ -169,7 +197,7 @@ export default function LoginForm() {
           </div>
 
           {/* Login Card */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 lg:p-10">
+          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-6 sm:p-8 lg:p-10">
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Bem-vindo de volta
@@ -180,9 +208,27 @@ export default function LoginForm() {
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+
+                {showResendConfirmation && (
+                  <div className="flex flex-col gap-2 pl-8">
+                    <p className="text-xs text-red-700/80">
+                      Dica: confira o Spam/Lixo eletrônico. Se não encontrar, você pode reenviar o e-mail de confirmação.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      disabled={resendingConfirmation || !email}
+                      className="w-fit text-sm font-semibold text-[#FF9B6A] hover:text-[#FFAD85] disabled:opacity-50"
+                    >
+                      {resendingConfirmation ? 'Reenviando...' : 'Reenviar confirmação'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

@@ -3,6 +3,7 @@ import { Users, UserPlus, Mail, Shield, MoreVertical, Check, X, Clock, Trash2, E
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
+import { shortId } from '../utils/team';
 
 interface TeamMember {
   id: string;
@@ -11,12 +12,10 @@ interface TeamMember {
   role: 'admin' | 'manager' | 'member' | 'viewer';
   status: 'active' | 'pending' | 'inactive';
   created_at: string;
-  user?: {
-    email: string;
-    user_metadata?: {
-      full_name?: string;
-    };
+  profile?: {
+    full_name?: string;
   };
+
 }
 
 interface Invite {
@@ -26,6 +25,7 @@ interface Invite {
   status: 'pending' | 'accepted' | 'expired';
   created_at: string;
   expires_at: string;
+  token: string;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -52,6 +52,8 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<string>('member');
   const [sending, setSending] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
+  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
+  const [lastInviteLink, setLastInviteLink] = useState<string>('');
 
   useEffect(() => {
     loadTeamData();
@@ -88,20 +90,30 @@ export default function TeamPage() {
 
       if (membersError) throw membersError;
 
-      // Get user emails for each member
-      const membersWithEmails = await Promise.all(
-        (membersData || []).map(async (member) => {
-          const { data: userData } = await supabase.auth.admin.getUserById(member.user_id);
-          return {
-            ...member,
-            email: userData?.user?.email || 'Email não disponível',
-            status: 'active' as const,
-            user: userData?.user
-          };
-        })
-      );
+      // NOTE: do NOT use supabase.auth.admin on the client (requires service role).
+      // Fetch profile info (when available) from public table.
+      const userIds = (membersData || []).map(m => m.user_id);
 
-      setMembers(membersWithEmails);
+      const { data: profilesData } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const profileByUserId = new Map<string, any>();
+      (profilesData || []).forEach((p: any) => profileByUserId.set(p.id, p));
+
+      const membersWithProfiles = (membersData || []).map((member) => {
+        const profile = profileByUserId.get(member.user_id);
+        const email = 'Email não disponível';
+        return {
+          ...member,
+          email,
+          status: 'active' as const,
+          profile
+        };
+      });
+
+      setMembers(membersWithProfiles);
 
       // Get pending invites
       const { data: invitesData } = await supabase
@@ -117,6 +129,16 @@ export default function TeamPage() {
       toast.error('Erro ao carregar dados da equipe');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Link copiado!');
+    } catch {
+      // Fallback for older browsers
+      window.prompt('Copie o link abaixo:', text);
     }
   };
 
@@ -162,16 +184,12 @@ export default function TeamPage() {
       if (error) throw error;
 
       // TODO: Send email with invite link
-      // For now, just show the link
+      // MVP: show/copy link
       const inviteLink = `${window.location.origin}/invite/${token}`;
-      
-      toast.success(
-        <div>
-          <p>Convite criado com sucesso!</p>
-          <p className="text-xs mt-1">Link: {inviteLink}</p>
-        </div>,
-        { duration: 10000 }
-      );
+
+      setLastInviteLink(inviteLink);
+      setShowInviteLinkModal(true);
+      toast.success('Convite criado com sucesso!');
 
       setShowInviteModal(false);
       setInviteEmail('');
@@ -346,7 +364,7 @@ export default function TeamPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">
-                      {member.user?.user_metadata?.full_name || member.email?.split('@')[0]}
+                      {member.profile?.full_name || member.email?.split('@')[0] || shortId(member.user_id)}
                     </div>
                     <div className="text-xs text-gray-500 truncate">{member.email}</div>
                   </div>
@@ -423,7 +441,7 @@ export default function TeamPage() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {member.user?.user_metadata?.full_name || member.email}
+                          {member.profile?.full_name || member.email || shortId(member.user_id)}
                         </div>
                         <div className="text-sm text-gray-500">{member.email}</div>
                       </div>
@@ -502,6 +520,17 @@ export default function TeamPage() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ROLE_COLORS[invite.role]}`}>
                     {ROLE_LABELS[invite.role]}
                   </span>
+
+                  {canManageTeam && invite.token && (
+                    <button
+                      onClick={() => copyToClipboard(`${window.location.origin}/invite/${invite.token}`)}
+                      className="px-3 py-2 text-sm font-semibold text-[#FF9B6A] hover:text-[#FFAD85] hover:bg-[#FFAD85]/10 rounded-lg"
+                      title="Copiar link do convite"
+                    >
+                      Copiar link
+                    </button>
+                  )}
+
                   {canManageTeam && (
                     <button
                       onClick={() => handleCancelInvite(invite.id)}
@@ -514,6 +543,47 @@ export default function TeamPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invite Link Modal (after create) */}
+      {showInviteLinkModal && lastInviteLink && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Link do Convite</h3>
+              <button
+                onClick={() => setShowInviteLinkModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-3">
+              Copie e envie este link para a pessoa entrar na organização.
+            </p>
+
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl break-all text-sm text-gray-800">
+              {lastInviteLink}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-5">
+              <button
+                onClick={() => copyToClipboard(lastInviteLink)}
+                className="w-full sm:flex-1 px-4 py-3 bg-[#FFAD85] text-white rounded-xl hover:bg-[#FF9B6A] transition-colors"
+              >
+                Copiar link
+              </button>
+              <button
+                onClick={() => setShowInviteLinkModal(false)}
+                className="w-full sm:flex-1 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

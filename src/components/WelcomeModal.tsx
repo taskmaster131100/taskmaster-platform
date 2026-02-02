@@ -43,10 +43,10 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden max-w-[calc(100vw-2rem)]">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#FFAD85] via-purple-600 to-pink-600 p-8 text-white relative">
+        <div className="bg-gradient-to-r from-[#FFAD85] via-purple-600 to-pink-600 p-5 sm:p-8 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
@@ -65,7 +65,7 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white border-opacity-20">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white border-opacity-20">
             <div className="text-center">
               <div className="text-2xl font-bold">95%</div>
               <div className="text-xs text-blue-100">Funcionalidades</div>
@@ -82,7 +82,7 @@ export default function WelcomeModal({ userName, onClose }: WelcomeModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-5 sm:p-8">
           <div className="mb-6">
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               Plataforma Completa de Gestão Musical
