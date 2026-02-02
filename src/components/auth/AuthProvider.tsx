@@ -31,13 +31,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Real auth check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
           email: session.user.email || '',
           name: session.user.user_metadata?.name
         });
+
+        // Bootstrap organization for account owner (if needed)
+        try {
+          const { data: membership } = await supabase
+            .from('user_organizations')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (!membership?.id) {
+            // If user has pending invites, do NOT auto-create a new org.
+            const { data: pendingInvite } = await supabase
+              .from('team_invites')
+              .select('id')
+              .eq('email', (session.user.email || '').toLowerCase())
+              .eq('status', 'pending')
+              .gt('expires_at', new Date().toISOString())
+              .maybeSingle();
+
+            if (!pendingInvite?.id) {
+              const orgName =
+                session.user.user_metadata?.organization_name ||
+                session.user.user_metadata?.name ||
+                (session.user.email || '').split('@')[0] ||
+                'Minha Organização';
+
+              await supabase.rpc('bootstrap_organization', { org_name: orgName });
+            }
+          }
+        } catch (e) {
+          // Silent: if it fails, the UI will show the empty state.
+          console.warn('bootstrap_organization failed', e);
+        }
       }
       setLoading(false);
     });

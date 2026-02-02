@@ -93,32 +93,14 @@ export default function InvitePage() {
         return;
       }
 
-      // Create membership (idempotent-ish)
-      const { data: existing } = await supabase
-        .from('user_organizations')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('organization_id', invite.organization_id)
-        .maybeSingle();
+      const { data, error: rpcErr } = await supabase
+        .rpc('accept_team_invite', { invite_token: tokenValue });
 
-      if (!existing?.id) {
-        const { error: membershipErr } = await supabase
-          .from('user_organizations')
-          .insert({
-            user_id: user.id,
-            organization_id: invite.organization_id,
-            role: invite.role || 'member'
-          });
+      if (rpcErr) throw rpcErr;
 
-        if (membershipErr) throw membershipErr;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Convite inválido ou expirado.');
       }
-
-      const { error: updateErr } = await supabase
-        .from('team_invites')
-        .update({ status: 'accepted' })
-        .eq('id', invite.id);
-
-      if (updateErr) throw updateErr;
 
       toast.success('Convite aceito! Você já faz parte da organização.');
       navigate('/team');
