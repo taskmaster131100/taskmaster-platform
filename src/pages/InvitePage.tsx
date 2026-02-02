@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2, Users, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -17,6 +17,7 @@ type Invite = {
 
 export default function InvitePage() {
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -81,7 +82,8 @@ export default function InvitePage() {
       // If user is not logged in, we can't attach them to the org safely.
       if (!user?.id) {
         toast.error('Faça login primeiro para aceitar o convite.');
-        navigate('/login');
+        const redirect = `/invite/${encodeURIComponent(tokenValue)}`;
+        navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
         return;
       }
 
@@ -160,7 +162,10 @@ export default function InvitePage() {
             <div>
               <p className="text-sm text-red-700">{error}</p>
               <div className="mt-2">
-                <Link to="/login" className="text-sm font-semibold text-[#FF9B6A] hover:text-[#FFAD85]">
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(`/invite/${encodeURIComponent(tokenValue)}`)}`}
+                  className="text-sm font-semibold text-[#FF9B6A] hover:text-[#FFAD85]"
+                >
                   Ir para login
                 </Link>
               </div>
@@ -184,7 +189,7 @@ export default function InvitePage() {
                   Para aceitar o convite, faça login com o email convidado.
                 </p>
                 <Link
-                  to="/login"
+                  to={`/login?redirect=${encodeURIComponent(`/invite/${encodeURIComponent(tokenValue)}`)}`}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white font-semibold"
                 >
                   Ir para login <ArrowRight className="w-4 h-4" />

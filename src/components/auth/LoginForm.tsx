@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Music, Mail, Lock, AlertCircle, Calendar, Rocket, DollarSign, FolderKanban, CheckCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
@@ -13,6 +13,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const { signIn, resendSignupConfirmation } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +48,13 @@ export default function LoginForm() {
     try {
       await signIn(email, password);
       toast.success('Login realizado com sucesso!');
-      navigate('/');
+
+      const redirect = searchParams.get('redirect');
+      if (redirect && redirect.startsWith('/')) {
+        navigate(redirect);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       const errorMessage = err?.message || 'Erro ao fazer login. Verifique suas credenciais.';
       setError(errorMessage);
