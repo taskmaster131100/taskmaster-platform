@@ -7,6 +7,15 @@ interface DocsViewerProps {
   title: string;
 }
 
+function resolveLang() {
+  const stored = localStorage.getItem('taskmaster_language');
+  const lang = stored || (navigator.language || 'en');
+
+  if (lang.toLowerCase().startsWith('pt')) return 'pt-BR';
+  if (lang.toLowerCase().startsWith('es')) return 'es';
+  return 'en';
+}
+
 export default function DocsViewer({ docPath, title }: DocsViewerProps) {
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -19,7 +28,10 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
   const loadMarkdown = async () => {
     try {
       setLoading(true);
-      const response = await fetch(docPath);
+      const lang = resolveLang();
+      const resolvedPath = docPath.includes('{lang}') ? docPath.replace('{lang}', lang) : docPath;
+
+      const response = await fetch(resolvedPath);
       const text = await response.text();
       setContent(text);
     } catch (error) {

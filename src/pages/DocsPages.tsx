@@ -4,7 +4,7 @@ import DocsViewer from '../components/DocsViewer';
 export function ManualUsuario() {
   return (
     <DocsViewer
-      docPath="/docs/help/manual-usuario.md"
+      docPath="/docs/help/{lang}/manual-usuario.md"
       title="Manual do Usuário"
     />
   );
@@ -13,7 +13,7 @@ export function ManualUsuario() {
 export function ManualEscritorio() {
   return (
     <DocsViewer
-      docPath="/docs/help/manual-escritorio.md"
+      docPath="/docs/help/{lang}/manual-escritorio.md"
       title="Manual Multiartista / Escritório"
     />
   );
@@ -22,7 +22,7 @@ export function ManualEscritorio() {
 export function Apresentacao() {
   return (
     <DocsViewer
-      docPath="/docs/help/apresentacao.md"
+      docPath="/docs/help/{lang}/apresentacao.md"
       title="Apresentação Oficial"
     />
   );
@@ -31,7 +31,7 @@ export function Apresentacao() {
 export function Fluxos() {
   return (
     <DocsViewer
-      docPath="/docs/help/fluxos.md"
+      docPath="/docs/help/{lang}/fluxos.md"
       title="Guia de Fluxos por Departamento"
     />
   );
@@ -40,7 +40,7 @@ export function Fluxos() {
 export function FAQ() {
   return (
     <DocsViewer
-      docPath="/docs/help/faq.md"
+      docPath="/docs/help/{lang}/faq.md"
       title="FAQ - Perguntas Frequentes"
     />
   );
@@ -49,7 +49,7 @@ export function FAQ() {
 export function Changelog() {
   return (
     <DocsViewer
-      docPath="/docs/help/changelog.md"
+      docPath="/docs/help/{lang}/changelog.md"
       title="Changelog - Histórico de Atualizações"
     />
   );
