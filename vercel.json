@@ -4,31 +4,9 @@
   "installCommand": "npm install",
   "framework": "vite",
   "devCommand": "npm run dev",
-  "rewrites": [
-    {
-      "source": "/login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/register",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/welcome",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/lobby",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/mail",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
     {
