@@ -18,6 +18,7 @@ function resolveLang() {
 
 export default function DocsViewer({ docPath, title }: DocsViewerProps) {
   const [content, setContent] = useState<string>('');
+  const [resolvedPath, setResolvedPath] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -29,11 +30,19 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
     try {
       setLoading(true);
       const lang = resolveLang();
-      const resolvedPath = docPath.includes('{lang}') ? docPath.replace('{lang}', lang) : docPath;
+      const resolved = docPath.includes('{lang}') ? docPath.replace('{lang}', lang) : docPath;
+      setResolvedPath(resolved);
 
-      const response = await fetch(resolvedPath);
+      const response = await fetch(resolved);
       const text = await response.text();
-      setContent(text);
+
+      // Guard: if Vercel rewrite returns index.html, we don't want to render a blank "manual".
+      const looksLikeHtml = /<!doctype html>|<html\b/i.test(text);
+      if (looksLikeHtml) {
+        setContent('# Documento indisponível\n\nO arquivo do manual não foi encontrado. Tente novamente em alguns minutos.');
+      } else {
+        setContent(text);
+      }
     } catch (error) {
       console.error('Erro ao carregar documento:', error);
       setContent('# Erro ao carregar documento\n\nNão foi possível carregar o conteúdo. Por favor, tente novamente.');
@@ -67,14 +76,20 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
 
     html = html.replace(/^---$/gim, '<hr class="my-8 border-gray-300" />');
 
-    html = html.replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed my-4">');
-    html = '<p class="text-gray-700 leading-relaxed my-4">' + html + '</p>';
+    // Paragraphs (avoid wrapping block elements like headings inside <p> which can break printing)
+    html = html.replace(/\n\n+/g, '<div class="h-4"></div>');
 
     return html;
   };
 
   const handleExportPDF = () => {
+    // Uses browser print dialog (user can "Save as PDF")
     window.print();
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!resolvedPath) return;
+    window.open(resolvedPath, '_blank', 'noopener,noreferrer');
   };
 
   if (loading) {
@@ -100,13 +115,23 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
             Voltar
           </button>
 
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
-          >
-            <Download className="w-5 h-5" />
-            Baixar PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadMarkdown}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Abrir arquivo
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Imprimir / Salvar PDF
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print:shadow-none print:border-0">
