@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Download, BookOpen, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Build-time bundled docs fallback (works even if static hosting rewrites /docs/* to index.html)
+const bundledDocs = import.meta.glob('../docs/help/**/**/*.md', { as: 'raw', eager: true }) as Record<string, string>;
+
 interface DocsViewerProps {
   docPath: string;
   title: string;
@@ -36,10 +39,18 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
       const response = await fetch(resolved);
       const text = await response.text();
 
-      // Guard: if Vercel rewrite returns index.html, we don't want to render a blank "manual".
+      // Guard: if hosting rewrites /docs/* to index.html, fallback to bundled markdown.
       const looksLikeHtml = /<!doctype html>|<html\b/i.test(text);
       if (looksLikeHtml) {
-        setContent('# Documento indisponível\n\nO arquivo do manual não foi encontrado. Tente novamente em alguns minutos.');
+        const match = resolved.match(/\/docs\/help\/(.+)$/);
+        const rel = match?.[1];
+        const key = rel ? `../docs/help/${rel}` : '';
+        const fallback = key ? bundledDocs[key] : undefined;
+
+        setContent(
+          fallback ||
+            '# Documento indisponível\n\nO arquivo do manual não foi encontrado. Tente novamente em alguns minutos.'
+        );
       } else {
         setContent(text);
       }
