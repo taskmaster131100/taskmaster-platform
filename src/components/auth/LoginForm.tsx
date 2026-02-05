@@ -205,6 +205,12 @@ export default function LoginForm() {
               <p className="text-gray-500">
                 Entre para continuar gerenciando seus projetos
               </p>
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+                <Mail className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800">
+                  <span className="font-bold">Dica:</span> Se não conseguir entrar, verifique se confirmou seu e-mail (incluindo Spam).
+                </p>
+              </div>
             </div>
 
             {error && (

@@ -258,10 +258,10 @@ export default function RegisterForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
-              <p className="text-sm text-amber-800">
-                Importante: após o cadastro, você precisa <span className="font-semibold">confirmar seu e-mail</span> para conseguir entrar.
-                Verifique também o Spam/Lixo eletrônico.
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
+              <Mail className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800">
+                <span className="font-bold">Atenção:</span> Após cadastrar, você receberá um e-mail de confirmação. <span className="font-semibold">Você precisa confirmá-lo</span> para conseguir acessar a plataforma. Verifique também sua caixa de <span className="font-semibold">Spam ou Lixo Eletrônico</span>.
               </p>
             </div>
             <div>
