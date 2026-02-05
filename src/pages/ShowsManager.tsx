@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Show,
@@ -11,8 +11,8 @@ import {
   formatDate,
   getStatusColor
 } from '../services/showService';
+import { DocumentService, DEFAULT_CLAUSES } from '../services/documentService';
 import ShowForm from '../components/ShowForm';
-import ShowDetails from '../components/ShowDetails';
 
 export default function ShowsManager() {
   const [shows, setShows] = useState<Show[]>([]);
@@ -71,6 +71,26 @@ export default function ShowsManager() {
     e.stopPropagation();
     setSelectedShow(show);
     setShowFormModal(true);
+  };
+
+  const handleGenerateContract = async (show: Show) => {
+    try {
+      toast.info('Gerando contrato...');
+      await DocumentService.generateShowContract({
+        show,
+        contractor: {
+          name: show.contractor_name || 'Contratante Exemplo',
+          document: '00.000.000/0001-00',
+          address: 'Endereço do Evento',
+          representative: 'Responsável Legal'
+        },
+        clauses: DEFAULT_CLAUSES
+      });
+      toast.success('Contrato gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar contrato:', error);
+      toast.error('Erro ao gerar contrato');
+    }
   };
 
   const handleFormClose = () => {
@@ -233,13 +253,18 @@ export default function ShowsManager() {
                     )}
                   </div>
 
-                  {show.contractor_name && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <p className="text-xs text-gray-500">
-                        Contratante: {show.contractor_name}
-                      </p>
-                    </div>
-                  )}
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateContract(show);
+                      }}
+                      className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Contrato
+                    </button>
+                  </div>
                 </div>
 
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
@@ -283,83 +308,28 @@ export default function ShowsManager() {
         />
       )}
 
-      {/* Modal de Detalhes do Show */}
+      {/* Modal de Detalhes do Show Simples */}
       {showDetailsModal && selectedShow && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Detalhes do Show</h2>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                ✕
-              </button>
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">{selectedShow.title}</h2>
+              <button onClick={() => setShowDetailsModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
             </div>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Título</p>
-                  <p className="font-medium">{selectedShow.title}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Artista</p>
-                  <p className="font-medium">{selectedShow.artist_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Data</p>
-                  <p className="font-medium">{formatDate(selectedShow.show_date)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Local</p>
-                  <p className="font-medium">{selectedShow.venue || selectedShow.city}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Valor</p>
-                  <p className="font-medium">{selectedShow.value ? formatCurrency(selectedShow.value, selectedShow.currency) : '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedShow.status)}`}>
-                    {SHOW_STATUSES.find(s => s.value === selectedShow.status)?.label}
-                  </span>
-                </div>
+            <div className="space-y-4">
+              <p><strong>Artista:</strong> {selectedShow.artist_name}</p>
+              <p><strong>Data:</strong> {formatDate(selectedShow.show_date)}</p>
+              <p><strong>Local:</strong> {selectedShow.venue || selectedShow.city}</p>
+              <p><strong>Status:</strong> {selectedShow.status}</p>
+              <div className="pt-4 flex gap-4">
+                <button
+                  onClick={() => handleGenerateContract(selectedShow)}
+                  className="flex-1 py-3 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] flex items-center justify-center gap-2 font-bold"
+                >
+                  <Download className="w-5 h-5" />
+                  Baixar Contrato PDF
+                </button>
               </div>
-
-              {selectedShow.contractor_name && (
-                <div className="pt-4 border-t">
-                  <h3 className="font-medium mb-2">Contratante</h3>
-                  <p>{selectedShow.contractor_name}</p>
-                  {selectedShow.contractor_contact && <p className="text-sm text-gray-500">{selectedShow.contractor_contact}</p>}
-                </div>
-              )}
-
-              {selectedShow.notes && (
-                <div className="pt-4 border-t">
-                  <h3 className="font-medium mb-2">Observações</h3>
-                  <p className="text-gray-600">{selectedShow.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedShow(selectedShow);
-                  setShowFormModal(true);
-                }}
-                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
-              >
-                Editar Show
-              </button>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Fechar
-              </button>
             </div>
           </div>
         </div>
