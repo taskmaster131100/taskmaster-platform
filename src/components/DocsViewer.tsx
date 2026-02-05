@@ -3,7 +3,7 @@ import { Download, BookOpen, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Build-time bundled docs fallback (works even if static hosting rewrites /docs/* to index.html)
-const bundledDocs = import.meta.glob('../docs/help/**/**/*.md', { as: 'raw', eager: true }) as Record<string, string>;
+const bundledDocs = import.meta.glob('../docs/help/**/*.md', { as: 'raw', eager: true }) as Record<string, string>;
 
 interface DocsViewerProps {
   docPath: string;
@@ -36,20 +36,44 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
       const resolved = docPath.includes('{lang}') ? docPath.replace('{lang}', lang) : docPath;
       setResolvedPath(resolved);
 
+      // Try to fetch from public folder first
       const response = await fetch(resolved);
       const text = await response.text();
 
       // Guard: if hosting rewrites /docs/* to index.html, fallback to bundled markdown.
       const looksLikeHtml = /<!doctype html>|<html\b/i.test(text);
+      
       if (looksLikeHtml) {
+        // Extract the relative path from /docs/help/lang/file.md
         const match = resolved.match(/\/docs\/help\/(.+)$/);
         const rel = match?.[1];
-        const key = rel ? `../docs/help/${rel}` : '';
-        const fallback = key ? bundledDocs[key] : undefined;
+        
+        // Try different key formats for bundledDocs
+        const possibleKeys = [
+          `../docs/help/${rel}`,
+          `./docs/help/${rel}`,
+          `/src/docs/help/${rel}`,
+          `src/docs/help/${rel}`
+        ];
+        
+        let fallback: string | undefined;
+        for (const key of possibleKeys) {
+          if (bundledDocs[key]) {
+            fallback = bundledDocs[key];
+            break;
+          }
+        }
+
+        // If no specific key found, try to find by filename
+        if (!fallback && rel) {
+          const fileName = rel.split('/').pop();
+          const foundKey = Object.keys(bundledDocs).find(k => k.endsWith(fileName || ''));
+          if (foundKey) fallback = bundledDocs[foundKey];
+        }
 
         setContent(
           fallback ||
-            '# Documento indisponível\n\nO arquivo do manual não foi encontrado. Tente novamente em alguns minutos.'
+            '# Documento indisponível\n\nO arquivo do manual não foi encontrado no servidor. Por favor, contate o suporte.'
         );
       } else {
         setContent(text);
@@ -87,14 +111,13 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
 
     html = html.replace(/^---$/gim, '<hr class="my-8 border-gray-300" />');
 
-    // Paragraphs (avoid wrapping block elements like headings inside <p> which can break printing)
+    // Paragraphs
     html = html.replace(/\n\n+/g, '<div class="h-4"></div>');
 
     return html;
   };
 
   const handleExportPDF = () => {
-    // Uses browser print dialog (user can "Save as PDF")
     window.print();
   };
 
@@ -117,7 +140,7 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between no-print">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -161,10 +184,15 @@ export default function DocsViewer({ docPath, title }: DocsViewerProps) {
       <style>{`
         @media print {
           body {
-            background: white;
+            background: white !important;
           }
           .no-print {
             display: none !important;
+          }
+          .bg-white {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
           }
         }
       `}</style>
