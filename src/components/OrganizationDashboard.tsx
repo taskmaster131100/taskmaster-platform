@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, MoreVertical, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { 
+  Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, 
+  MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles, 
+  AlertTriangle, Info, CheckCircle2, ArrowRight 
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getProactiveSuggestions, Suggestion } from '../services/suggestionService';
 
 interface OrganizationDashboardProps {
   onSelectArtist: (id: string) => void;
@@ -26,6 +31,7 @@ export default function OrganizationDashboard({
   const [loading, setLoading] = useState(true);
   const [artists, setArtists] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>(initialProjects || []);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [stats, setStats] = useState([
     {
       icon: Music,
@@ -110,6 +116,10 @@ export default function OrganizationDashboard({
         .gte('transaction_date', firstDayOfMonth.toISOString().split('T')[0]);
       
       const totalRevenue = financeData?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+
+      // 5. Carregar Sugestões Proativas
+      const proactiveSuggestions = await getProactiveSuggestions();
+      setSuggestions(proactiveSuggestions);
 
       // Atualizar Stats
       setStats([
@@ -204,6 +214,58 @@ export default function OrganizationDashboard({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Proactive Suggestions Section */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-purple-600" />
+          <h2 className="text-xl font-bold text-gray-900">Sugestões do TaskMaster</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {suggestions.length > 0 ? (
+            suggestions.map((suggestion) => (
+              <div 
+                key={suggestion.id}
+                className={`p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
+                  suggestion.type === 'warning' ? 'border-l-4 border-l-amber-500' : 
+                  suggestion.type === 'action' ? 'border-l-4 border-l-purple-500' : 
+                  'border-l-4 border-l-blue-500'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    {suggestion.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                    {suggestion.type === 'info' && <Info className="w-4 h-4 text-blue-500" />}
+                    {suggestion.type === 'action' && <Sparkles className="w-4 h-4 text-purple-500" />}
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                      {suggestion.module}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-1">{suggestion.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{suggestion.description}</p>
+                </div>
+                
+                {suggestion.actionLabel && (
+                  <button 
+                    onClick={() => navigate(suggestion.actionPath || '/')}
+                    className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors mt-auto"
+                  >
+                    {suggestion.actionLabel}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center">
+              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-3" />
+              <h3 className="font-bold text-gray-900">Tudo em ordem!</h3>
+              <p className="text-gray-600">Não há pendências críticas ou sugestões no momento.</p>
+            </div>
+          )}
         </div>
       </div>
 
