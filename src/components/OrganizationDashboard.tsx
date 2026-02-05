@@ -181,34 +181,34 @@ export default function OrganizationDashboard({
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header with Stats */}
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
                 onClick={stat.onClick}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-[#FFAD85] transition-all cursor-pointer"
+                className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-md hover:border-[#FFAD85] transition-all cursor-pointer touch-button"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${stat.color} rounded-lg flex items-center justify-center`}>
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   {stat.trend && (
                     stat.trend === 'up' ?
-                      <TrendingUp className="w-5 h-5 text-green-500" /> :
-                      <TrendingDown className="w-5 h-5 text-red-500" />
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" /> :
+                      <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
                   )}
                 </div>
                 <div className="flex items-baseline gap-2 mb-1">
-                  <Icon className={`w-5 h-5 ${stat.iconColor}`} />
-                  <h3 className="text-sm font-medium text-gray-600">{stat.label}</h3>
+                  <Icon className={`w-4 h-4 ${stat.iconColor}`} />
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-600">{stat.label}</h3>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                <div className="text-[10px] sm:text-xs text-gray-500 flex items-center gap-1">
                   {stat.subtitle}
                 </div>
               </div>
@@ -221,15 +221,15 @@ export default function OrganizationDashboard({
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-5 h-5 text-purple-600" />
-          <h2 className="text-xl font-bold text-gray-900">Sugestões do TaskMaster</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Sugestões do TaskMaster</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {suggestions.length > 0 ? (
             suggestions.map((suggestion) => (
               <div 
                 key={suggestion.id}
-                className={`p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
+                className={`p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between touch-button ${
                   suggestion.type === 'warning' ? 'border-l-4 border-l-amber-500' : 
                   suggestion.type === 'action' ? 'border-l-4 border-l-purple-500' : 
                   'border-l-4 border-l-blue-500'
@@ -240,18 +240,18 @@ export default function OrganizationDashboard({
                     {suggestion.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
                     {suggestion.type === 'info' && <Info className="w-4 h-4 text-blue-500" />}
                     {suggestion.type === 'action' && <Sparkles className="w-4 h-4 text-purple-500" />}
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
                       {suggestion.module}
                     </span>
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-1">{suggestion.title}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{suggestion.description}</p>
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1">{suggestion.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-4">{suggestion.description}</p>
                 </div>
                 
                 {suggestion.actionLabel && (
                   <button 
                     onClick={() => navigate(suggestion.actionPath || '/')}
-                    className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors mt-auto"
+                    className="flex items-center gap-2 text-xs sm:text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors mt-auto touch-button"
                   >
                     {suggestion.actionLabel}
                     <ArrowRight className="w-4 h-4" />
@@ -260,10 +260,10 @@ export default function OrganizationDashboard({
               </div>
             ))
           ) : (
-            <div className="col-span-full bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center">
-              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-3" />
+            <div className="col-span-full bg-white p-6 sm:p-8 rounded-xl border border-dashed border-gray-300 text-center">
+              <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-green-500 mx-auto mb-3" />
               <h3 className="font-bold text-gray-900">Tudo em ordem!</h3>
-              <p className="text-gray-600">Não há pendências críticas ou sugestões no momento.</p>
+              <p className="text-xs sm:text-sm text-gray-600">Não há pendências críticas ou sugestões no momento.</p>
             </div>
           )}
         </div>

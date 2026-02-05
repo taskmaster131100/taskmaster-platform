@@ -273,22 +273,22 @@ export default function MainLayout({
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[60] lg:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Slide-out Menu */}
-      <div className={`fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
+      <div className={`fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-[70] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Mobile Menu Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 safe-area-top">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 safe-area-top flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] rounded-xl flex items-center justify-center">
               <Music className="w-5 h-5 text-white" />
@@ -297,14 +297,14 @@ export default function MainLayout({
           </div>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors touch-button"
           >
             <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
         {/* Mobile Menu Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 h-[calc(100vh-8rem)]">
+        <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar pb-24">
           {renderMenuItems(true)}
         </nav>
 
@@ -325,7 +325,7 @@ export default function MainLayout({
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors touch-button"
           >
             <LogOut className="w-5 h-5" />
             <span className="text-sm font-medium">Sair da conta</span>
@@ -334,10 +334,10 @@ export default function MainLayout({
       </div>
 
       {/* Desktop Sidebar */}
-      <div className={`hidden lg:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex-col`}>
+      <div className={`hidden lg:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex-col flex-shrink-0`}>
 
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0">
           {sidebarOpen ? (
             <>
               <div className="flex items-center gap-2">
@@ -364,12 +364,12 @@ export default function MainLayout({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
           {renderMenuItems(sidebarOpen)}
         </nav>
 
         {/* Desktop User Menu */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-200 p-4 flex-shrink-0">
           {sidebarOpen ? (
             <div className="space-y-2">
               <div className="flex items-center gap-3 px-2 py-2">
@@ -406,15 +406,15 @@ export default function MainLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
 
         {/* Header */}
-        <header className="h-14 lg:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 safe-area-top">
+        <header className="h-14 lg:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 safe-area-top flex-shrink-0 z-40">
           <div className="flex items-center gap-3">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors -ml-2"
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors -ml-2 touch-button"
             >
               <Menu className="w-6 h-6 text-gray-600" />
             </button>
@@ -444,12 +444,12 @@ export default function MainLayout({
 
           <div className="flex items-center gap-2">
             {/* Search button - mobile */}
-            <button className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors touch-button">
               <Search className="w-5 h-5 text-gray-600" />
             </button>
             
             {/* Notifications */}
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative touch-button">
               <Bell className="w-5 h-5 text-gray-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
@@ -457,14 +457,14 @@ export default function MainLayout({
             {/* Desktop buttons */}
             <button
               onClick={onCreateProject}
-              className="hidden md:flex px-3 lg:px-4 py-2 bg-gradient-to-r from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium items-center gap-1"
+              className="hidden md:flex px-3 lg:px-4 py-2 bg-gradient-to-r from-[#FFAD85] via-[#FF9B6A] to-[#FFD4B8] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium items-center gap-1 touch-button"
             >
               <span className="hidden lg:inline">+ Criar Projeto</span>
               <span className="lg:hidden">+ Novo</span>
             </button>
             <button
               onClick={onViewArtists}
-              className="hidden lg:flex px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="hidden lg:flex px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium touch-button"
             >
               Artistas
             </button>
@@ -472,12 +472,14 @@ export default function MainLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          {children}
+        <main className="flex-1 overflow-y-auto custom-scrollbar pb-24 lg:pb-0">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </main>
 
         {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom z-30">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 safe-area-bottom z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-around h-16">
             {bottomNavItems.map((item) => {
               const Icon = item.icon;
@@ -486,14 +488,14 @@ export default function MainLayout({
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item)}
-                  className={`flex flex-col items-center justify-center flex-1 h-full py-2 transition-colors ${
+                  className={`flex flex-col items-center justify-center flex-1 h-full py-2 transition-all active:scale-95 touch-button ${
                     isActive
-                      ? 'text-[#FF9B6A]'
+                      ? 'text-[#FF9B6A] bg-[#FFAD85]/10'
                       : 'text-gray-500 hover:text-gray-700 active:text-gray-900'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-[#FF9B6A]' : ''}`} />
-                  <span className={`text-xs mt-1 ${isActive ? 'font-medium' : ''}`}>{item.label}</span>
+                  <Icon className={`w-6 h-6 ${isActive ? 'animate-pulse' : ''}`} />
+                  <span className={`text-[10px] mt-1 font-bold uppercase tracking-tighter ${isActive ? 'text-[#FF9B6A]' : ''}`}>{item.label}</span>
                 </button>
               );
             })}
