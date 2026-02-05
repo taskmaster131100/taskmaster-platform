@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Send, Bot, User, Loader2, CheckCircle2, AlertCircle, 
   ArrowRight, Calendar, Music, Megaphone, Truck, DollarSign,
-  Lightbulb, Target, ShieldAlert, Zap
+  Lightbulb, Target, ShieldAlert, Zap, Paperclip, FileText, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  type?: 'plan' | 'suggestion' | 'alert';
+  type?: 'plan' | 'suggestion' | 'alert' | 'file_analysis';
   metadata?: any;
 }
 
@@ -24,12 +24,14 @@ export default function PlanningCopilot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Olá! Sou seu Copilot de Gestão Musical. Com base na metodologia de 10+ anos do Marcos Menezes, estou aqui para transformar sua carreira em um negócio profissional. Como posso te ajudar hoje?',
+      content: 'Olá! Sou seu Copilot de Gestão Musical. Com base na metodologia de 10+ anos do Marcos Menezes, estou aqui para transformar sua carreira em um negócio profissional. Como posso te ajudar hoje? Você também pode anexar seu próprio projeto em PDF para eu analisar!',
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -37,19 +39,56 @@ export default function PlanningCopilot() {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.type === 'text/plain') {
+        setAttachedFile(file);
+        toast.success(`Arquivo "${file.name}" anexado com sucesso!`);
+      } else {
+        toast.error('Por favor, anexe apenas arquivos PDF, Word ou Texto.');
+      }
+    }
+  };
 
-    const userMessage: Message = { role: 'user', content: input };
+  const removeFile = () => {
+    setAttachedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() && !attachedFile) return;
+
+    const userMessage: Message = { 
+      role: 'user', 
+      content: input || (attachedFile ? `Analise meu projeto: ${attachedFile.name}` : ''),
+      metadata: attachedFile ? { fileName: attachedFile.name } : undefined
+    };
+    
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    const currentFile = attachedFile;
+    setAttachedFile(null);
     setIsLoading(true);
 
-    // Simulação de IA Avançada com Metodologia
+    // Simulação de IA Avançada com Metodologia e Análise de Arquivo
     setTimeout(() => {
       let response: Message;
       
-      if (input.toLowerCase().includes('lançar') || input.toLowerCase().includes('single')) {
+      if (currentFile) {
+        response = {
+          role: 'assistant',
+          content: `Recebi seu projeto "${currentFile.name}". Analisei a estrutura administrativa que você já possui e identifiquei como podemos integrá-la aos 4 Pilares da TaskMaster para potencializar seus resultados:`,
+          type: 'file_analysis',
+          metadata: {
+            analysis: [
+              { title: 'Pontos Fortes', items: ['Estrutura de custos bem definida', 'Cronograma de ensaios claro'] },
+              { title: 'Oportunidades (4 Pilares)', items: ['Falta estratégia de tráfego pago (Estratégia)', 'Rider técnico não detalhado (Logística)'] },
+              { title: 'Ações Sugeridas', items: ['Importar cronograma para o Calendário', 'Gerar tarefas de marketing D-30'] }
+            ]
+          }
+        };
+      } else if (input.toLowerCase().includes('lançar') || input.toLowerCase().includes('single')) {
         response = {
           role: 'assistant',
           content: 'Entendido. Para um lançamento de single de alta performance, vamos aplicar a metodologia dos 4 Pilares:',
@@ -72,7 +111,7 @@ export default function PlanningCopilot() {
 
       setMessages(prev => [...prev, response]);
       setIsLoading(false);
-    }, 1500);
+    }, 2000);
   };
 
   return (
@@ -89,7 +128,7 @@ export default function PlanningCopilot() {
           </div>
         </div>
         <div className="flex gap-2">
-          <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">v2.0 PRO</div>
+          <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">v2.1 PRO</div>
         </div>
       </div>
 
@@ -117,8 +156,36 @@ export default function PlanningCopilot() {
               <div className="space-y-2">
                 <div className={`p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-[#FFAD85] text-white rounded-tr-none' : 'bg-white shadow-sm border border-gray-100 text-gray-800 rounded-tl-none'}`}>
                   {msg.content}
+                  {msg.metadata?.fileName && (
+                    <div className="mt-2 flex items-center gap-2 p-2 bg-white/10 rounded-lg border border-white/20">
+                      <FileText className="w-4 h-4" />
+                      <span className="text-xs font-medium truncate">{msg.metadata.fileName}</span>
+                    </div>
+                  )}
                 </div>
                 
+                {msg.type === 'file_analysis' && msg.metadata?.analysis && (
+                  <div className="grid grid-cols-1 gap-2 mt-2">
+                    {msg.metadata.analysis.map((item: any, idx: number) => (
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-2">
+                          <Target className="w-3 h-3 text-purple-500" /> {item.title}
+                        </h4>
+                        <ul className="space-y-1">
+                          {item.items.map((text: string, ti: number) => (
+                            <li key={ti} className="text-[11px] text-gray-600 flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3 text-green-500" /> {text}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    <button className="w-full py-2 bg-purple-600 text-white text-xs font-bold rounded-lg mt-2 hover:bg-purple-700 transition-all">
+                      Importar Projeto para TaskMaster
+                    </button>
+                  </div>
+                )}
+
                 {msg.type === 'plan' && msg.metadata?.pillars && (
                   <div className="grid grid-cols-1 gap-2 mt-2">
                     {msg.metadata.pillars.map((p: any, pi: number) => (
@@ -164,22 +231,49 @@ export default function PlanningCopilot() {
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-100">
-        <div className="relative flex items-center">
+        {attachedFile && (
+          <div className="mb-3 flex items-center justify-between p-2 bg-purple-50 border border-purple-100 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-purple-600" />
+              <span className="text-xs font-medium text-purple-700 truncate max-w-[200px]">{attachedFile.name}</span>
+            </div>
+            <button onClick={removeFile} className="p-1 hover:bg-purple-100 rounded-full text-purple-600">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        <div className="relative flex items-center gap-2">
           <input
-            type="text"
-            placeholder="Pergunte sobre lançamentos, shows ou estratégia..."
-            className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFAD85] outline-none text-sm"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept=".pdf,.doc,.docx,.txt"
           />
           <button 
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            className="absolute right-2 p-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] disabled:opacity-50 transition-all"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-500 transition-all"
+            title="Anexar projeto (PDF/Doc)"
           >
-            <Send className="w-4 h-4" />
+            <Paperclip className="w-5 h-5" />
           </button>
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Pergunte ou peça para analisar seu anexo..."
+              className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFAD85] outline-none text-sm"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            />
+            <button 
+              onClick={handleSend}
+              disabled={isLoading || (!input.trim() && !attachedFile)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] disabled:opacity-50 transition-all"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div className="flex gap-4 mt-3">
           <button className="text-[10px] font-bold text-gray-400 hover:text-[#FFAD85] uppercase tracking-wider">Sugestão de Lançamento</button>
