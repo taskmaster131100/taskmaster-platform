@@ -6,7 +6,7 @@ import {
   Sparkles, Library, TrendingUp, FileText, Eye, CheckSquare,
   MessageSquare, PieChart, Shield, User, Mic2, Radio, FolderArchive,
   HelpCircle, BookOpen, FileQuestion, MapPin, Share2, Disc3,
-  DollarSign, UsersRound, Bell, Search
+  DollarSign, UsersRound, Bell, Search, Bot, Brain, PhoneCall, LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 
@@ -131,6 +131,15 @@ export default function MainLayout({
         { id: 'ai', label: 'Análise', icon: PieChart },
         { id: 'ia-texto', label: 'IA de Texto', icon: Sparkles, link: '/ia-texto' },
         { id: 'kpis', label: 'KPIs', icon: TrendingUp },
+      ]
+    },
+    {
+      title: 'MENTOR IA',
+      items: [
+        { id: 'mentor-chat', label: 'Chat Marcos Menezes', icon: Bot, link: '/mentor-chat' },
+        { id: 'mentor-diagnosis', label: 'Diagnóstico', icon: Brain, link: '/mentor-diagnosis' },
+        { id: 'mentor-dashboard', label: 'Dashboard Mentor', icon: LayoutDashboard, link: '/mentor-dashboard' },
+        { id: 'mentor-consulting', label: 'Consultoria Premium', icon: PhoneCall, link: '/mentor-consulting' },
       ]
     },
     {

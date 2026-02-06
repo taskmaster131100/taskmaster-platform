@@ -148,7 +148,7 @@ export default function ToursManager() {
                 </h3>
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                   <p className="font-bold">Voo G3-1234 (GOL)</p>
-                  <p className="text-sm text-gray-600">GRU -> SDU | 15/02 às 10:00</p>
+                  <p className="text-sm text-gray-600">GRU → SDU | 15/02 às 10:00</p>
                   <p className="text-xs text-blue-600 mt-2 font-bold">Localizador: ABC123DEF</p>
                 </div>
               </div>

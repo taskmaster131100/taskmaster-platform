@@ -61,6 +61,14 @@ const FAQ = React.lazy(() => import('./pages/DocsPages').then(module => ({ defau
 const Changelog = React.lazy(() => import('./pages/DocsPages').then(module => ({ default: module.Changelog })));
 
 const ToursManager = React.lazy(() => import('./pages/ToursManager'));
+
+// Marcos Menezes AI Mentor Components
+const MentorChatWithVoice = React.lazy(() => import('./components/MentorChatWithVoice'));
+const MentorDiagnosticOnboarding = React.lazy(() => import('./components/MentorDiagnosticOnboarding'));
+const MentorExecutiveDashboard = React.lazy(() => import('./components/MentorExecutiveDashboard'));
+const PremiumConsultingBooking = React.lazy(() => import('./components/PremiumConsultingBooking'));
+const VirtualAgentWidget = React.lazy(() => import('./components/VirtualAgentWidget'));
+const MentorProactiveNotification = React.lazy(() => import('./components/MentorProactiveNotification'));
 const ContentManager = React.lazy(() => import('./pages/ContentManager'));
 const ReleasesManager = React.lazy(() => import('./pages/ReleasesManager'));
 const TeamPage = React.lazy(() => import('./pages/TeamPage'));
@@ -609,6 +617,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'preferences') return <UserPreferences />;
     if (activeTab === 'role-features') return <UserRoleFeatures />;
     if (activeTab === 'about') return <About />;
+    if (activeTab === 'mentor-chat') return <MentorChatWithVoice />;
+    if (activeTab === 'mentor-diagnosis') return <MentorDiagnosticOnboarding />;
+    if (activeTab === 'mentor-dashboard') return <MentorExecutiveDashboard />;
+    if (activeTab === 'mentor-consulting') return <PremiumConsultingBooking />;
     if (activeTab === 'reports') {
       return <ReportsPage />;
     }
@@ -830,6 +842,28 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           </React.Suspense>
         } />
 
+        {/* Marcos Menezes AI Mentor Routes */}
+        <Route path="/mentor-chat" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <MentorChatWithVoice />
+          </React.Suspense>
+        } />
+        <Route path="/mentor-diagnosis" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <MentorDiagnosticOnboarding />
+          </React.Suspense>
+        } />
+        <Route path="/mentor-dashboard" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <MentorExecutiveDashboard />
+          </React.Suspense>
+        } />
+        <Route path="/mentor-consulting" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <PremiumConsultingBooking />
+          </React.Suspense>
+        } />
+
         {/* Main layout routes */}
         <Route path="/*" element={
           <React.Suspense fallback={
@@ -901,6 +935,14 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       {user && (
         <React.Suspense fallback={<div></div>}>
           <BetaFeedbackWidget />
+        </React.Suspense>
+      )}
+
+      {/* Marcos Menezes AI Mentor - Global Widgets */}
+      {user && (
+        <React.Suspense fallback={<div></div>}>
+          <VirtualAgentWidget />
+          <MentorProactiveNotification />
         </React.Suspense>
       )}
     </div>
