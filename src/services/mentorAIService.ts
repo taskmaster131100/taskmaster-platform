@@ -230,7 +230,7 @@ export async function generateMentorResponse(
       return generateLocalResponse(userQuestion, category);
     }
 
-    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini';
+    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o';
 
     const historyMessages = (context?.conversationHistory || []).slice(-10).map(msg => ({
       role: msg.role === 'user' ? 'user' as const : 'assistant' as const,

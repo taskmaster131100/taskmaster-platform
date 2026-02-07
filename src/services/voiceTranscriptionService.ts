@@ -142,7 +142,7 @@ export async function processVoiceMessage(
       throw new Error('API key não configurada');
     }
 
-    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini';
+    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o';
 
     // Construir histórico de conversa para contexto
     const historyMessages = (conversationHistory || []).slice(-10).map(msg => ({
