@@ -6,6 +6,8 @@ import {
   Music2, ListMusic, FileAudio, FileUp
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../components/auth/AuthProvider';
 
 interface Arrangement {
   id: string;
@@ -31,6 +33,7 @@ const INSTRUMENTS = ['Violão', 'Guitarra', 'Baixo', 'Bateria', 'Teclado', 'Pian
 const CHORD_SUGGESTIONS = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Am', 'Dm', 'Em', 'G7', 'C7', 'D7', 'Bb', 'Eb'];
 
 export default function MusicProduction() {
+  const { user } = useAuth();
   const [arrangements, setArrangements] = useState<Arrangement[]>([]);
   const [selectedArrangement, setSelectedArrangement] = useState<Arrangement | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -53,17 +56,57 @@ export default function MusicProduction() {
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Mock initial data
-    const sampleData: Arrangement[] = [
-      {
-        id: '1', title: 'Exemplo de Cifra', artist: 'Artista Exemplo', type: 'cifra',
+    loadArrangements();
+  }, [user]);
+
+  const loadArrangements = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_arrangements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setArrangements(data.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          artist: d.artist || '',
+          type: d.type || 'cifra',
+          content: d.content || '',
+          key: d.key || 'C',
+          tempo: d.tempo || 120,
+          timeSignature: d.time_signature || '4/4',
+          instruments: d.instruments || [],
+          fileUrl: d.file_url,
+          fileName: d.file_name,
+          createdAt: new Date(d.created_at),
+          updatedAt: new Date(d.updated_at),
+          status: d.status || 'rascunho'
+        })));
+      } else {
+        // Dados de exemplo para novos usuários
+        setArrangements([{
+          id: 'sample-1', title: 'Exemplo de Cifra', artist: 'Artista Exemplo', type: 'cifra',
+          content: '[Intro]\nC G Am F\n\n[Verso]\nC          G\nMinha música começa aqui\nAm         F\nCom um arranjo especial',
+          key: 'C', tempo: 90, timeSignature: '4/4', instruments: ['Violão', 'Voz'],
+          createdAt: new Date(), updatedAt: new Date(), status: 'finalizado'
+        }]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar arranjos:', error);
+      // Fallback para dados de exemplo
+      setArrangements([{
+        id: 'sample-1', title: 'Exemplo de Cifra', artist: 'Artista Exemplo', type: 'cifra',
         content: '[Intro]\nC G Am F\n\n[Verso]\nC          G\nMinha música começa aqui\nAm         F\nCom um arranjo especial',
         key: 'C', tempo: 90, timeSignature: '4/4', instruments: ['Violão', 'Voz'],
         createdAt: new Date(), updatedAt: new Date(), status: 'finalizado'
-      }
-    ];
-    setArrangements(sampleData);
-  }, []);
+      }]);
+    }
+  };
 
   const handleCreate = () => {
     setIsCreating(true);
@@ -116,10 +159,51 @@ export default function MusicProduction() {
       status: 'rascunho'
     };
 
-    if (isCreating) {
-      setArrangements([newArr, ...arrangements]);
-    } else {
-      setArrangements(arrangements.map(a => a.id === newArr.id ? newArr : a));
+    // Salvar no Supabase
+    try {
+      const dbData = {
+        title: newArr.title,
+        artist: newArr.artist,
+        type: newArr.type,
+        content: newArr.content,
+        key: newArr.key,
+        tempo: newArr.tempo,
+        time_signature: newArr.timeSignature,
+        instruments: newArr.instruments,
+        file_url: newArr.fileUrl,
+        file_name: newArr.fileName,
+        status: newArr.status,
+        user_id: user?.id,
+        updated_at: new Date().toISOString()
+      };
+
+      if (isCreating) {
+        const { data, error } = await supabase
+          .from('user_arrangements')
+          .insert({ ...dbData, created_at: new Date().toISOString() })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        if (data) newArr.id = data.id;
+        setArrangements([newArr, ...arrangements]);
+      } else {
+        const { error } = await supabase
+          .from('user_arrangements')
+          .update(dbData)
+          .eq('id', selectedArrangement!.id);
+        
+        if (error) throw error;
+        setArrangements(arrangements.map(a => a.id === newArr.id ? newArr : a));
+      }
+    } catch (error) {
+      console.error('Erro ao salvar no banco:', error);
+      // Fallback: salvar localmente mesmo assim
+      if (isCreating) {
+        setArrangements([newArr, ...arrangements]);
+      } else {
+        setArrangements(arrangements.map(a => a.id === newArr.id ? newArr : a));
+      }
     }
 
     setIsEditing(false);

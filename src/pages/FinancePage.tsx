@@ -55,36 +55,93 @@ export default function FinancePage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState('Todos os Artistas');
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({ description: '', category: 'Show', amount: 0, type: 'revenue' as 'revenue' | 'expense' });
+
   useEffect(() => {
     loadFinanceData();
-  }, []);
+  }, [user]);
 
   const loadFinanceData = async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      // Simulação de dados para o MVP
-      setBudgets([
-        {
-          id: '1',
-          name: 'Lançamento Single "Nova Era"',
-          description: 'Marketing e Produção',
-          total_amount: 15000,
-          spent_amount: 8500,
-          currency: 'BRL',
-          start_date: '2025-01-01',
-          end_date: '2025-03-31',
-          status: 'active',
-          items: []
-        }
-      ]);
-      setTransactions([
-        { id: '1', description: 'Cachê Show SP', category: 'Show', amount: 25000, type: 'revenue', status: 'paid', transaction_date: '2025-01-10', created_at: '2025-01-10' },
-        { id: '2', description: 'Anúncios Meta', category: 'Marketing', amount: 3500, type: 'expense', status: 'paid', transaction_date: '2025-01-15', created_at: '2025-01-15' }
-      ]);
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('transaction_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setTransactions(data.map((t: any) => ({
+          id: t.id,
+          description: t.description,
+          category: t.category,
+          amount: Number(t.amount),
+          type: t.type,
+          status: t.status || 'paid',
+          transaction_date: t.transaction_date,
+          created_at: t.created_at
+        })));
+      } else {
+        setTransactions([
+          { id: '1', description: 'Cachê Show SP (exemplo)', category: 'Show', amount: 25000, type: 'revenue', status: 'paid', transaction_date: '2025-01-10', created_at: '2025-01-10' },
+          { id: '2', description: 'Anúncios Meta (exemplo)', category: 'Marketing', amount: 3500, type: 'expense', status: 'paid', transaction_date: '2025-01-15', created_at: '2025-01-15' }
+        ]);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados financeiros:', error);
+      setTransactions([
+        { id: '1', description: 'Cachê Show SP (exemplo)', category: 'Show', amount: 25000, type: 'revenue', status: 'paid', transaction_date: '2025-01-10', created_at: '2025-01-10' },
+        { id: '2', description: 'Anúncios Meta (exemplo)', category: 'Marketing', amount: 3500, type: 'expense', status: 'paid', transaction_date: '2025-01-15', created_at: '2025-01-15' }
+      ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddTransaction = async () => {
+    if (!newTransaction.description || !newTransaction.amount) {
+      toast.error('Preencha descrição e valor');
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .insert({
+          user_id: user?.id,
+          description: newTransaction.description,
+          category: newTransaction.category,
+          amount: newTransaction.amount,
+          type: newTransaction.type,
+          status: 'paid',
+          transaction_date: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setTransactions([{
+          id: data.id,
+          description: data.description,
+          category: data.category,
+          amount: Number(data.amount),
+          type: data.type,
+          status: data.status,
+          transaction_date: data.transaction_date,
+          created_at: data.created_at
+        }, ...transactions]);
+      }
+      setShowAddModal(false);
+      setNewTransaction({ description: '', category: 'Show', amount: 0, type: 'revenue' });
+      toast.success('Transação adicionada!');
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+      toast.error('Erro ao salvar. Tente novamente.');
     }
   };
 
@@ -108,7 +165,10 @@ export default function FinancePage() {
             <FileText className="w-5 h-5 text-[#FFAD85]" />
             Relatório para Artista
           </button>
-          <button className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg flex items-center gap-2 hover:bg-[#FF9B6A] font-bold">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg flex items-center gap-2 hover:bg-[#FF9B6A] font-bold"
+          >
             <Plus className="w-5 h-5" />
             Nova Transação
           </button>
@@ -122,21 +182,21 @@ export default function FinancePage() {
             <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
             <span className="text-sm text-gray-500 font-medium">Receita Total</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">R$ 45.000,00</p>
+          <p className="text-2xl font-bold text-gray-900">R$ {transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-100 rounded-lg"><TrendingDown className="w-5 h-5 text-red-600" /></div>
             <span className="text-sm text-gray-500 font-medium">Despesas Totais</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">R$ 12.500,00</p>
+          <p className="text-2xl font-bold text-gray-900">R$ {transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-[#FFAD85] shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-orange-100 rounded-lg"><DollarSign className="w-5 h-5 text-orange-600" /></div>
             <span className="text-sm text-gray-500 font-medium">Lucro Líquido</span>
           </div>
-          <p className="text-2xl font-bold text-orange-600">R$ 32.500,00</p>
+          <p className="text-2xl font-bold text-orange-600">R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -182,19 +242,19 @@ export default function FinancePage() {
             <div className="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
               <div className="flex justify-between border-b pb-3">
                 <span className="text-gray-600">Total Bruto (Receitas)</span>
-                <span className="font-bold text-green-600">R$ 45.000,00</span>
+                <span className="font-bold text-green-600">R$ {transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between border-b pb-3">
                 <span className="text-gray-600">Total Despesas (Produção/Logística)</span>
-                <span className="font-bold text-red-600">- R$ 12.500,00</span>
+                <span className="font-bold text-red-600">- R$ {transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between border-b pb-3">
                 <span className="text-gray-600">Comissão Escritório (20%)</span>
-                <span className="font-bold text-orange-600">- R$ 9.000,00</span>
+                <span className="font-bold text-orange-600">- R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) * 0.20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between pt-2">
                 <span className="text-xl font-bold">Saldo Líquido Artista</span>
-                <span className="text-xl font-bold text-blue-600">R$ 23.500,00</span>
+                <span className="text-xl font-bold text-blue-600">R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) * 0.20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
@@ -204,6 +264,82 @@ export default function FinancePage() {
               </button>
               <button className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 flex items-center justify-center gap-2">
                 <Share2 className="w-6 h-6" /> Enviar WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nova Transação */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Nova Transação</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setNewTransaction({...newTransaction, type: 'revenue'})}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm ${newTransaction.type === 'revenue' ? 'bg-green-100 text-green-700 border-2 border-green-500' : 'bg-gray-100 text-gray-600'}`}
+                  >Receita</button>
+                  <button
+                    onClick={() => setNewTransaction({...newTransaction, type: 'expense'})}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm ${newTransaction.type === 'expense' ? 'bg-red-100 text-red-700 border-2 border-red-500' : 'bg-gray-100 text-gray-600'}`}
+                  >Despesa</button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <input
+                  type="text"
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  placeholder="Ex: Cachê Show SP"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <select
+                  value={newTransaction.category}
+                  onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                >
+                  <option value="Show">Show</option>
+                  <option value="Streaming">Streaming</option>
+                  <option value="Direitos Autorais">Direitos Autorais</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Produção">Produção</option>
+                  <option value="Equipamento">Equipamento</option>
+                  <option value="Transporte">Transporte</option>
+                  <option value="Hospedagem">Hospedagem</option>
+                  <option value="Alimentação">Alimentação</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                <input
+                  type="number"
+                  value={newTransaction.amount || ''}
+                  onChange={(e) => setNewTransaction({...newTransaction, amount: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  placeholder="0,00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <button
+                onClick={handleAddTransaction}
+                className="w-full py-3 bg-[#FFAD85] text-white rounded-xl font-bold text-lg hover:bg-[#FF9B6A] mt-4"
+              >
+                Salvar Transação
               </button>
             </div>
           </div>

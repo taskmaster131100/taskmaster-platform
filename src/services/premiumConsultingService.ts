@@ -55,7 +55,7 @@ export const CONSULTING_PACKAGES: ConsultingPackage[] = [
     id: 'starter',
     name: 'Sessão Estratégica',
     description: 'Uma sessão de 1 hora com Marcos Menezes para definir sua estratégia',
-    priceUSD: 150,
+    priceUSD: 99,
     duration: 60,
     topics: ['career_strategy', 'marketing_strategy', 'social_media_strategy', 'financial_strategy', 'business_model', 'custom'],
     benefits: [
@@ -70,7 +70,7 @@ export const CONSULTING_PACKAGES: ConsultingPackage[] = [
     id: 'pro',
     name: 'Consultoria Trimestral',
     description: '3 sessões de 1 hora ao longo de 3 meses com acompanhamento',
-    priceUSD: 400,
+    priceUSD: 249,
     duration: 180,
     topics: ['career_strategy', 'marketing_strategy', 'social_media_strategy', 'financial_strategy', 'business_model'],
     benefits: [
@@ -87,7 +87,7 @@ export const CONSULTING_PACKAGES: ConsultingPackage[] = [
     id: 'enterprise',
     name: 'Consultoria Anual',
     description: 'Acompanhamento estratégico completo ao longo de 12 meses',
-    priceUSD: 1200,
+    priceUSD: 891,
     duration: 720,
     topics: ['career_strategy', 'marketing_strategy', 'social_media_strategy', 'financial_strategy', 'business_model', 'custom'],
     benefits: [

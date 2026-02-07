@@ -24,61 +24,58 @@ export interface MentorResponse {
  * System Prompt para o Marcos Menezes
  * Define a personalidade, expertise e abordagem do mentor
  */
-export const MARCOS_MENEZES_SYSTEM_PROMPT = `Você é Marcos Menezes, um mentor e conselheiro experiente na indústria musical brasileira e internacional. Você é especialista em:
+export const MARCOS_MENEZES_SYSTEM_PROMPT = `Você é Marcos Menezes, mentor e estratégista musical com mais de 20 anos de experiência na indústria musical brasileira e internacional. Você é o criador da plataforma TaskMaster — a plataforma completa para gestão de carreiras musicais.
 
-- Gestão de carreira artística (artistas solo, bandas, produtores)
-- Negócios musicais (contratos, cachês, splits, direitos autorais)
-- Estratégia de marketing e engajamento de público
-- Logística de shows e turnês
-- Saúde mental e bem-estar de artistas
-- Tendências de mercado e oportunidades
-- Criatividade e desenvolvimento artístico
-- Relacionamentos profissionais e networking
+## SUA HISTÓRIA E CREDIBILIDADE
+- Você já trabalhou com artistas de todos os níveis: de iniciantes a artistas com milhões de streams
+- Você entende a realidade do artista independente brasileiro e latino-americano
+- Você criou o TaskMaster porque viu que artistas talentosos fracassavam por falta de gestão
+- Você acredita que talento sem estratégia é desperdício, e estratégia sem talento é marketing vazio
 
-PERSONALIDADE E TOM:
-- Você é amigável, acessível e humanizado, mas profissional
-- Você fala em português brasileiro de forma natural e coloquial
-- Você é proativo, oferecendo insights antes de ser perguntado
-- Você celebra sucessos e oferece suporte em dificuldades
-- Você é honesto e direto, sem ser duro ou desanimador
-- Você sempre busca entender o contexto completo antes de aconselhar
+## SUA PERSONALIDADE
+- Direto e prático — não enrola, vai ao ponto
+- Fala como um amigo que entende do negócio, não como professor
+- Usa linguagem natural, coloquial mas profissional
+- É motivador mas NUNCA vende ilusão — fala a verdade com respeito
+- Celebra vitórias, por menores que sejam
+- Quando o artista está no caminho errado, fala com firmeza mas com carinho
+- Usa expressões como "olha só", "é o seguinte", "vou te falar uma coisa", "presta atenção nisso"
 
-ABORDAGEM:
-- Você faz perguntas para entender melhor a situação
-- Você oferece múltiplas perspectivas e opções
-- Você conecta diferentes áreas (ex: financeiro com criatividade)
-- Você usa exemplos reais de artistas e situações
-- Você fornece ações concretas e passos próximos
-- Você acompanha o progresso e ajusta recomendações
+## SUAS ÁREAS DE EXPERTISE PROFUNDA
+1. **Gestão de Carreira**: Posicionamento, identidade artística, diferenciação, estratégia de crescimento
+2. **Negócios Musicais**: Cachês, splits, contratos, direitos autorais, tributação, negociação
+3. **Produção Musical**: Arranjos, partituras, estúdio, mix, master, qualidade sonora
+4. **Shows e Turnês**: Logística, rider técnico, segurança, experiência do público
+5. **Marketing Musical**: Conteúdo, redes sociais, branding, storytelling, engajamento
+6. **Financeiro**: Fluxo de caixa, investimentos, diversificação de renda, sustentabilidade
+7. **Distribuição Digital**: Streaming, plataformas, estratégias de lançamento
+8. **Saúde do Artista**: Burnout, saúde mental, equilíbrio vida-trabalho
 
-TÓPICOS QUE VOCÊ COBRE:
-1. CARREIRA E POSICIONAMENTO: Identidade artística, diferenciação, posicionamento no mercado
-2. NEGÓCIOS: Cachês, splits, contratos, direitos, tributação
-3. MARKETING: Estratégia de conteúdo, redes sociais, engajamento, branding
-4. PRODUÇÃO: Qualidade de som, estúdio, equipamento, parcerias criativas
-5. SHOWS E TURNÊS: Planejamento, logística, segurança, saúde da equipe
-6. SAÚDE E BEM-ESTAR: Burnout, saúde mental, relacionamentos, equilíbrio
-7. CRIATIVIDADE: Bloqueios criativos, inspiração, evolução artística
-8. NETWORKING: Relacionamentos, parcerias, colaborações
-9. TECNOLOGIA: Plataformas, ferramentas, IA, distribuição digital
-10. FUTURO: Planejamento de longo prazo, aposentadoria, legado
+## COMO VOCÊ RESPONDE
+- SEMPRE dê conselhos ESPECÍFICOS e ACIONÁVEIS, nunca genéricos
+- Use exemplos reais da indústria musical (pode inventar nomes mas situações reais)
+- Quando o artista perguntar algo vago, faça perguntas para entender melhor ANTES de aconselhar
+- Dê números, porcentagens e referências concretas quando possível
+- Conecte diferentes áreas (ex: "isso afeta seu financeiro E seu marketing")
+- Termine com uma ação concreta ou pergunta que faça o artista pensar
 
-REGRAS IMPORTANTES:
-- Você NUNCA dá conselhos legais ou fiscais específicos (recomenda profissionais)
-- Você NUNCA desanima ou diz que algo é impossível
-- Você SEMPRE oferece esperança e caminhos alternativos
-- Você SEMPRE respeita a autonomia e decisões do artista
-- Você SEMPRE celebra pequenas vitórias
-- Você NUNCA é condescendente ou fala "de cima para baixo"
+## REDIRECIONAMENTO INTELIGENTE
+Quando perceber que o artista precisa de algo mais profundo:
+- Se o assunto é complexo demais para chat, sugira: "Isso merece uma consultoria dedicada comigo. Quer agendar uma sessão estratégica?"
+- Se o artista precisa organizar um projeto, sugira: "Vamos usar o módulo de Gestão de Projetos para organizar isso direitinho"
+- Se precisa de arranjos/partituras, sugira: "Abre o módulo de Produção Musical que lá você consegue escrever tudo"
+- Se precisa organizar finanças, sugira: "Vamos pro módulo Financeiro para colocar esses números no papel"
+- Se precisa planejar conteúdo, sugira: "Usa o módulo de Marketing para montar seu calendário de conteúdo"
+- Se precisa de agenda, sugira: "Coloca isso na sua Agenda dentro da plataforma"
 
-FORMATO DE RESPOSTA:
-- Responda de forma conversacional e natural
-- Use parágrafos curtos e fáceis de ler
-- Ofereça ações concretas quando possível
-- Termine com uma pergunta para continuar a conversa
-- Seja conciso mas completo (máximo 3-4 parágrafos)
+## REGRAS INEGOCIÁVEIS
+- NUNCA dê conselho jurídico ou fiscal específico (recomende um profissional)
+- NUNCA diga que algo é impossível — sempre mostre um caminho
+- NUNCA seja condescendente
+- SEMPRE respeite a autonomia do artista
+- MÁXIMO 3-4 parágrafos por resposta (seja conciso e impactante)
 
-Você é o Marcos Menezes. Bem-vindo à conversa!`;
+Você é o Marcos. Fala como o Marcos. Ajuda como o Marcos.`;
 
 /**
  * Categoriza o tipo de pergunta do usuário para melhor contextualização
@@ -88,15 +85,16 @@ export function categorizeQuestion(question: string): string {
 
   const categories: Record<string, string[]> = {
     career: ['carreira', 'posicionamento', 'identidade', 'diferenciação', 'mercado', 'oportunidade'],
-    business: ['cachê', 'split', 'contrato', 'financeiro', 'ganhar', 'receita', 'lucro', 'margem'],
-    marketing: ['marketing', 'redes sociais', 'instagram', 'tiktok', 'youtube', 'engajamento', 'público', 'fãs', 'conteúdo'],
-    production: ['produção', 'estúdio', 'som', 'qualidade', 'equipamento', 'gravação', 'mix', 'master'],
-    shows: ['show', 'turnê', 'logística', 'viagem', 'palco', 'apresentação', 'público', 'venue'],
-    health: ['saúde', 'mental', 'burnout', 'cansaço', 'depressão', 'ansiedade', 'bem-estar', 'equilíbrio'],
-    creativity: ['criatividade', 'bloqueio', 'inspiração', 'música', 'composição', 'arranjo', 'evolução'],
-    networking: ['networking', 'parceria', 'colaboração', 'relacionamento', 'conexão', 'contato'],
-    technology: ['tecnologia', 'ia', 'plataforma', 'distribuição', 'streaming', 'app', 'ferramenta'],
-    future: ['futuro', 'planejamento', 'aposentadoria', 'legado', 'longo prazo', 'visão']
+    business: ['cachê', 'split', 'contrato', 'financeiro', 'ganhar', 'receita', 'lucro', 'margem', 'dinheiro', 'pagar', 'cobrar'],
+    marketing: ['marketing', 'redes sociais', 'instagram', 'tiktok', 'youtube', 'engajamento', 'público', 'fãs', 'conteúdo', 'post', 'story', 'reels'],
+    production: ['produção', 'estúdio', 'som', 'qualidade', 'equipamento', 'gravação', 'mix', 'master', 'arranjo', 'partitura', 'cifra'],
+    shows: ['show', 'turnê', 'logística', 'viagem', 'palco', 'apresentação', 'venue', 'evento'],
+    health: ['saúde', 'mental', 'burnout', 'cansaço', 'depressão', 'ansiedade', 'bem-estar', 'equilíbrio', 'stress'],
+    creativity: ['criatividade', 'bloqueio', 'inspiração', 'música', 'composição', 'arranjo', 'evolução', 'letra'],
+    networking: ['networking', 'parceria', 'colaboração', 'relacionamento', 'conexão', 'contato', 'feat'],
+    technology: ['tecnologia', 'ia', 'plataforma', 'distribuição', 'streaming', 'app', 'ferramenta', 'spotify', 'deezer'],
+    future: ['futuro', 'planejamento', 'aposentadoria', 'legado', 'longo prazo', 'visão', 'meta', 'objetivo'],
+    project: ['projeto', 'lançamento', 'álbum', 'ep', 'single', 'clipe', 'videoclipe', 'release']
   };
 
   for (const [category, keywords] of Object.entries(categories)) {
@@ -113,37 +111,18 @@ export function categorizeQuestion(question: string): string {
  */
 export function generateCategoryContext(category: string): string {
   const contexts: Record<string, string> = {
-    career: `Você está falando sobre carreira artística. Considere: identidade artística, diferenciação no mercado, 
-    posicionamento único, público-alvo, e como se destacar em um mercado competitivo.`,
-    
-    business: `Você está falando sobre negócios musicais. Considere: sustentabilidade financeira, 
-    margens de lucro, custos operacionais, diversificação de renda, e planejamento financeiro.`,
-    
-    marketing: `Você está falando sobre marketing e engajamento. Considere: autenticidade, consistência, 
-    relacionamento com fãs, tendências de plataformas, e storytelling.`,
-    
-    production: `Você está falando sobre produção musical. Considere: qualidade técnica, investimento em equipamento, 
-    parcerias criativas, e evolução sonora.`,
-    
-    shows: `Você está falando sobre shows e turnês. Considere: planejamento logístico, saúde da equipe, 
-    segurança, experiência do público, e sustentabilidade da turnê.`,
-    
-    health: `Você está falando sobre saúde e bem-estar. Considere: saúde mental, equilíbrio vida-trabalho, 
-    relacionamentos, e sustentabilidade da carreira a longo prazo.`,
-    
-    creativity: `Você está falando sobre criatividade e desenvolvimento artístico. Considere: bloqueios criativos, 
-    inspiração, evolução sonora, e autenticidade artística.`,
-    
-    networking: `Você está falando sobre relacionamentos profissionais. Considere: construção de relacionamentos genuínos, 
-    colaborações estratégicas, e valor mútuo.`,
-    
-    technology: `Você está falando sobre tecnologia e ferramentas. Considere: eficiência operacional, 
-    automação, dados, e como a tecnologia serve sua visão artística.`,
-    
-    future: `Você está falando sobre planejamento de longo prazo. Considere: visão de 5-10 anos, 
-    diversificação de renda, e legado artístico.`,
-    
-    general: `Você está fazendo uma pergunta geral. Estou aqui para ajudar com qualquer aspecto da sua carreira artística.`
+    career: `Foco em carreira artística: identidade, diferenciação, posicionamento único, público-alvo e como se destacar.`,
+    business: `Foco em negócios musicais: sustentabilidade financeira, margens, custos, diversificação de renda e planejamento.`,
+    marketing: `Foco em marketing: autenticidade, consistência, relacionamento com fãs, tendências e storytelling.`,
+    production: `Foco em produção musical: qualidade técnica, investimento em equipamento, parcerias criativas e evolução sonora.`,
+    shows: `Foco em shows e turnês: planejamento logístico, saúde da equipe, segurança e experiência do público.`,
+    health: `Foco em saúde e bem-estar: saúde mental, equilíbrio vida-trabalho e sustentabilidade da carreira.`,
+    creativity: `Foco em criatividade: bloqueios criativos, inspiração, evolução sonora e autenticidade artística.`,
+    networking: `Foco em relacionamentos profissionais: conexões genuínas, colaborações estratégicas e valor mútuo.`,
+    technology: `Foco em tecnologia: eficiência operacional, automação, dados e como a tecnologia serve a visão artística.`,
+    future: `Foco em planejamento de longo prazo: visão de 5-10 anos, diversificação de renda e legado artístico.`,
+    project: `Foco em gestão de projetos: organização, etapas, responsabilidades, prazos e qualidade de entrega.`,
+    general: `Estou aqui para ajudar com qualquer aspecto da sua carreira artística.`
   };
 
   return contexts[category] || contexts.general;
@@ -161,22 +140,22 @@ export function generateActionSuggestions(category: string): string[] {
     ],
     business: [
       'Revise seus últimos 5 cachês e margens',
-      'Crie uma projeção financeira de 12 meses',
+      'Use o módulo Financeiro para controlar receitas e despesas',
       'Negocie melhores termos em seus próximos shows'
     ],
     marketing: [
-      'Planeje conteúdo para as próximas 2 semanas',
+      'Use o módulo de Marketing para planejar conteúdo das próximas 2 semanas',
       'Analise qual tipo de conteúdo gera mais engajamento',
       'Crie uma estratégia de hashtags e tendências'
     ],
     production: [
-      'Invista em um equipamento que melhore sua qualidade',
+      'Abra o módulo de Produção Musical para organizar seus arranjos',
       'Procure um produtor ou engenheiro para colaboração',
       'Estude novos arranjos ou técnicas de produção'
     ],
     shows: [
       'Planeje uma mini-turnê em 3 cidades próximas',
-      'Crie um checklist completo de logística',
+      'Use a Agenda para organizar datas e logística',
       'Documente o RoadMap detalhado do próximo show'
     ],
     health: [
@@ -187,7 +166,7 @@ export function generateActionSuggestions(category: string): string[] {
     creativity: [
       'Experimente um novo estilo ou gênero',
       'Colabore com outro artista para trazer perspectivas novas',
-      'Faça um retiro criativo para se reconectar com a música'
+      'Use o módulo de Produção Musical para experimentar arranjos'
     ],
     networking: [
       'Identifique 5 pessoas-chave para conectar',
@@ -195,7 +174,7 @@ export function generateActionSuggestions(category: string): string[] {
       'Participe de eventos da indústria musical'
     ],
     technology: [
-      'Explore ferramentas de automação para seu marketing',
+      'Explore as ferramentas do TaskMaster para otimizar sua gestão',
       'Implemente um sistema de CRM para gerenciar contatos',
       'Aprenda a usar IA para acelerar sua produção'
     ],
@@ -203,10 +182,15 @@ export function generateActionSuggestions(category: string): string[] {
       'Crie uma visão de 5 anos para sua carreira',
       'Defina metas anuais e trimestrais',
       'Diversifique suas fontes de renda'
+    ],
+    project: [
+      'Use a Gestão de Projetos para organizar todas as etapas',
+      'Defina responsáveis e prazos para cada tarefa',
+      'Acompanhe o progresso no Dashboard'
     ]
   };
 
-  return suggestions[category] || suggestions.general || [];
+  return suggestions[category] || [];
 }
 
 /**
@@ -217,96 +201,158 @@ export function generateRelatedTopics(category: string): string[] {
     career: ['Posicionamento no mercado', 'Diferenciação artística', 'Público-alvo', 'Tendências'],
     business: ['Cashflow', 'Tributação', 'Diversificação de renda', 'Investimentos'],
     marketing: ['Branding', 'Storytelling', 'Comunidade', 'Parcerias'],
-    production: ['Qualidade de som', 'Parcerias criativas', 'Estúdio', 'Equipamento'],
+    production: ['Qualidade de som', 'Parcerias criativas', 'Estúdio', 'Arranjos'],
     shows: ['Segurança', 'Experiência do público', 'Equipe', 'Sustentabilidade'],
     health: ['Saúde mental', 'Equilíbrio', 'Relacionamentos', 'Sustentabilidade'],
     creativity: ['Inspiração', 'Evolução sonora', 'Colaborações', 'Experimentação'],
     networking: ['Parcerias', 'Mentoria', 'Comunidade', 'Oportunidades'],
     technology: ['Automação', 'Dados', 'Plataformas', 'IA'],
-    future: ['Legado', 'Aposentadoria', 'Diversificação', 'Impacto']
+    future: ['Legado', 'Aposentadoria', 'Diversificação', 'Impacto'],
+    project: ['Planejamento', 'Prazos', 'Equipe', 'Qualidade']
   };
 
   return topics[category] || [];
 }
 
 /**
- * Simula resposta do Marcos Menezes baseada na categoria e contexto
- * Em produção, isso seria uma chamada à API OpenAI
+ * Gera resposta do Marcos Menezes via OpenAI API
  */
 export async function generateMentorResponse(
   userQuestion: string,
   context?: MentorContext
 ): Promise<MentorResponse> {
-  // Categorizar a pergunta
   const category = categorizeQuestion(userQuestion);
-  const categoryContext = generateCategoryContext(category);
 
-  // Simular delay de resposta (em produção seria a latência da API)
-  await new Promise(resolve => setTimeout(resolve, 800));
+  try {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey || apiKey === 'sk-proj-your-openai-key-here') {
+      // Fallback para respostas locais se não tiver API key
+      return generateLocalResponse(userQuestion, category);
+    }
 
-  // Gerar resposta baseada em padrões
+    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini';
+
+    const historyMessages = (context?.conversationHistory || []).slice(-10).map(msg => ({
+      role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
+      content: msg.content
+    }));
+
+    const contextInfo = context ? `\n\nContexto do artista: Nível ${context.careerLevel}, Função: ${context.userRole}${context.genre ? `, Gênero: ${context.genre}` : ''}${context.recentShows ? `, Shows recentes: ${context.recentShows}` : ''}` : '';
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + contextInfo },
+          ...historyMessages,
+          { role: 'user', content: userQuestion }
+        ],
+        temperature: 0.85,
+        max_tokens: 1200
+      })
+    });
+
+    if (!response.ok) {
+      return generateLocalResponse(userQuestion, category);
+    }
+
+    const data = await response.json();
+    const message = data.choices[0]?.message?.content || '';
+
+    return {
+      message,
+      actionSuggestions: generateActionSuggestions(category),
+      relatedTopics: generateRelatedTopics(category),
+      followUpQuestions: [
+        'Quer que eu aprofunde mais nesse assunto?',
+        'Posso te ajudar com algo específico?',
+        'Qual é o próximo passo que você quer dar?'
+      ]
+    };
+  } catch (error) {
+    return generateLocalResponse(userQuestion, category);
+  }
+}
+
+/**
+ * Fallback: Gera resposta local quando a API não está disponível
+ */
+function generateLocalResponse(userQuestion: string, category: string): MentorResponse {
   const responses: Record<string, string> = {
-    career: `Ótima pergunta sobre carreira! ${categoryContext} 
+    career: `É o seguinte — sua identidade artística é o seu maior ativo. Não é só sobre o som, é sobre a história que você conta, a energia que você traz e o valor que você entrega pro seu público.
 
-A verdade é que sua identidade artística é o seu maior ativo. Recomendo que você invista tempo em entender o que torna você único — não é apenas o som, mas a história, a energia e o valor que você traz.
+Vou te falar uma coisa: os artistas que mais crescem são os que sabem exatamente quem são e pra quem fazem música. Não tenta agradar todo mundo — escolhe seu nicho e domina ele.
 
-Qual é o seu maior diferencial artístico neste momento? O que você faz que ninguém mais faz exatamente do mesmo jeito?`,
+Qual é o seu maior diferencial artístico neste momento? O que você faz que ninguém mais faz do mesmo jeito?`,
 
-    business: `Entendo sua preocupação com o lado financeiro. ${categoryContext}
+    business: `Olha só, muitos artistas deixam dinheiro na mesa por não entenderem seus números. Você precisa saber exatamente quanto entra, quanto sai, e qual é sua margem real.
 
-A realidade é que muitos artistas deixam dinheiro na mesa por não negociarem bem ou não entenderem seus números. Recomendo que você sempre saiba exatamente quanto está ganhando, quanto está gastando, e qual é sua margem real.
+Presta atenção nisso: use o módulo Financeiro da plataforma para registrar tudo — cachês, despesas, splits. Quando você tem clareza dos números, negocia melhor e toma decisões mais inteligentes.
 
-Você tem um controle claro dos seus números atualmente?`,
+Você tem controle claro dos seus números atualmente? Se não, vamos resolver isso agora.`,
 
-    marketing: `Excelente foco em marketing! ${categoryContext}
+    marketing: `Vou te falar uma coisa sobre marketing musical: o segredo não é estar em todas as plataformas, é ser consistente e autêntico onde você está. Seu público quer conhecer VOCÊ, não só sua música.
 
-O segredo não é apenas estar em todas as plataformas, mas ser consistente, autêntico e estratégico. Seu público quer conhecer você, não apenas sua música. Compartilhe sua jornada, seus desafios, suas vitórias.
+Minha recomendação: use o módulo de Marketing para planejar seu conteúdo das próximas 2 semanas. Alterne entre bastidores, música, vida pessoal e interação com fãs.
 
-Qual é o tipo de conteúdo que você mais gosta de criar?`,
+Qual tipo de conteúdo seu público mais engaja?`,
 
-    production: `Ótimo interesse em produção! ${categoryContext}
+    production: `Sobre produção musical — a qualidade do seu som é um reflexo do seu profissionalismo. Não precisa ser perfeito, mas precisa ser consistente e representar sua visão artística.
 
-A qualidade do seu som é um reflexo do seu profissionalismo. Não precisa ser perfeito, mas precisa ser consistente e representar sua visão artística. Considere investir em melhorias gradualmente.
+Abre o módulo de Produção Musical e começa a organizar seus arranjos lá dentro. Ter tudo documentado — cifras, partituras, instrumentação — faz toda a diferença quando você vai pro estúdio.
 
 Qual é o seu maior desafio de produção neste momento?`,
 
-    shows: `Ótimo pensar em shows! ${categoryContext}
+    shows: `Cada show é uma oportunidade de criar memórias, conectar com o público e gerar receita. Mas isso só funciona bem com planejamento.
 
-Cada show é uma oportunidade de criar memórias, conectar com o público e gerar receita. Mas isso só funciona bem com planejamento cuidadoso. Logística bem feita = equipe feliz = melhor performance.
+Usa a Agenda da plataforma para organizar datas, e o módulo de Projetos para detalhar a logística de cada show. Rider técnico, transporte, hospedagem — tudo documentado.
 
 Qual é o seu maior desafio com shows e turnês?`,
 
-    health: `Sua saúde é fundamental. ${categoryContext}
+    health: `Presta atenção nisso — sua saúde é o alicerce de tudo. Muitos artistas negligenciam isso e acabam queimados. Sua melhor arte vem quando você está bem — mental, emocional e fisicamente.
 
-Muitos artistas negligenciam isso e acabam queimados. A verdade é que sua melhor arte vem quando você está bem — mental, emocional e fisicamente. Isso não é luxo, é necessidade.
+Isso não é luxo, é necessidade profissional. Estabeleça limites, tenha uma rotina, e não tenha vergonha de pedir ajuda quando precisar.
 
 Como você está se sentindo em relação ao seu bem-estar neste momento?`,
 
-    creativity: `Criatividade é o coração da sua carreira! ${categoryContext}
+    creativity: `Bloqueios criativos são normais e passageiros. Todo artista passa por isso. O importante é ter estratégias para superar — pode ser colaboração, mudança de ambiente, descanso, ou experimentação.
 
-Bloqueios criativos são normais e passageiros. O importante é ter estratégias para superá-los — pode ser colaboração, mudança de ambiente, descanso, ou experimentação.
+Abre o módulo de Produção Musical e tenta escrever algo diferente do que você normalmente faz. Às vezes sair da zona de conforto destrava tudo.
 
 O que está afetando sua criatividade neste momento?`,
 
-    networking: `Relacionamentos são ouro! ${categoryContext}
+    networking: `Sua rede profissional é um dos seus maiores ativos. Pessoas que acreditam em você, que podem abrir portas, que podem colaborar. Invista em relacionamentos genuínos.
 
-Sua rede profissional é um dos seus maiores ativos. Pessoas que acreditam em você, que podem abrir portas, que podem colaborar. Invista em relacionamentos genuínos.
+Não é sobre quantidade, é sobre qualidade. Identifique 5 pessoas-chave que podem impactar sua carreira e construa relacionamento real com elas.
 
 Quem são as pessoas-chave que você gostaria de conectar?`,
 
-    technology: `Tecnologia é uma ferramenta poderosa! ${categoryContext}
+    technology: `Tecnologia é ferramenta, não é fim em si mesma. Use o que faz sentido para você e sua carreira. A plataforma TaskMaster já tem tudo que você precisa para organizar sua gestão.
 
-Não é sobre usar tudo, mas usar o que faz sentido para você e sua carreira. IA, automação, dados — tudo pode ajudar, mas sempre a serviço da sua visão artística.
+Explore os módulos — Projetos, Financeiro, Marketing, Produção Musical, Agenda. Tudo integrado para você não precisar sair da plataforma.
 
-Qual é a maior dificuldade que você enfrenta que a tecnologia poderia resolver?`,
+Qual é a maior dificuldade que a tecnologia poderia resolver pra você?`,
 
-    future: `Pensar no futuro é sábio! ${categoryContext}
+    future: `Pensar no futuro é sábio. Muitos artistas vivem o presente sem pensar no amanhã. Mas planejamento não mata a criatividade — na verdade, liberta você para ser mais criativo porque tem segurança.
 
-Muitos artistas vivem o presente sem pensar no amanhã. Mas planejamento não mata a criatividade — na verdade, liberta você para ser mais criativo porque você tem segurança.
+Crie uma visão de 5 anos: onde quer estar, quanto quer ganhar, que tipo de projetos quer fazer. Depois quebre isso em metas anuais e trimestrais.
 
 Qual é sua visão para sua carreira nos próximos 5 anos?`,
 
-    general: `Ótima pergunta! Estou aqui para ajudar com qualquer aspecto da sua carreira artística — desde o lado criativo até o lado comercial, desde shows até saúde mental.
+    project: `Organização de projeto é fundamental. Cada lançamento, cada show, cada campanha precisa ser tratado como um projeto com etapas, responsáveis e prazos.
+
+Usa o módulo de Gestão de Projetos para criar seu projeto, dividir em tarefas e acompanhar o progresso. Isso muda completamente a qualidade da sua entrega.
+
+Qual projeto você está trabalhando agora?`,
+
+    general: `É o seguinte — estou aqui para te ajudar com qualquer aspecto da sua carreira artística. Desde o lado criativo até o comercial, desde shows até saúde mental.
+
+A plataforma TaskMaster tem tudo que você precisa: Gestão de Projetos, Produção Musical, Financeiro, Marketing, Agenda e muito mais. Tudo integrado.
 
 O que você gostaria de explorar comigo?`
   };
@@ -318,9 +364,9 @@ O que você gostaria de explorar comigo?`
     actionSuggestions: generateActionSuggestions(category),
     relatedTopics: generateRelatedTopics(category),
     followUpQuestions: [
-      'Quer explorar mais sobre isso?',
-      'Posso ajudar com algo específico?',
-      'Qual é o seu próximo passo?'
+      'Quer que eu aprofunde mais nesse assunto?',
+      'Posso te ajudar com algo específico?',
+      'Qual é o próximo passo que você quer dar?'
     ]
   };
 }
@@ -329,12 +375,8 @@ O que você gostaria de explorar comigo?`
  * Valida se a pergunta é apropriada para o Marcos Menezes
  */
 export function isValidQuestion(question: string): boolean {
-  // Rejeitar perguntas muito curtas
-  if (question.trim().length < 5) return false;
-
-  // Rejeitar spam ou conteúdo inapropriado
+  if (question.trim().length < 3) return false;
   const bannedWords = ['spam', 'scam', 'xxx'];
   if (bannedWords.some(word => question.toLowerCase().includes(word))) return false;
-
   return true;
 }

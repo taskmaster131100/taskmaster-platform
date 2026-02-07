@@ -1,6 +1,7 @@
 /**
  * Pricing Plans Configuration
  * All prices in USD
+ * Updated: Feb 2026
  */
 
 export interface PricingFeature {
@@ -14,90 +15,130 @@ export interface PricingPlan {
   name: string;
   description: string;
   price: number;
+  priceMonthly: number;
+  priceSemiannual: number;
+  priceSemiannualMonthly: number;
+  priceAnnual: number;
+  priceAnnualMonthly: number;
   currency: string;
-  interval: 'month' | 'year';
-  stripePriceId?: string; // To be filled when Stripe is configured
+  interval: 'month' | 'semester' | 'year';
+  stripePriceId?: string;
   features: PricingFeature[];
   popular?: boolean;
   cta: string;
 }
 
+/**
+ * Promoção de Lançamento
+ * 25% de desconto nos 3 primeiros meses (aplicável ao plano mensal)
+ */
+export const LAUNCH_PROMO = {
+  enabled: true,
+  discountPercent: 25,
+  durationMonths: 3,
+  label: 'Promoção de Lançamento',
+  description: '25% de desconto nos 3 primeiros meses!'
+};
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'starter',
     name: 'Starter',
-    description: 'Perfect for independent artists starting their career',
-    price: 28,
+    description: 'Perfeito para artistas independentes começando sua carreira',
+    price: 49,
+    priceMonthly: 49,
+    priceSemiannual: 249.90,
+    priceSemiannualMonthly: 41.65,
+    priceAnnual: 441,
+    priceAnnualMonthly: 36.75,
     currency: 'USD',
     interval: 'month',
-    stripePriceId: '', // Will be set after Stripe configuration
+    stripePriceId: '',
     features: [
-      { name: 'Up to 3 artists', included: true, limit: 3 },
-      { name: 'Task management', included: true },
-      { name: 'Calendar & events', included: true },
-      { name: 'Basic reports', included: true },
-      { name: 'Up to 5 KPIs', included: true, limit: 5 },
-      { name: 'File storage (5GB)', included: true, limit: '5GB' },
-      { name: 'Email support', included: true },
-      { name: 'AI planning assistant', included: false },
-      { name: 'Advanced analytics', included: false },
-      { name: 'Custom branding', included: false },
-      { name: 'API access', included: false }
+      { name: 'Até 3 artistas', included: true, limit: 3 },
+      { name: 'Gestão de tarefas', included: true },
+      { name: 'Calendário e eventos', included: true },
+      { name: 'Relatórios básicos', included: true },
+      { name: 'Até 5 KPIs', included: true, limit: 5 },
+      { name: 'Armazenamento (5GB)', included: true, limit: '5GB' },
+      { name: 'Suporte por email', included: true },
+      { name: 'Chat com Marcos Menezes (IA)', included: true },
+      { name: 'Diagnóstico de maturidade', included: true },
+      { name: 'Assistente de planejamento IA', included: false },
+      { name: 'Analytics avançado', included: false },
+      { name: 'Branding personalizado', included: false },
+      { name: 'Acesso à API', included: false }
     ],
-    cta: 'Start Free Trial'
+    cta: 'Começar Agora'
   },
   {
     id: 'pro',
     name: 'Pro',
-    description: 'For professional managers and small agencies',
-    price: 79,
+    description: 'Para gerenciadores profissionais e pequenas agências',
+    price: 80,
+    priceMonthly: 80,
+    priceSemiannual: 408,
+    priceSemiannualMonthly: 68,
+    priceAnnual: 720,
+    priceAnnualMonthly: 60,
     currency: 'USD',
     interval: 'month',
-    stripePriceId: '', // Will be set after Stripe configuration
+    stripePriceId: '',
     popular: true,
     features: [
-      { name: 'Up to 15 artists', included: true, limit: 15 },
-      { name: 'Task management', included: true },
-      { name: 'Calendar & events', included: true },
-      { name: 'Advanced reports', included: true },
-      { name: 'Unlimited KPIs', included: true, limit: 'Unlimited' },
-      { name: 'File storage (50GB)', included: true, limit: '50GB' },
-      { name: 'Priority email support', included: true },
-      { name: 'AI planning assistant', included: true },
-      { name: 'Advanced analytics', included: true },
-      { name: 'Team collaboration', included: true },
-      { name: 'Integrations (Spotify, Instagram)', included: true },
-      { name: 'Custom branding', included: false },
-      { name: 'API access', included: false }
+      { name: 'Até 15 artistas', included: true, limit: 15 },
+      { name: 'Gestão de tarefas', included: true },
+      { name: 'Calendário e eventos', included: true },
+      { name: 'Relatórios avançados', included: true },
+      { name: 'KPIs ilimitados', included: true, limit: 'Ilimitado' },
+      { name: 'Armazenamento (50GB)', included: true, limit: '50GB' },
+      { name: 'Suporte prioritário', included: true },
+      { name: 'Chat com Marcos Menezes (IA)', included: true },
+      { name: 'Diagnóstico de maturidade', included: true },
+      { name: 'Assistente de planejamento IA', included: true },
+      { name: 'Analytics avançado', included: true },
+      { name: 'Colaboração em equipe', included: true },
+      { name: 'Produção musical completa', included: true },
+      { name: 'Módulo financeiro completo', included: true },
+      { name: 'Branding personalizado', included: false },
+      { name: 'Acesso à API', included: false }
     ],
-    cta: 'Start Free Trial'
+    cta: 'Começar Agora'
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'For labels, distributors, and large agencies',
-    price: 299,
+    id: 'professional',
+    name: 'Professional',
+    description: 'Consultoria personalizada com Marcos Menezes + acesso total',
+    price: 99,
+    priceMonthly: 99,
+    priceSemiannual: 504.90,
+    priceSemiannualMonthly: 84.15,
+    priceAnnual: 891,
+    priceAnnualMonthly: 74.25,
     currency: 'USD',
     interval: 'month',
-    stripePriceId: '', // Will be set after Stripe configuration
+    stripePriceId: '',
     features: [
-      { name: 'Unlimited artists', included: true, limit: 'Unlimited' },
-      { name: 'Task management', included: true },
-      { name: 'Calendar & events', included: true },
-      { name: 'Advanced reports', included: true },
-      { name: 'Unlimited KPIs', included: true, limit: 'Unlimited' },
-      { name: 'File storage (500GB)', included: true, limit: '500GB' },
-      { name: '24/7 priority support', included: true },
-      { name: 'AI planning assistant', included: true },
-      { name: 'Advanced analytics', included: true },
-      { name: 'Team collaboration', included: true },
-      { name: 'All integrations', included: true },
-      { name: 'Custom branding', included: true },
-      { name: 'API access', included: true },
-      { name: 'Dedicated account manager', included: true },
-      { name: 'Custom features', included: true }
+      { name: 'Artistas ilimitados', included: true, limit: 'Ilimitado' },
+      { name: 'Gestão de tarefas', included: true },
+      { name: 'Calendário e eventos', included: true },
+      { name: 'Relatórios avançados', included: true },
+      { name: 'KPIs ilimitados', included: true, limit: 'Ilimitado' },
+      { name: 'Armazenamento (500GB)', included: true, limit: '500GB' },
+      { name: 'Suporte 24/7 prioritário', included: true },
+      { name: 'Chat com Marcos Menezes (IA)', included: true },
+      { name: 'Diagnóstico de maturidade', included: true },
+      { name: 'Assistente de planejamento IA', included: true },
+      { name: 'Analytics avançado', included: true },
+      { name: 'Colaboração em equipe', included: true },
+      { name: 'Produção musical completa', included: true },
+      { name: 'Módulo financeiro completo', included: true },
+      { name: 'Consultoria com Marcos (mensal)', included: true },
+      { name: 'Branding personalizado', included: true },
+      { name: 'Acesso à API', included: true },
+      { name: 'Gerente de conta dedicado', included: true }
     ],
-    cta: 'Contact Sales'
+    cta: 'Falar com Marcos'
   }
 ];
 
@@ -108,29 +149,38 @@ export const PLAN_LIMITS = {
   starter: {
     maxArtists: 3,
     maxKPIs: 5,
-    maxStorage: 5 * 1024 * 1024 * 1024, // 5GB in bytes
+    maxStorage: 5 * 1024 * 1024 * 1024,
     aiPlanning: false,
     advancedAnalytics: false,
     customBranding: false,
-    apiAccess: false
+    apiAccess: false,
+    musicProduction: false,
+    financeFull: false,
+    consulting: false
   },
   pro: {
     maxArtists: 15,
-    maxKPIs: -1, // -1 = unlimited
-    maxStorage: 50 * 1024 * 1024 * 1024, // 50GB in bytes
+    maxKPIs: -1,
+    maxStorage: 50 * 1024 * 1024 * 1024,
     aiPlanning: true,
     advancedAnalytics: true,
     customBranding: false,
-    apiAccess: false
+    apiAccess: false,
+    musicProduction: true,
+    financeFull: true,
+    consulting: false
   },
-  enterprise: {
-    maxArtists: -1, // -1 = unlimited
+  professional: {
+    maxArtists: -1,
     maxKPIs: -1,
-    maxStorage: 500 * 1024 * 1024 * 1024, // 500GB in bytes
+    maxStorage: 500 * 1024 * 1024 * 1024,
     aiPlanning: true,
     advancedAnalytics: true,
     customBranding: true,
-    apiAccess: true
+    apiAccess: true,
+    musicProduction: true,
+    financeFull: true,
+    consulting: true
   }
 };
 
@@ -140,5 +190,14 @@ export const PLAN_LIMITS = {
 export const FREE_TRIAL = {
   enabled: true,
   durationDays: 14,
-  plan: 'pro' // Users get Pro features during trial
+  plan: 'pro'
 };
+
+/**
+ * Billing intervals with discounts
+ */
+export const BILLING_INTERVALS = [
+  { id: 'month', label: 'Mensal', discount: 0 },
+  { id: 'semester', label: 'Semestral', discount: 15, badge: '-15%' },
+  { id: 'year', label: 'Anual', discount: 25, badge: '-25%' }
+];
