@@ -12,8 +12,5 @@ yarn-error.log*
 *.log
 coverage
 .nyc_output
-docs/
-*.md
-!README.md
 .git
 .gitignore
