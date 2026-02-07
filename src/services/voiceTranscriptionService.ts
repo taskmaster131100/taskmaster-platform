@@ -1,6 +1,6 @@
 /**
  * Serviço de Transcrição de Áudio e Processamento de Voz
- * Usa Vercel Serverless Functions para manter a API key segura no servidor
+ * Usa OpenAI API diretamente (mesma abordagem dos outros serviços da plataforma)
  */
 
 export interface AudioMessage {
@@ -78,41 +78,31 @@ export class AudioRecorder {
 }
 
 /**
- * Converte Blob para base64
- */
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-/**
- * Transcreve áudio usando a Serverless Function (API key segura no servidor)
+ * Transcreve áudio usando OpenAI Whisper API
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
   try {
-    const audioBase64 = await blobToBase64(audioBlob);
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('API key não configurada');
+    }
 
-    const response = await fetch('/api/mentor/transcribe', {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'pt');
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        audioBase64,
-        mimeType: audioBlob.type || 'audio/webm'
-      })
+      body: formData
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Erro na transcrição: ${response.statusText}`);
+      throw new Error(errorData.error?.message || `Erro na transcrição: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -121,7 +111,7 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
       success: true,
       text: data.text,
       confidence: 0.95,
-      language: data.language || 'pt-BR',
+      language: 'pt-BR',
       duration: audioBlob.size / (16000 * 2)
     };
   } catch (error) {
@@ -138,7 +128,7 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
 }
 
 /**
- * Processa mensagem e obtém resposta do Marcos Menezes via Serverless Function
+ * Processa mensagem e obtém resposta do Marcos Menezes via OpenAI
  */
 export async function processVoiceMessage(
   transcription: string,
@@ -147,26 +137,58 @@ export async function processVoiceMessage(
   conversationHistory?: any[]
 ): Promise<string> {
   try {
-    const response = await fetch('/api/mentor/chat', {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('API key não configurada');
+    }
+
+    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini';
+
+    // Construir histórico de conversa para contexto
+    const historyMessages = (conversationHistory || []).slice(-10).map(msg => ({
+      role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+      content: msg.content
+    }));
+
+    const systemPrompt = `Você é Marcos Menezes, um mentor especialista em gestão musical com mais de 20 anos de experiência na indústria musical brasileira e internacional. Você é o criador da plataforma TaskMaster e ajuda artistas, produtores e gestores musicais a organizarem suas carreiras.
+
+Sua personalidade:
+- Comunicativo, direto e prático
+- Usa linguagem acessível mas profissional
+- Sempre dá exemplos reais da indústria musical
+- É motivador mas realista
+- Conhece profundamente: produção musical, shows, turnês, marketing musical, financeiro, contratos, direitos autorais, distribuição digital, streaming, redes sociais para artistas
+- Fala português brasileiro naturalmente
+
+${context?.mode === 'module' && context?.module ? `Contexto atual: O usuário está no módulo "${context.module}" da plataforma.` : ''}
+
+Responda de forma conversacional, como se estivesse em uma mentoria presencial. Seja útil e específico nas orientações.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        message: transcription,
-        userId,
-        context,
-        conversationHistory
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...historyMessages,
+          { role: 'user', content: transcription }
+        ],
+        temperature: 0.8,
+        max_tokens: 1000
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Erro ao processar mensagem');
+      throw new Error(errorData.error?.message || 'Erro ao processar mensagem');
     }
 
     const data = await response.json();
-    return data.response;
+    return data.choices[0]?.message?.content || 'Desculpe, não consegui processar sua mensagem. Tente novamente.';
   } catch (error) {
     console.error('Erro ao processar mensagem:', error);
     throw error;
