@@ -72,6 +72,7 @@ const MentorProactiveNotification = React.lazy(() => import('./components/Mentor
 const ContentManager = React.lazy(() => import('./pages/ContentManager'));
 const ReleasesManager = React.lazy(() => import('./pages/ReleasesManager'));
 const TeamPage = React.lazy(() => import('./pages/TeamPage'));
+const OrganizationProfile = React.lazy(() => import('./components/OrganizationProfile'));
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 const InvitePage = React.lazy(() => import('./pages/InvitePage'));
 
@@ -192,22 +193,38 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     }
   }, [location]);
 
-  const loadData = () => {
+  const loadData = async () => {
     // Don't initialize example data for real users
     // Each user starts with clean slate
 
-    // Load all data
+    // Load projects, tasks, departments, teamMembers from local
     const projectsData = localDatabase.getCollection<Project>('projects');
     const tasksData = localDatabase.getCollection<Task>('tasks');
-    const artistsData = localDatabase.getCollection<Artist>('artists');
     const departmentsData = localDatabase.getCollection<Department>('departments');
     const teamMembersData = localDatabase.getCollection<TeamMember>('teamMembers');
 
     setProjects(Array.isArray(projectsData) ? projectsData : []);
     setTasks(Array.isArray(tasksData) ? tasksData : []);
-    setArtists(Array.isArray(artistsData) ? artistsData : []);
     setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     setTeamMembers(Array.isArray(teamMembersData) ? teamMembersData : []);
+
+    // Load artists from Supabase (source of truth)
+    try {
+      const { data: supabaseArtists } = await supabase
+        .from('artists')
+        .select('*')
+        .order('name');
+      if (supabaseArtists && supabaseArtists.length > 0) {
+        setArtists(supabaseArtists as Artist[]);
+      } else {
+        // Fallback to local if Supabase is empty
+        const artistsData = localDatabase.getCollection<Artist>('artists');
+        setArtists(Array.isArray(artistsData) ? artistsData : []);
+      }
+    } catch {
+      const artistsData = localDatabase.getCollection<Artist>('artists');
+      setArtists(Array.isArray(artistsData) ? artistsData : []);
+    }
 
     // Select first project if none selected
     if (!selectedProjectId && Array.isArray(projectsData) && projectsData.length > 0) {
@@ -831,6 +848,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/team" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <TeamPage />
+          </React.Suspense>
+        } />
+
+        <Route path="/organization-profile" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <OrganizationProfile />
           </React.Suspense>
         } />
 

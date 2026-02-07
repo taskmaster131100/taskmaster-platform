@@ -73,7 +73,6 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
 // Função para analisar projeto com IA
 async function analyzeProjectWithAI(text: string): Promise<ProjectData> {
   try {
-    // Usar a API do OpenAI via proxy ou diretamente
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -85,25 +84,34 @@ async function analyzeProjectWithAI(text: string): Promise<ProjectData> {
         messages: [
           {
             role: 'system',
-            content: `Você é um assistente especializado em gestão de projetos musicais. 
-            Analise o texto do projeto e extraia as informações em formato JSON com os seguintes campos:
-            - name: nome do projeto
-            - artistName: nome do artista
-            - genre: gênero musical
-            - objective: objetivo principal
-            - duration: duração prevista
-            - phases: array com as fases do projeto
-            - tasks: array com as principais tarefas identificadas
-            - description: descrição resumida do projeto
-            
-            Responda APENAS com o JSON, sem markdown ou explicações.`
+            content: `Você é Marcos Menezes, consultor estratégico com 20+ anos de experiência na indústria musical.
+Sua missão é analisar projetos musicais e transformá-los em planos de ação completos.
+
+Analise o texto do projeto e retorne um JSON com:
+- name: nome do projeto (criativo e descritivo)
+- artistName: nome do artista ou banda
+- genre: gênero musical principal e subgêneros
+- objective: objetivo principal detalhado (2-3 frases)
+- duration: duração prevista com justificativa
+- phases: array com 5-8 fases detalhadas do projeto (cada fase deve ser uma string descritiva como "Fase 1 - Pré-produção: Definição de repertório, arranjos e cronograma de gravação")
+- tasks: array com 15-25 tarefas específicas e acionáveis (cada tarefa deve incluir a ação, responsável sugerido e prazo estimado, ex: "Definir repertório final (Artista + Produtor) - Semana 1-2")
+- description: descrição executiva do projeto (3-5 frases)
+
+IMPORTANTE:
+- Cada fase deve ter nome, descrição e duração estimada
+- Cada tarefa deve ser específica, mensurável e ter responsável sugerido
+- Inclua tarefas de marketing, distribuição, audiovisual e gestão financeira
+- Considere o mercado atual de música independente
+- Seja detalhado e profissional
+
+Responda APENAS com o JSON válido, sem markdown, sem explicações, sem blocos de código.`
           },
           {
             role: 'user',
-            content: `Analise este projeto artístico e extraia as informações:\n\n${text.substring(0, 8000)}`
+            content: `Analise este projeto artístico em profundidade e crie um plano de ação completo com todas as etapas, tarefas e responsabilidades:\n\n${text.substring(0, 12000)}`
           }
         ],
-        temperature: 0.3
+        temperature: 0.4
       })
     });
 
@@ -171,9 +179,14 @@ function extractBasicInfo(text: string): ProjectData {
   
   // Adicionar tarefas padrão se não encontrou
   if (tasks.length === 0) {
-    tasks.push('Definir cronograma do projeto');
-    tasks.push('Montar equipe de trabalho');
-    tasks.push('Criar estratégia de divulgação');
+    tasks.push('Definir cronograma do projeto (Gestor) - Semana 1');
+    tasks.push('Montar equipe de trabalho (Gestor + Artista) - Semana 1-2');
+    tasks.push('Definir orçamento e fontes de receita (Financeiro) - Semana 2');
+    tasks.push('Criar estratégia de divulgação (Marketing) - Semana 3');
+    tasks.push('Planejar conteúdo audiovisual (Diretor Criativo) - Semana 3-4');
+    tasks.push('Definir canais de distribuição (Distribuidor) - Semana 4');
+    tasks.push('Agendar sessões de gravação (Produtor) - Semana 4-5');
+    tasks.push('Criar identidade visual do projeto (Designer) - Semana 2-3');
   }
   
   return {
@@ -346,35 +359,54 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
   const generateTasks = (data: ProjectData): string[] => {
     const tasks: string[] = [];
     
+    // Tarefas essenciais de gestão
+    tasks.push('Definir orçamento completo do projeto (Gestor Financeiro) - Semana 1');
+    tasks.push('Montar equipe de trabalho e definir responsabilidades (Gestor) - Semana 1');
+    tasks.push('Criar cronograma detalhado com marcos (Gestor) - Semana 1');
+    
     // Tarefas baseadas no objetivo
-    if (data.objective.toLowerCase().includes('lançamento')) {
-      tasks.push('Definir data de lançamento');
-      tasks.push('Preparar material de divulgação');
-      tasks.push('Criar estratégia de pré-lançamento');
+    const obj = data.objective.toLowerCase();
+    if (obj.includes('lançamento') || obj.includes('album') || obj.includes('álbum') || obj.includes('single') || obj.includes('ep')) {
+      tasks.push('Definir data de lançamento e estratégia (Artista + Gestor) - Semana 2');
+      tasks.push('Selecionar e contratar distribuidora digital (Gestor) - Semana 2');
+      tasks.push('Criar arte de capa e materiais visuais (Designer) - Semana 3-4');
+      tasks.push('Preparar press release e kit de imprensa (Assessoria) - Semana 4');
+      tasks.push('Criar estratégia de pré-lançamento nas redes (Marketing) - Semana 3');
+      tasks.push('Planejar conteúdo de teasers e behind the scenes (Audiovisual) - Semana 3-4');
+      tasks.push('Submeter música para playlists e curadoria (Distribuidor) - Semana 4');
     }
     
-    if (data.objective.toLowerCase().includes('marca') || data.objective.toLowerCase().includes('construção')) {
-      tasks.push('Definir identidade visual');
-      tasks.push('Criar perfis em redes sociais');
-      tasks.push('Desenvolver estratégia de conteúdo');
+    if (obj.includes('marca') || obj.includes('construção') || obj.includes('branding') || obj.includes('identidade')) {
+      tasks.push('Definir identidade visual completa (Designer) - Semana 2-3');
+      tasks.push('Criar e otimizar perfis em redes sociais (Marketing) - Semana 2');
+      tasks.push('Desenvolver estratégia de conteúdo mensal (Marketing) - Semana 3');
+      tasks.push('Produzir sessão de fotos profissional (Fotógrafo) - Semana 3');
+      tasks.push('Criar biografia e EPK digital (Assessoria) - Semana 2');
     }
     
-    if (data.objective.toLowerCase().includes('show') || data.objective.toLowerCase().includes('turnê')) {
-      tasks.push('Mapear casas de show');
-      tasks.push('Preparar rider técnico');
-      tasks.push('Criar material de divulgação de shows');
+    if (obj.includes('show') || obj.includes('turnê') || obj.includes('tour') || obj.includes('ao vivo')) {
+      tasks.push('Mapear casas de show e festivais (Booking) - Semana 2-3');
+      tasks.push('Preparar rider técnico e hospitality (Produção) - Semana 2');
+      tasks.push('Criar material de divulgação de shows (Marketing) - Semana 3');
+      tasks.push('Negociar cachês e contratos (Gestor) - Semana 3-4');
+      tasks.push('Planejar logística de viagem e hospedagem (Produção) - Semana 4');
+    }
+    
+    if (obj.includes('gravação') || obj.includes('produção') || obj.includes('estúdio')) {
+      tasks.push('Selecionar estúdio de gravação (Produtor) - Semana 2');
+      tasks.push('Finalizar arranjos e partituras (Produtor + Artista) - Semana 2-3');
+      tasks.push('Agendar sessões de gravação (Produtor) - Semana 3');
+      tasks.push('Mixagem e masterização (Engenheiro de áudio) - Semana 5-6');
     }
     
     // Tarefas baseadas nas fases
-    data.phases.forEach(phase => {
-      tasks.push(`Planejar: ${phase}`);
-      tasks.push(`Executar: ${phase}`);
+    data.phases.forEach((phase, i) => {
+      tasks.push(`Planejar e executar: ${phase} (Equipe) - Fase ${i + 1}`);
     });
     
-    // Tarefas padrão
-    tasks.push('Definir orçamento do projeto');
-    tasks.push('Montar equipe de trabalho');
-    tasks.push('Criar cronograma detalhado');
+    // Tarefas de encerramento
+    tasks.push('Reunião de avaliação de resultados (Toda equipe) - Final');
+    tasks.push('Relatório financeiro final (Gestor Financeiro) - Final');
     
     return tasks;
   };

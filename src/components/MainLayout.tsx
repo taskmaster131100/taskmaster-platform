@@ -71,7 +71,7 @@ export default function MainLayout({
       title: 'PRINCIPAL',
       items: [
         { id: 'organization', label: 'Início', icon: Home },
-        { id: 'organization', label: 'Organização', icon: TrendingUp },
+        { id: 'org-profile', label: 'Organização', icon: TrendingUp, link: '/organization-profile' },
         { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
         { id: 'calendar', label: 'Agenda', icon: Calendar },
         { id: 'reports', label: 'Relatórios', icon: BarChart3 },

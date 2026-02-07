@@ -142,10 +142,24 @@ export default function TeamPage() {
     }
   };
 
+  const MAX_FREE_MEMBERS = 5;
+  const EXTRA_MEMBER_COST = 3; // USD per extra member/month
+
+  const totalTeamSize = members.length + invites.filter(i => i.status === 'pending').length;
+  const isOverLimit = totalTeamSize >= MAX_FREE_MEMBERS;
+
   const handleInviteMember = async () => {
     if (!inviteEmail.trim()) {
       toast.error('Digite um email válido');
       return;
+    }
+
+    // Check team limit
+    if (isOverLimit) {
+      const confirmExtra = confirm(
+        `Seu plano inclui ${MAX_FREE_MEMBERS} membros. Membros adicionais custam $${EXTRA_MEMBER_COST}/mês cada. Deseja continuar?`
+      );
+      if (!confirmExtra) return;
     }
 
     try {
@@ -278,6 +292,9 @@ export default function TeamPage() {
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">
             Gerencie os membros da sua organização
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Seu plano inclui 5 membros. Membros extras: $3/mês cada.
           </p>
         </div>
         
