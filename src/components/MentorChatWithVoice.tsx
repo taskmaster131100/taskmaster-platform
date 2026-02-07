@@ -135,9 +135,8 @@ export default function MentorChatWithVoice({
         isVoice: true
       }]);
 
-      // Processar e obter resposta
-      setIsProcessing(true);
-      const response = await processVoiceMessage(result.text, userId, { mode, module });
+      // Processar e obter resposta (envia histórico para contexto)
+      const response = await processVoiceMessage(result.text, userId, { mode, module }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
@@ -174,8 +173,8 @@ export default function MentorChatWithVoice({
 
       setInputText('');
 
-      // Processar e obter resposta
-      const response = await processVoiceMessage(inputText, userId, { mode, module });
+      // Processar e obter resposta (envia histórico para contexto)
+      const response = await processVoiceMessage(inputText, userId, { mode, module }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,

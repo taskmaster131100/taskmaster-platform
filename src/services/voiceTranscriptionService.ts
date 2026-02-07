@@ -1,6 +1,6 @@
 /**
  * Serviço de Transcrição de Áudio e Processamento de Voz
- * Permite que usuários enviem mensagens de áudio que são transcritas e processadas pela IA
+ * Usa Vercel Serverless Functions para manter a API key segura no servidor
  */
 
 export interface AudioMessage {
@@ -8,7 +8,7 @@ export interface AudioMessage {
   userId: string;
   audioBlob: Blob;
   audioUrl: string;
-  duration: number; // em segundos
+  duration: number;
   transcription?: string;
   isTranscribing: boolean;
   createdAt: Date;
@@ -17,14 +17,14 @@ export interface AudioMessage {
 export interface TranscriptionResult {
   success: boolean;
   text: string;
-  confidence: number; // 0-1
+  confidence: number;
   language: string;
   duration: number;
   error?: string;
 }
 
 /**
- * Inicia a gravação de áudio
+ * Gravador de áudio
  */
 export class AudioRecorder {
   private mediaRecorder: MediaRecorder | null = null;
@@ -63,8 +63,6 @@ export class AudioRecorder {
       };
 
       this.mediaRecorder.stop();
-
-      // Parar o stream
       this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
     });
   }
@@ -80,25 +78,41 @@ export class AudioRecorder {
 }
 
 /**
- * Transcreve áudio usando a API do OpenAI Whisper
+ * Converte Blob para base64
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Transcreve áudio usando a Serverless Function (API key segura no servidor)
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
   try {
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'pt'); // Português
+    const audioBase64 = await blobToBase64(audioBlob);
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('/api/mentor/transcribe', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+        'Content-Type': 'application/json'
       },
-      body: formData
+      body: JSON.stringify({
+        audioBase64,
+        mimeType: audioBlob.type || 'audio/webm'
+      })
     });
 
     if (!response.ok) {
-      throw new Error(`Erro na transcrição: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erro na transcrição: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -106,9 +120,9 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
     return {
       success: true,
       text: data.text,
-      confidence: 0.95, // OpenAI não retorna confiança, usar valor padrão
-      language: 'pt-BR',
-      duration: audioBlob.size / (16000 * 2) // Estimativa baseada no tamanho
+      confidence: 0.95,
+      language: data.language || 'pt-BR',
+      duration: audioBlob.size / (16000 * 2)
     };
   } catch (error) {
     console.error('Erro ao transcrever áudio:', error);
@@ -124,17 +138,15 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
 }
 
 /**
- * Processa uma mensagem de voz e gera resposta
+ * Processa mensagem e obtém resposta do Marcos Menezes via Serverless Function
  */
 export async function processVoiceMessage(
   transcription: string,
   userId: string,
-  context?: any
+  context?: any,
+  conversationHistory?: any[]
 ): Promise<string> {
   try {
-    // Aqui você integraria com a IA (OpenAI, Claude, etc.)
-    // Por enquanto, retornar uma resposta simulada
-
     const response = await fetch('/api/mentor/chat', {
       method: 'POST',
       headers: {
@@ -144,49 +156,19 @@ export async function processVoiceMessage(
         message: transcription,
         userId,
         context,
-        mode: 'voice'
+        conversationHistory
       })
     });
 
     if (!response.ok) {
-      throw new Error('Erro ao processar mensagem');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Erro ao processar mensagem');
     }
 
     const data = await response.json();
     return data.response;
   } catch (error) {
-    console.error('Erro ao processar mensagem de voz:', error);
-    throw error;
-  }
-}
-
-/**
- * Converte texto em fala (Text-to-Speech) para resposta do Marcos
- * Opcional: usar para fazer o Marcos responder com voz
- */
-export async function synthesizeSpeech(text: string): Promise<Blob> {
-  try {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'tts-1',
-        input: text,
-        voice: 'nova', // Voz feminina clara
-        language: 'pt-BR'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Erro ao sintetizar fala');
-    }
-
-    return await response.blob();
-  } catch (error) {
-    console.error('Erro ao sintetizar fala:', error);
+    console.error('Erro ao processar mensagem:', error);
     throw error;
   }
 }
@@ -204,13 +186,9 @@ export function formatDuration(seconds: number): string {
  * Valida o áudio gravado
  */
 export function validateAudio(blob: Blob, minDuration: number = 1): boolean {
-  // Mínimo de 1 segundo
   if (blob.size === 0) return false;
-
-  // Tamanho máximo de 25MB (limite do OpenAI Whisper)
   const maxSize = 25 * 1024 * 1024;
   if (blob.size > maxSize) return false;
-
   return true;
 }
 
@@ -226,34 +204,4 @@ export function createAudioUrl(blob: Blob): string {
  */
 export function revokeAudioUrl(url: string): void {
   URL.revokeObjectURL(url);
-}
-
-/**
- * Detecta o idioma do áudio (opcional)
- */
-export async function detectLanguage(audioBlob: Blob): Promise<string> {
-  try {
-    // Usar Whisper para detectar idioma
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      return 'pt-BR'; // Padrão: português
-    }
-
-    const data = await response.json();
-    return data.language || 'pt-BR';
-  } catch (error) {
-    console.error('Erro ao detectar idioma:', error);
-    return 'pt-BR'; // Padrão: português
-  }
 }
