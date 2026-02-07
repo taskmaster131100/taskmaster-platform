@@ -136,7 +136,7 @@ export default function MusicProduction() {
     setUploadedFile(arr.fileUrl ? { name: arr.fileName || 'Arquivo', url: arr.fileUrl } : null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editorTitle) {
       toast.error('Por favor, insira um título');
       return;
