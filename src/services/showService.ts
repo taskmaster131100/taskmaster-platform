@@ -14,6 +14,9 @@ export interface Show {
   contractor_contact?: string;
   value?: number;
   currency: string;
+  commission_rate?: number; // % para a produtora
+  artist_split?: number; // % para o artista
+  production_split?: number; // % para a produtora (calculado ou fixo)
   status: ShowStatus;
   notes?: string;
   created_by: string;

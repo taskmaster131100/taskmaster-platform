@@ -3,52 +3,48 @@ import { Show, ShowTask } from './showService';
 
 export interface AgentNotification {
   id: string;
-  type: 'warning' | 'info' | 'success' | 'critical' | 'suggestion' | 'mentor';
+  type: 'warning' | 'info' | 'success' | 'critical' | 'suggestion';
   title: string;
   message: string;
   actionLabel?: string;
   actionPath?: string;
   showId?: string;
-  category: 'legal' | 'financial' | 'production' | 'logistics' | 'marketing' | 'general' | 'strategy';
-  isMentorInsight?: boolean;
+  category: 'legal' | 'financial' | 'production' | 'logistics' | 'marketing' | 'general';
 }
 
-// Mensagens humanizadas e estratégicas para o Mentor FlexMax
+// Mensagens humanizadas para o Agente Virtual
 const HUMAN_MESSAGES = {
-  onboarding: [
-    "Boas-vindas à FlexMax! Sou seu Mentor e estou aqui para garantir que sua carreira decole com organização. Que tal começarmos cadastrando seu primeiro artista?",
-    "Olá! Fico feliz em ter você aqui. Como seu Mentor, sugiro que o primeiro passo seja configurar sua organização para gerenciar seus talentos com eficiência.",
-  ],
   contract_pending: [
     "Fala! Notei que o contrato de \"{{show}}\" ainda não foi assinado. Vamos garantir essa segurança jurídica antes da viagem?",
     "Tudo certo? O contrato do show \"{{show}}\" está pendente. É bom dar uma olhada nisso para evitar imprevistos.",
+    "Oi! Passando para lembrar que o contrato de \"{{show}}\" precisa de assinatura. Quer que eu te ajude a revisar?"
   ],
   finance_pending: [
     "Ei, o pagamento de entrada de \"{{show}}\" ainda não caiu. Vale dar aquela cobrada amigável no contratante?",
-    "Atenção com o financeiro: a entrada de \"{{show}}\" ainda não foi confirmada. Melhor checar antes de seguir com a logística.",
+    "Notei que a entrada do show \"{{show}}\" está pendente. Vamos conferir se o financeiro já liberou?",
+    "Atenção com o financeiro: a entrada de \"{{show}}\" ainda não foi confirmada. Melhor checar antes de seguir com a logística."
   ],
   logistics_incomplete: [
     "O roteiro de \"{{show}}\" está quase pronto, mas faltam alguns detalhes. Vamos fechar isso para a equipe viajar tranquila?",
     "Equipe na estrada precisa de clareza! O RoadMap de \"{{show}}\" ainda tem pontos em aberto. Vamos finalizar?",
+    "Vi que o roteiro de viagem para \"{{show}}\" não está completo. Quer aproveitar agora para definir os horários?"
   ],
   setlist_missing: [
     "Show chegando! O setlist de \"{{show}}\" ainda não foi definido. Quais músicas vamos levar para o palco dessa vez?",
-    "O artista precisa saber o que tocar! O setlist de \"{{show}}\" está pendente. Vamos montar essa sequência?",
+    "Bora ensaiar? O repertório de \"{{show}}\" ainda está em branco. Vamos escolher as músicas?",
+    "O artista precisa saber o que tocar! O setlist de \"{{show}}\" está pendente. Vamos montar essa sequência?"
   ],
   marketing_suggestion: [
     "O show \"{{show}}\" está próximo! Que tal usarmos a IA para gerar uns roteiros de Reels e aquecer o público?",
     "Bora bombar esse show? Posso sugerir umas legendas e estratégias de marketing para \"{{show}}\".",
-  ],
-  strategic_insight: [
-    "Analisando seus dados: Notei que sua margem de lucro em \"{{show}}\" está abaixo da média devido aos custos de logística. Quer revisar o split?",
-    "Dica de Mentor: Seus lançamentos recentes tiveram mais engajamento com roteiros de Reels. Vamos focar nisso para o próximo show?",
+    "Notei que ainda não planejamos o marketing de \"{{show}}\". Quer umas ideias criativas para os Stories?"
   ]
 };
 
-function getRandomMessage(key: keyof typeof HUMAN_MESSAGES, context?: string): string {
+function getRandomMessage(key: keyof typeof HUMAN_MESSAGES, showTitle: string): string {
   const messages = HUMAN_MESSAGES[key];
   const msg = messages[Math.floor(Math.random() * messages.length)];
-  return context ? msg.replace('{{show}}', context) : msg;
+  return msg.replace('{{show}}', showTitle);
 }
 
 export async function getAgentNotifications(): Promise<AgentNotification[]> {
@@ -57,25 +53,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
   const next14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
   try {
-    // 1. Verificar Onboarding (Se não houver artistas cadastrados)
-    const { count: artistCount } = await supabase
-      .from('artists')
-      .select('*', { count: 'exact', head: true });
-
-    if (artistCount === 0) {
-      notifications.push({
-        id: 'mentor-onboarding',
-        type: 'mentor',
-        title: 'Marcos Menezes - Mentor FlexMax: Primeiros Passos',
-        message: getRandomMessage('onboarding'),
-        actionLabel: 'Cadastrar Artista',
-        actionPath: '/artistas',
-        category: 'strategy',
-        isMentorInsight: true
-      });
-    }
-
-    // 2. Buscar shows próximos para diagnósticos
+    // 1. Buscar shows próximos
     const { data: shows, error: showsError } = await supabase
       .from('shows')
       .select('*')
@@ -93,7 +71,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
 
       const pendingTasks = (tasks || []) as ShowTask[];
       
-      // Diagnóstico de Segurança Jurídica
+      // Alerta de Contrato (Legal)
       if (pendingTasks.find(t => t.title.toLowerCase().includes('contrato'))) {
         notifications.push({
           id: `contract-${show.id}`,
@@ -107,7 +85,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
         });
       }
 
-      // Diagnóstico Financeiro
+      // Alerta de Financeiro (Entrada)
       if (pendingTasks.find(t => t.title.toLowerCase().includes('entrada') || t.category === 'financial')) {
         notifications.push({
           id: `finance-${show.id}`,
@@ -121,22 +99,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
         });
       }
 
-      // Insight Estratégico (Simulação de análise de margem)
-      if (show.total_value && show.total_value > 5000) {
-        notifications.push({
-          id: `insight-${show.id}`,
-          type: 'mentor',
-          title: 'Marcos Menezes - Mentor: Insight Estratégico',
-          message: getRandomMessage('strategic_insight', show.title),
-          actionLabel: 'Analisar Split',
-          actionPath: `/shows`,
-          showId: show.id,
-          category: 'strategy',
-          isMentorInsight: true
-        });
-      }
-
-      // Logística e Produção
+      // Alerta de Logística (Roteiro)
       if (pendingTasks.find(t => t.category === 'logistics')) {
         notifications.push({
           id: `logistics-${show.id}`,
@@ -150,6 +113,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
         });
       }
 
+      // Alerta de Setlist
       if (pendingTasks.find(t => t.title.toLowerCase().includes('setlist'))) {
         notifications.push({
           id: `setlist-${show.id}`,
@@ -162,19 +126,34 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
           category: 'production'
         });
       }
+
+      // Sugestão de Marketing (Sempre que o show estiver a menos de 7 dias)
+      const showDate = new Date(show.show_date);
+      const diffDays = Math.ceil((showDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) {
+        notifications.push({
+          id: `marketing-${show.id}`,
+          type: 'suggestion',
+          title: 'Engajamento & Público',
+          message: getRandomMessage('marketing_suggestion', show.title),
+          actionLabel: 'Gerar Conteúdo',
+          actionPath: `/marketing`,
+          showId: show.id,
+          category: 'marketing'
+        });
+      }
     }
 
-    // Se não houver nada urgente, dar uma mensagem de incentivo do Mentor
+    // Se não houver nada urgente, dar uma mensagem de boas-vindas/incentivo
     if (notifications.length === 0) {
       notifications.push({
-        id: 'mentor-idle',
-        type: 'mentor',
-        title: 'Marcos Menezes - Mentor FlexMax: Visão Geral',
-        message: "Tudo sob controle por aqui! Seus artistas estão com a agenda em dia. Que tal usarmos esse tempo para prospectar novos contratantes?",
-        actionLabel: 'Ver Relatórios',
-        actionPath: '/relatorios',
-        category: 'strategy',
-        isMentorInsight: true
+        id: 'welcome-agent',
+        type: 'success',
+        title: 'Tudo sob controle!',
+        message: "Fala! Por aqui está tudo em ordem com seus artistas e shows. Que tal aproveitar o tempo livre para planejar o próximo lançamento?",
+        actionLabel: 'Novo Planejamento',
+        actionPath: '/planejamento',
+        category: 'general'
       });
     }
 

@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings } from 'lucide-react';
+import AIMarketingAssistant from './AIMarketingAssistant';
+import InviteManager from './InviteManager';
+import { supabase } from '../lib/supabase';
 
 // Simple placeholder component factory
 const createSimpleComponent = (title: string, icon: React.ReactNode, description: string) => {
@@ -42,11 +45,75 @@ export const MeetingsManager = createSimpleComponent(
   'Gerenciamento de reuniões e acompanhamentos'
 );
 
-export const MarketingManager = createSimpleComponent(
-  'Marketing',
-  <Megaphone className="w-8 h-8 text-pink-600" />,
-  'Gestão de campanhas e estratégias de marketing'
-);
+export const MarketingManager = () => {
+  const [artists, setArtists] = useState<any[]>([]);
+  const [selectedArtist, setSelectedArtist] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadArtists = async () => {
+      try {
+        const { data, error } = await supabase.from('artists').select('*').order('name');
+        if (error) throw error;
+        setArtists(data || []);
+        if (data && data.length > 0) setSelectedArtist(data[0]);
+      } catch (error) {
+        console.error('Erro ao carregar artistas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadArtists();
+  }, []);
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Megaphone className="w-8 h-8 text-pink-600" />
+              Marketing & Estratégia
+            </h2>
+            <p className="text-gray-600 mt-1">Gere conteúdos e roteiros criativos com auxílio de IA.</p>
+          </div>
+
+          {artists.length > 0 && (
+            <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+              <span className="text-xs font-bold text-gray-400 uppercase ml-2">Artista:</span>
+              <select 
+                value={selectedArtist?.id || ''} 
+                onChange={(e) => setSelectedArtist(artists.find(a => a.id === e.target.value))}
+                className="bg-transparent text-sm font-bold text-gray-900 focus:outline-none pr-8"
+              >
+                {artists.map(artist => (
+                  <option key={artist.id} value={artist.id}>{artist.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-600"></div>
+          </div>
+        ) : selectedArtist ? (
+          <AIMarketingAssistant 
+            artistName={selectedArtist.name} 
+            genre={selectedArtist.genre || 'Pop'} 
+          />
+        ) : (
+          <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 text-center">
+            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum artista encontrado</h3>
+            <p className="text-gray-600">Você precisa cadastrar um artista para usar o assistente de marketing.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const ProductionManager = createSimpleComponent(
   'Produção',
@@ -78,11 +145,23 @@ export const MindMap = createSimpleComponent(
   'Visualização de ideias e conexões de projetos'
 );
 
-export const UserManagement = createSimpleComponent(
-  'Gerenciamento de Usuários',
-  <Users className="w-8 h-8 text-[#FFAD85]" />,
-  'Administração de usuários e permissões'
-);
+export const UserManagement = () => {
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <Users className="w-8 h-8 text-[#FFAD85]" />
+            Gerenciamento de Usuários
+          </h2>
+          <p className="text-gray-600 mt-1">Controle quem tem acesso à sua plataforma e gerencie convites.</p>
+        </div>
+        
+        <InviteManager />
+      </div>
+    </div>
+  );
+};
 
 export const UserPreferences = createSimpleComponent(
   'Preferências',
@@ -160,10 +239,11 @@ export const ArtistForm = ({ onSubmit, onCancel }: { onSubmit: (data: any) => vo
       <form onSubmit={(e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        const genre = formData.get('genre') === 'Outro' ? formData.get('genreOther') : formData.get('genre');
         onSubmit({
           name: formData.get('name'),
-          artisticName: formData.get('artisticName'),
-          genre: formData.get('genre') || 'Pop'
+          artistic_name: formData.get('artisticName'),
+          genre: genre || 'Pop'
         });
       }}>
         <div className="space-y-4">

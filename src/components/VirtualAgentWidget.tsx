@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, AlertTriangle, Info, CheckCircle2, ArrowRight, X, BrainCircuit, TrendingUp } from 'lucide-react';
+import { Sparkles, AlertTriangle, Info, CheckCircle2, ArrowRight, X, Bell } from 'lucide-react';
 import { getAgentNotifications, AgentNotification } from '../services/virtualAgentService';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,7 +29,6 @@ export default function VirtualAgentWidget() {
 
   const getTypeStyles = (type: AgentNotification['type']) => {
     switch (type) {
-      case 'mentor': return 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm border-l-4 border-l-indigo-600';
       case 'critical': return 'bg-white border-red-200 text-gray-900 shadow-sm border-l-4 border-l-red-500';
       case 'warning': return 'bg-white border-amber-200 text-gray-900 shadow-sm border-l-4 border-l-amber-500';
       case 'success': return 'bg-white border-green-200 text-gray-900 shadow-sm border-l-4 border-l-green-500';
@@ -40,7 +39,6 @@ export default function VirtualAgentWidget() {
 
   const getIcon = (type: AgentNotification['type']) => {
     switch (type) {
-      case 'mentor': return <div className="bg-indigo-600 p-2 rounded-lg"><BrainCircuit className="w-5 h-5 text-white" /></div>;
       case 'critical': return <div className="bg-red-100 p-2 rounded-lg"><AlertTriangle className="w-5 h-5 text-red-600" /></div>;
       case 'warning': return <div className="bg-amber-100 p-2 rounded-lg"><AlertTriangle className="w-5 h-5 text-amber-600" /></div>;
       case 'success': return <div className="bg-green-100 p-2 rounded-lg"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>;
@@ -53,13 +51,13 @@ export default function VirtualAgentWidget() {
     <div className="space-y-3 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="bg-indigo-100 p-1.5 rounded-lg">
-            <BrainCircuit className="w-4 h-4 text-indigo-600" />
+          <div className="bg-purple-100 p-1.5 rounded-lg">
+            <Sparkles className="w-4 h-4 text-purple-600" />
           </div>
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Marcos Menezes - Mentor FlexMax</h3>
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Seu Copiloto TaskMaster</h3>
         </div>
-        <span className="text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-          {activeNotifications.length} INSIGHTS ATIVOS
+        <span className="text-[10px] font-bold bg-purple-600 text-white px-2 py-0.5 rounded-full">
+          {activeNotifications.length} MENSAGENS
         </span>
       </div>
 
@@ -82,16 +80,11 @@ export default function VirtualAgentWidget() {
                 {getIcon(notification.type)}
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h4 className="text-sm font-bold">{notification.title}</h4>
-                  {notification.type === 'mentor' && (
-                    <span className="text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter">Estratégico</span>
-                  )}
-                </div>
+                <h4 className="text-sm font-bold mb-0.5">{notification.title}</h4>
                 <p className="text-xs opacity-90 leading-relaxed mb-2">{notification.message}</p>
                 
                 {notification.actionLabel && (
-                  <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 group-hover:text-indigo-700">
+                  <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
                     {notification.actionLabel}
                     <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -103,8 +96,8 @@ export default function VirtualAgentWidget() {
       </div>
       
       {activeNotifications.length > 4 && (
-        <button className="w-full py-2 text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors">
-          VER TODOS OS INSIGHTS DO MENTOR
+        <button className="w-full py-2 text-xs font-bold text-gray-400 hover:text-purple-600 transition-colors">
+          VER TODOS OS ALERTAS
         </button>
       )}
     </div>

@@ -47,10 +47,11 @@ export default function FileLibrary() {
         category: selectedCategory || undefined,
         search: searchTerm || undefined
       });
-      setFiles(data);
+      setFiles(data || []);
     } catch (error) {
       console.error('Erro ao carregar arquivos:', error);
-      toast.error('Erro ao carregar arquivos');
+      // Silently handle error to avoid persistent error toast on every screen
+      setFiles([]);
     } finally {
       setLoading(false);
     }

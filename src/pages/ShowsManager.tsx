@@ -13,6 +13,10 @@ import {
 } from '../services/showService';
 import { DocumentService, DEFAULT_CLAUSES } from '../services/documentService';
 import ShowForm from '../components/ShowForm';
+import RoadMap from '../components/RoadMap';
+import SetlistManager from '../components/SetlistManager';
+import TechnicalRider from '../components/TechnicalRider';
+import FinancialSplit from '../components/FinancialSplit';
 
 export default function ShowsManager() {
   const [shows, setShows] = useState<Show[]>([]);
@@ -23,6 +27,7 @@ export default function ShowsManager() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [activeView, setActiveView] = useState<'details' | 'roadmap' | 'setlist' | 'rider' | 'finance'>('details');
 
   useEffect(() => {
     loadShows();
@@ -59,6 +64,7 @@ export default function ShowsManager() {
 
   const handleViewDetails = (show: Show) => {
     setSelectedShow(show);
+    setActiveView('details');
     setShowDetailsModal(true);
   };
 
@@ -308,28 +314,140 @@ export default function ShowsManager() {
         />
       )}
 
-      {/* Modal de Detalhes do Show Simples */}
+      {/* Modal de Detalhes do Show / RoadMap */}
       {showDetailsModal && selectedShow && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">{selectedShow.title}</h2>
-              <button onClick={() => setShowDetailsModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-8">
+            {/* Tabs do Modal */}
+            <div className="flex border-b border-gray-100">
+              <button 
+                onClick={() => setActiveView('details')}
+                className={`flex-1 py-4 text-sm font-bold transition-all ${activeView === 'details' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Detalhes
+              </button>
+              <button 
+                onClick={() => setActiveView('roadmap')}
+                className={`flex-1 py-4 text-sm font-bold transition-all ${activeView === 'roadmap' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Logística
+              </button>
+              <button 
+                onClick={() => setActiveView('setlist')}
+                className={`flex-1 py-4 text-sm font-bold transition-all ${activeView === 'setlist' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Setlist
+              </button>
+              <button 
+                onClick={() => setActiveView('rider')}
+                className={`flex-1 py-4 text-sm font-bold transition-all ${activeView === 'rider' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Rider Técnico
+              </button>
+              <button 
+                onClick={() => setActiveView('finance')}
+                className={`flex-1 py-4 text-sm font-bold transition-all ${activeView === 'finance' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Financeiro
+              </button>
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                className="px-6 py-4 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
             </div>
-            <div className="space-y-4">
-              <p><strong>Artista:</strong> {selectedShow.artist_name}</p>
-              <p><strong>Data:</strong> {formatDate(selectedShow.show_date)}</p>
-              <p><strong>Local:</strong> {selectedShow.venue || selectedShow.city}</p>
-              <p><strong>Status:</strong> {selectedShow.status}</p>
-              <div className="pt-4 flex gap-4">
-                <button
-                  onClick={() => handleGenerateContract(selectedShow)}
-                  className="flex-1 py-3 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] flex items-center justify-center gap-2 font-bold"
-                >
-                  <Download className="w-5 h-5" />
-                  Baixar Contrato PDF
-                </button>
-              </div>
+
+            <div className="max-h-[70vh] overflow-y-auto">
+              {activeView === 'details' ? (
+                <div className="p-6 sm:p-8">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600">
+                      <Calendar className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedShow.title}</h2>
+                      <p className="text-purple-600 font-medium">{selectedShow.artist_name}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 text-gray-600">
+                        <Calendar className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase font-bold">Data</p>
+                          <p className="font-medium">{formatDate(selectedShow.show_date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-gray-600">
+                        <MapPin className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase font-bold">Local</p>
+                          <p className="font-medium">{selectedShow.venue || 'A definir'}, {selectedShow.city}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 text-gray-600">
+                        <DollarSign className="w-5 h-5 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase font-bold">Cachê</p>
+                          <p className="font-medium">{formatCurrency(selectedShow.value || 0, selectedShow.currency)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-gray-600">
+                        <div className={`w-3 h-3 rounded-full ${getStatusBadgeColor(selectedShow.status).split(' ')[0]}`} />
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase font-bold">Status</p>
+                          <p className="font-medium uppercase">{selectedShow.status}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+                    <button
+                      onClick={() => handleGenerateContract(selectedShow)}
+                      className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-200 transition-all"
+                    >
+                      <Download className="w-5 h-5" />
+                      Gerar Contrato PDF
+                    </button>
+                    <button
+                      onClick={() => setActiveView('roadmap')}
+                      className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 font-bold transition-all"
+                    >
+                      <Truck className="w-5 h-5 text-purple-600" />
+                      Ver Roteiro
+                    </button>
+                  </div>
+                </div>
+              ) : activeView === 'roadmap' ? (
+                <div className="p-0">
+                  <RoadMap showId={selectedShow.id} />
+                </div>
+              ) : activeView === 'setlist' ? (
+                <div className="p-0">
+                  <SetlistManager showId={selectedShow.id} />
+                </div>
+              ) : activeView === 'rider' ? (
+                <div className="p-0">
+                  <TechnicalRider showId={selectedShow.id} showData={selectedShow} />
+                </div>
+              ) : (
+                <div className="p-6 sm:p-8">
+                  <FinancialSplit 
+                    show={selectedShow} 
+                    onUpdate={() => {
+                      loadShows();
+                      // Atualizar o show selecionado no estado local
+                      const updatedShow = shows.find(s => s.id === selectedShow.id);
+                      if (updatedShow) setSelectedShow(updatedShow);
+                    }} 
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

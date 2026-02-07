@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Plus } from 'lucide-react';
-import { localDatabase } from '../services/localDatabase';
+import { Music, Search, Plus, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface Artist {
   id: string;
   name: string;
-  artisticName?: string;
+  artistic_name?: string;
   genre?: string;
+  image_url?: string;
   [key: string]: any;
 }
 
@@ -22,16 +24,46 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   onSelectProject
 }) => {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const loadArtists = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('artists')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setArtists(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar artistas:', error);
+      toast.error('Erro ao carregar lista de artistas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const storedArtists = localDatabase.getCollection<Artist>('artists');
-    setArtists(Array.isArray(storedArtists) ? storedArtists : []);
+    loadArtists();
+
+    // Inscrever para mudanças em tempo real
+    const channel = supabase
+      .channel('artists_changes')
+      .on('postgres_changes', { event: '*', table: 'artists', schema: 'public' }, () => {
+        loadArtists();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredArtists = artists.filter(artist =>
     artist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    artist.artisticName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    artist.artistic_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     artist.genre?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -56,19 +88,28 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen pb-24 sm:pb-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciamento de Artistas</h2>
-          <p className="text-gray-600">{artists.length} artistas cadastrados</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Artistas</h2>
+          <p className="text-gray-600 text-sm">{artists.length} talentos na sua organização</p>
         </div>
         <button
           onClick={onCreateArtist}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+          className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl items-center gap-2 font-bold"
         >
-          + Novo Artista
+          <Plus className="w-5 h-5" />
+          Novo Artista
         </button>
       </div>
+
+      {/* Floating Action Button for Mobile */}
+      <button
+        onClick={onCreateArtist}
+        className="sm:hidden fixed bottom-20 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform"
+      >
+        <Plus className="w-8 h-8" />
+      </button>
 
       <div className="mb-6">
         <div className="relative">
@@ -83,7 +124,12 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
         </div>
       </div>
 
-      {filteredArtists.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg shadow-sm">
+          <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+          <p className="text-gray-600">Carregando artistas...</p>
+        </div>
+      ) : filteredArtists.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <Music className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -113,20 +159,22 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
                 className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all p-6 cursor-pointer"
                 onClick={() => onSelectArtist?.(artist.id)}
               >
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto`}>
-                  {initials}
-                </div>
+                <div className="flex items-center gap-4 sm:block sm:text-center">
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-xl sm:text-2xl font-bold sm:mb-4 sm:mx-auto shrink-0 shadow-inner`}>
+                    {initials}
+                  </div>
 
-                <div className="text-center">
-                  <h3 className="text-lg font-bold text-gray-900">{artist.name}</h3>
-                  {artist.artisticName && (
-                    <p className="text-sm text-gray-600">"{artist.artisticName}"</p>
-                  )}
-                  {artist.genre && (
-                    <span className="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                      {artist.genre}
-                    </span>
-                  )}
+                  <div className="flex-1 sm:text-center">
+                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{artist.name}</h3>
+                    {artist.artistic_name && (
+                      <p className="text-sm text-gray-600 line-clamp-1">"{artist.artistic_name}"</p>
+                    )}
+                    {artist.genre && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                        {artist.genre}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <button

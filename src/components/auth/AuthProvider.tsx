@@ -1,168 +1,98 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
+import { User } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<void>;
-  resendSignupConfirmation: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signIn: async () => {},
-  signUp: async () => {},
-  resendSignupConfirmation: async () => {},
-  signOut: async () => {}
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Real auth check
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // 1. Verificar sessão inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name
-        });
-
-        // Bootstrap organization for account owner (if needed)
-        try {
-          const { data: membership } = await supabase
-            .from('user_organizations')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          if (!membership?.id) {
-            // If user has pending invites, do NOT auto-create a new org.
-            const { data: pendingInvite } = await supabase
-              .from('team_invites')
-              .select('id')
-              .eq('email', (session.user.email || '').toLowerCase())
-              .eq('status', 'pending')
-              .gt('expires_at', new Date().toISOString())
-              .maybeSingle();
-
-            if (!pendingInvite?.id) {
-              const orgName =
-                session.user.user_metadata?.organization_name ||
-                session.user.user_metadata?.name ||
-                (session.user.email || '').split('@')[0] ||
-                'Minha Organização';
-
-              await supabase.rpc('bootstrap_organization', { org_name: orgName });
-            }
-          }
-        } catch (e) {
-          // Silent: if it fails, the UI will show the empty state.
-          console.warn('bootstrap_organization failed', e);
-        }
+        checkSingleSession(session.user.id);
       }
       setLoading(false);
     });
 
+    // 2. Ouvir mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name
-        });
-      } else {
-        setUser(null);
+        checkSingleSession(session.user.id);
       }
+      setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+  // Função para garantir sessão única
+  const checkSingleSession = async (userId: string) => {
+    const sessionId = Math.random().toString(36).substring(7);
+    localStorage.setItem('tm_session_id', sessionId);
 
-    if (error) {
-      throw error;
-    }
+    // Atualizar o ID da sessão no banco de dados (tabela profiles ou similar)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ last_session_id: sessionId })
+      .eq('id', userId);
 
-    if (data.user) {
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.user_metadata?.name
-      });
-    }
-  };
+    if (error) console.error('Erro ao atualizar sessão:', error);
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata
-      }
-    });
+    // Inscrever para mudanças no perfil do usuário
+    const channel = supabase
+      .channel(`profile_${userId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        table: 'profiles', 
+        schema: 'public',
+        filter: `id=eq.${userId}`
+      }, (payload) => {
+        const newSessionId = payload.new.last_session_id;
+        const currentSessionId = localStorage.getItem('tm_session_id');
 
-    if (error) {
-      throw error;
-    }
+        if (newSessionId && newSessionId !== currentSessionId) {
+          toast.error('Sua conta foi conectada em outro dispositivo. Você será deslogado.');
+          setTimeout(() => {
+            supabase.auth.signOut();
+            window.location.href = '/login';
+          }, 3000);
+        }
+      })
+      .subscribe();
 
-    if (data.user) {
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.user_metadata?.name
-      });
-    }
-  };
-
-  const resendSignupConfirmation = async (email: string) => {
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      throw new Error('Digite um email válido para reenviar a confirmação.');
-    }
-
-    // Supabase v2: resend confirmation email for signup
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: cleanEmail,
-    });
-
-    if (error) {
-      throw error;
-    }
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
+    localStorage.removeItem('tm_session_id');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, resendSignupConfirmation, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};

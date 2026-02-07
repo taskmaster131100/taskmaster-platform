@@ -81,6 +81,7 @@ const LobbyPreview = React.lazy(() => import('./pages/LobbyPreview'));
 const MailPreview = React.lazy(() => import('./pages/MailPreview'));
 
 import { localDatabase } from './services/localDatabase';
+import { supabase } from './lib/supabase';
 import type { Project, Task, Artist, Department, TeamMember } from './types';
 
 // Feature flag for classic routes
@@ -257,47 +258,44 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     }
   };
 
-  const handleArtistSubmit = (artistData: any) => {
+  const handleArtistSubmit = async (artistData: any) => {
     try {
       // Garantir que todos os campos obrigatórios estão presentes
       const safeArtistData = {
         name: artistData.name || 'Novo Artista',
-        artisticName: artistData.artisticName,
+        artistic_name: artistData.artistic_name || artistData.artisticName,
         genre: artistData.genre || 'Não definido',
         status: artistData.status || 'active',
-        contactEmail: artistData.contactEmail,
-        contactPhone: artistData.contactPhone,
+        contact_email: artistData.contact_email || artistData.contactEmail,
+        contact_phone: artistData.contact_phone || artistData.contactPhone,
         bio: artistData.bio,
-        imageUrl: artistData.imageUrl,
+        image_url: artistData.image_url || artistData.imageUrl,
         exclusivity: Boolean(artistData.exclusivity),
-        contractStartDate: artistData.contractStartDate,
-        contractEndDate: artistData.contractEndDate,
-        commissionRate: artistData.commissionRate,
-        managerId: artistData.managerId,
-        socialMedia: artistData.socialMedia || {},
-        financialSummary: {
-          totalRevenue: 0,
-          totalExpenses: 0,
-          balance: 0,
-          pendingPayments: 0
-        },
-        upcomingEvents: {
-          shows: 0,
-          releases: 0,
-          meetings: 0
-        }
+        contract_start_date: artistData.contract_start_date || artistData.contractStartDate,
+        contract_end_date: artistData.contract_end_date || artistData.contractEndDate,
+        commission_rate: artistData.commission_rate || artistData.commissionRate,
+        manager_id: user?.id,
+        social_media: artistData.social_media || artistData.socialMedia || {}
       };
 
-      const newArtist = localDatabase.createArtist(safeArtistData);
+      const { data: newArtist, error } = await supabase
+        .from('artists')
+        .insert(safeArtistData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
       if (newArtist) {
         setArtists(prev => [...prev, newArtist as Artist]);
+        toast.success('Artista criado com sucesso!');
         // Recarregar dados após criar artista
         loadData();
       }
       setShowCreateArtist(false);
     } catch (error) {
       console.error('Erro ao criar artista:', error);
-      toast.error('Erro ao criar artista. Tente novamente.');
+      toast.error('Erro ao criar artista no banco de dados. Tente novamente.');
     }
   };
 

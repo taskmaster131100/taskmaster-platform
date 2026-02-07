@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, 
   MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles, 
-  AlertTriangle, Info, CheckCircle2, ArrowRight 
+  AlertTriangle, Info, CheckCircle2, ArrowRight, Building2, Plus
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProactiveSuggestions, Suggestion } from '../services/suggestionService';
+import { checkTaskDeadlines, checkUpcomingShows, checkUpcomingReleases } from '../services/notificationService';
+import VirtualAgentWidget from './VirtualAgentWidget';
 
 interface OrganizationDashboardProps {
   onSelectArtist: (id: string) => void;
@@ -74,6 +76,10 @@ export default function OrganizationDashboard({
 
   useEffect(() => {
     loadDashboardData();
+    // Executar verificações automáticas de notificações
+    checkTaskDeadlines();
+    checkUpcomingShows();
+    checkUpcomingReleases();
   }, []);
 
   async function loadDashboardData() {
@@ -180,8 +186,43 @@ export default function OrganizationDashboard({
     );
   }
 
+  const isSoloArtist = artists.length === 1;
+
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      {/* Virtual Agent Proactive Notifications */}
+      <VirtualAgentWidget />
+
+      {/* Welcome & Organization Header */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {isSoloArtist ? `Olá, ${artists[0].name}` : 'Central de Comando'}
+          </h1>
+          <p className="text-gray-600">
+            {isSoloArtist ? 'Sua carreira musical em 360°' : 'Gerencie sua produtora e artistas em 360°'}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          {!isSoloArtist && (
+            <button
+              onClick={() => navigate('/team')}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all shadow-sm text-sm font-medium"
+            >
+              <Building2 className="w-4 h-4 text-purple-600" />
+              Minha Organização
+            </button>
+          )}
+          <button
+            onClick={isSoloArtist ? () => onSelectArtist(artists[0].id) : onCreateArtist}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-md transition-all shadow-sm text-sm font-medium"
+          >
+            {isSoloArtist ? <Music className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {isSoloArtist ? 'Meu Perfil Artístico' : 'Novo Artista'}
+          </button>
+        </div>
+      </div>
+
       {/* Header with Stats */}
       <div className="mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
