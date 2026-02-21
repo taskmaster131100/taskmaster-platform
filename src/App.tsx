@@ -190,6 +190,14 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('users');
     } else if (path === '/profile') {
       setActiveTab('profile');
+    } else if (path === '/mentor-chat') {
+      setActiveTab('mentor-chat');
+    } else if (path === '/mentor-diagnosis') {
+      setActiveTab('mentor-diagnosis');
+    } else if (path === '/mentor-dashboard') {
+      setActiveTab('mentor-dashboard');
+    } else if (path === '/mentor-consulting') {
+      setActiveTab('mentor-consulting');
     }
   }, [location]);
 
@@ -617,15 +625,28 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         />
       );
     }
-    if (activeTab === 'users' && selectedProject) {
-      return (
-        <UserManagement
-          project={selectedProject}
-          onProjectUpdate={(project) => {
-            setProjects(projects.map(p => p.id === project.id ? project : p));
-          }}
-        />
-      );
+    if (activeTab === 'users') {
+      if (selectedProject) {
+        return (
+          <UserManagement
+            project={selectedProject}
+            onProjectUpdate={(project) => {
+              setProjects(projects.map(p => p.id === project.id ? project : p));
+            }}
+          />
+        );
+      } else {
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Administração</h2>
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <div className="w-12 h-12 text-gray-400 mx-auto mb-3 flex items-center justify-center text-3xl">🛡️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Selecione um Projeto</h3>
+              <p className="text-gray-600">Selecione um projeto na barra lateral para gerenciar usuários e permissões.</p>
+            </div>
+          </div>
+        );
+      }
     }
     if (activeTab === 'presentation') return <Presentation />;
     if (activeTab === 'profile') return <UserProfile />;

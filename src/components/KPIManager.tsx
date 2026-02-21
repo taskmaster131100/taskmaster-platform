@@ -166,7 +166,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">KPIs</h2>
-          <p className="text-gray-600 mt-1">Track your key performance indicators</p>
+          <p className="text-gray-600 mt-1">Acompanhe seus indicadores-chave de desempenho</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -174,7 +174,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            Atualizar
           </button>
           <button
             onClick={() => {
@@ -185,7 +185,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
             className="flex items-center gap-2 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
           >
             <Plus className="w-4 h-4" />
-            New KPI
+            Novo KPI
           </button>
         </div>
       </div>
@@ -194,14 +194,14 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
       {kpis.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No KPIs yet</h3>
-          <p className="text-gray-600 mb-4">Create your first KPI to start tracking performance</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhum KPI ainda</h3>
+          <p className="text-gray-600 mb-4">Crie seu primeiro KPI para começar a acompanhar o desempenho</p>
           <button
             onClick={() => setShowModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
           >
             <Plus className="w-4 h-4" />
-            Create KPI
+            Criar KPI
           </button>
         </div>
       ) : (
@@ -245,7 +245,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   ) : (
                     <TrendingDown className="w-4 h-4" />
                   )}
-                  {progress}% Complete
+                  {progress}% Concluído
                 </div>
 
                 {/* Values */}
@@ -283,13 +283,13 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-bold mb-4">
-              {editingKpi ? 'Edit KPI' : 'New KPI'}
+              {editingKpi ? 'Editar KPI' : 'Novo KPI'}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title *
+                  Título *
                 </label>
                 <input
                   type="text"
@@ -297,27 +297,27 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                  placeholder="e.g., Monthly Streams"
+                  placeholder="ex: Streams Mensais"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  Descrição
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                   rows={2}
-                  placeholder="Brief description of this KPI"
+                  placeholder="Breve descrição deste KPI"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Value *
+                    Valor Atual *
                   </label>
                   <input
                     type="number"
@@ -330,7 +330,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Target Value *
+                    Meta *
                   </label>
                   <input
                     type="number"
@@ -344,31 +344,31 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit
+                  Unidade
                 </label>
                 <input
                   type="text"
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                  placeholder="e.g., streams, shows, $"
+                  placeholder="ex: streams, shows, R$"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
+                  Categoria
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
-                  <option value="general">General</option>
+                  <option value="general">Geral</option>
                   <option value="streaming">Streaming</option>
                   <option value="shows">Shows</option>
-                  <option value="social">Social Media</option>
-                  <option value="financial">Financial</option>
+                  <option value="social">Redes Sociais</option>
+                  <option value="financial">Financeiro</option>
                   <option value="marketing">Marketing</option>
                 </select>
               </div>
@@ -383,13 +383,13 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                   }}
                   className="flex-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
                   className="flex-1 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]"
                 >
-                  {editingKpi ? 'Update' : 'Create'}
+                  {editingKpi ? 'Atualizar' : 'Criar'}
                 </button>
               </div>
             </form>
