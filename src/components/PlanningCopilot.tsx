@@ -395,7 +395,8 @@ export default function PlanningCopilot() {
       conversationHistory.current.push({ role: 'user', content: text });
       const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext!);
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      const processedMessage = processAIResponse(aiResponse);
+      setMessages(prev => [...prev, processedMessage]);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao processar áudio.');
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: '🎤 Não foi possível transcrever. Tente novamente.' } : m));
@@ -469,76 +470,9 @@ export default function PlanningCopilot() {
 
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
 
-      // Detectar se a IA gerou um projeto para criar
-      const projectMatch = aiResponse.match(/\[CRIAR_PROJETO\]([\s\S]*?)\[\/CRIAR_PROJETO\]/);
-      if (projectMatch) {
-        try {
-          const projectJson = JSON.parse(projectMatch[1].trim());
-          const projectData = projectJson.project;
-          
-          // Criar o projeto via localDatabase
-          const newProject = localDatabase.createProject({
-            name: projectData.name || 'Novo Projeto',
-            description: projectData.description || '',
-            project_type: projectData.project_type || 'artist_management',
-            status: 'active',
-            startDate: new Date().toISOString(),
-            budget: Number(projectData.budget) || 0,
-            totalCost: 0,
-            ownerId: 'user_1',
-            members: [],
-            phases: projectData.phases || [],
-            whatsappGroup: '',
-            tasks: []
-          });
-
-          // Criar tarefas para cada fase
-          if (projectData.phases && newProject) {
-            projectData.phases.forEach((phase: any, phaseIndex: number) => {
-              if (phase.tasks) {
-                phase.tasks.forEach((task: any, taskIndex: number) => {
-                  localDatabase.createTask({
-                    title: task.title,
-                    description: task.description || '',
-                    status: 'pending',
-                    priority: task.priority || 'medium',
-                    category: task.category || 'conteudo',
-                    projectId: newProject.id,
-                    phase: phase.name,
-                    order: taskIndex
-                  });
-                });
-              }
-            });
-          }
-
-          toast.success(`Projeto "${projectData.name}" criado com sucesso! Todas as tarefas foram organizadas por fase.`);
-          
-          // Limpar o JSON da mensagem para o usuário ver só o texto
-          const cleanResponse = aiResponse
-            .replace(/\[CRIAR_PROJETO\][\s\S]*?\[\/CRIAR_PROJETO\]/, '')
-            .trim() + `\n\n✅ **Projeto "${projectData.name}" criado com sucesso!**\nTodas as tarefas foram organizadas por fase dentro da plataforma. Acesse o Dashboard para acompanhar o progresso.`;
-          
-          const assistantMessage: Message = {
-            role: 'assistant',
-            content: cleanResponse
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        } catch (parseErr) {
-          console.error('Erro ao parsear projeto:', parseErr);
-          const assistantMessage: Message = {
-            role: 'assistant',
-            content: aiResponse
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-      } else {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: aiResponse
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      }
+      // Função para processar resposta da IA e detectar criação de projeto
+      const processedMessage = processAIResponse(aiResponse);
+      setMessages(prev => [...prev, processedMessage]);
     } catch (error) {
       console.error('Erro ao chamar IA:', error);
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -549,6 +483,146 @@ export default function PlanningCopilot() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Função central para processar resposta da IA e detectar/criar projetos
+  const processAIResponse = (aiResponse: string): Message => {
+    // Tentar detectar JSON de criação de projeto - com tags ou sem tags
+    let projectData: any = null;
+    let cleanText = aiResponse;
+
+    // 1. Tentar com tags [CRIAR_PROJETO]...[/CRIAR_PROJETO]
+    const tagMatch = aiResponse.match(/\[CRIAR_PROJETO\]([\s\S]*?)\[\/CRIAR_PROJETO\]/);
+    if (tagMatch) {
+      try {
+        const parsed = JSON.parse(tagMatch[1].trim());
+        projectData = parsed.project || parsed;
+        cleanText = aiResponse.replace(/\[CRIAR_PROJETO\][\s\S]*?\[\/CRIAR_PROJETO\]/, '').trim();
+      } catch (e) { console.error('Erro ao parsear tag projeto:', e); }
+    }
+
+    // 2. Se não encontrou com tags, tentar JSON puro com "action": "create_project"
+    if (!projectData) {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*?"action"\s*:\s*"create_project"[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          projectData = parsed.project || parsed;
+          cleanText = aiResponse.replace(jsonMatch[0], '').trim();
+        } catch (e) {
+          // Tentar extrair JSON de dentro de blocos de código markdown
+          const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (codeBlockMatch) {
+            try {
+              const parsed = JSON.parse(codeBlockMatch[1].trim());
+              if (parsed.action === 'create_project' || parsed.project) {
+                projectData = parsed.project || parsed;
+                cleanText = aiResponse.replace(/```(?:json)?\s*[\s\S]*?```/, '').trim();
+              }
+            } catch (e2) { console.error('Erro ao parsear code block:', e2); }
+          }
+        }
+      }
+    }
+
+    // 3. Se não encontrou de nenhuma forma, tentar qualquer JSON com "phases" e "name"
+    if (!projectData) {
+      const anyJsonMatch = aiResponse.match(/\{[\s\S]*?"name"[\s\S]*?"phases"[\s\S]*\}/);
+      if (anyJsonMatch) {
+        try {
+          const parsed = JSON.parse(anyJsonMatch[0]);
+          if (parsed.phases && parsed.name) {
+            projectData = parsed.project || parsed;
+            cleanText = aiResponse.replace(anyJsonMatch[0], '').trim();
+          }
+        } catch (e) { /* não é JSON válido, ignorar */ }
+      }
+    }
+
+    // Se detectou projeto, criar silenciosamente e mostrar mensagem amigável
+    if (projectData && projectData.name) {
+      try {
+        // Contar total de tarefas
+        let totalTasks = 0;
+        let totalPhases = 0;
+        const phaseNames: string[] = [];
+        if (projectData.phases) {
+          totalPhases = projectData.phases.length;
+          projectData.phases.forEach((phase: any) => {
+            phaseNames.push(phase.name);
+            if (phase.tasks) totalTasks += phase.tasks.length;
+          });
+        }
+
+        // Criar o projeto via localDatabase
+        const newProject = localDatabase.createProject({
+          name: projectData.name || 'Novo Projeto',
+          description: projectData.description || '',
+          project_type: projectData.project_type || 'artist_management',
+          status: 'active',
+          startDate: new Date().toISOString(),
+          budget: Number(projectData.budget) || 0,
+          totalCost: 0,
+          ownerId: 'user_1',
+          members: [],
+          phases: projectData.phases || [],
+          whatsappGroup: '',
+          tasks: []
+        });
+
+        // Criar tarefas para cada fase
+        if (projectData.phases && newProject) {
+          projectData.phases.forEach((phase: any, phaseIndex: number) => {
+            if (phase.tasks) {
+              phase.tasks.forEach((task: any, taskIndex: number) => {
+                localDatabase.createTask({
+                  title: task.title,
+                  description: task.description || '',
+                  status: 'pending',
+                  priority: task.priority || 'medium',
+                  category: task.category || 'conteudo',
+                  projectId: newProject.id,
+                  phase: phase.name,
+                  order: taskIndex
+                });
+              });
+            }
+          });
+        }
+
+        toast.success(`Projeto criado com sucesso!`);
+
+        // Montar mensagem amigável (SEM código, SEM JSON)
+        const friendlyMessage = `✅ **Pronto! Seu projeto "${projectData.name}" foi transformado em um fluxo de trabalho completo dentro da plataforma!**
+
+📊 **Resumo do que foi criado:**
+• **${totalPhases} fases** de trabalho organizadas
+• **${totalTasks} tarefas** distribuídas por categoria
+${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}
+
+Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
+
+📅 **A partir de que dia você quer começar a trabalhar nesse projeto?** Assim eu configuro as notificações e lembretes para você receber os avisos das atividades que precisam ser feitas em cada etapa.`;
+
+        return {
+          role: 'assistant' as const,
+          content: friendlyMessage
+        };
+      } catch (createErr) {
+        console.error('Erro ao criar projeto:', createErr);
+        toast.error('Erro ao criar o projeto. Tente novamente.');
+        return {
+          role: 'assistant' as const,
+          content: 'Desculpe, tive um problema ao criar o projeto na plataforma. Pode tentar novamente?'
+        };
+      }
+    }
+
+    // Se não é criação de projeto, retornar resposta normal
+    return {
+      role: 'assistant' as const,
+      content: cleanText || aiResponse
+    };
   };
 
   const handleQuickAction = (action: string) => {
