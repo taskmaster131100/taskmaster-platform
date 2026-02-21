@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, TrendingUp, TrendingDown, PieChart, Plus, 
   Filter, Download, Calendar, MoreVertical, Edit2, Trash2,
-  ChevronDown, ChevronRight, AlertCircle, CheckCircle, Clock, X, FileText, Share2
+  ChevronDown, ChevronRight, AlertCircle, CheckCircle, Clock, X, FileText, Share2,
+  Sparkles, Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
+import { analyzeFinances } from '../services/aiMarketingService';
 
 interface Budget {
   id: string;
@@ -57,6 +59,8 @@ export default function FinancePage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTransaction, setNewTransaction] = useState({ description: '', category: 'Show', amount: 0, type: 'revenue' as 'revenue' | 'expense' });
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [analyzingFinances, setAnalyzingFinances] = useState(false);
 
   useEffect(() => {
     loadFinanceData();
@@ -150,6 +154,24 @@ export default function FinancePage() {
     setShowReportModal(true);
   };
 
+  const handleAIAnalysis = async () => {
+    setAnalyzingFinances(true);
+    try {
+      const totalRevenue = transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0);
+      const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const result = await analyzeFinances(transactions, {
+        totalRevenue,
+        totalExpenses,
+        balance: totalRevenue - totalExpenses
+      });
+      setAiAnalysis(result);
+    } catch (error) {
+      toast.error('Erro ao gerar análise. Tente novamente.');
+    } finally {
+      setAnalyzingFinances(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
@@ -164,6 +186,14 @@ export default function FinancePage() {
           >
             <FileText className="w-5 h-5 text-[#FFAD85]" />
             Relatório para Artista
+          </button>
+          <button 
+            onClick={handleAIAnalysis}
+            disabled={analyzingFinances}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 font-bold disabled:opacity-50"
+          >
+            {analyzingFinances ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+            Análise IA
           </button>
           <button 
             onClick={() => setShowAddModal(true)}
@@ -199,6 +229,22 @@ export default function FinancePage() {
           <p className="text-2xl font-bold text-orange-600">R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
+
+      {/* Análise IA */}
+      {aiAnalysis && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg text-purple-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Análise Financeira do Marcos
+            </h3>
+            <button onClick={() => setAiAnalysis(null)} className="text-purple-400 hover:text-purple-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="text-sm text-purple-800 leading-relaxed whitespace-pre-wrap">{aiAnalysis}</div>
+        </div>
+      )}
 
       {/* Tabela de Transações Recentes */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

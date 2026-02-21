@@ -310,6 +310,53 @@ export default function OrganizationDashboard({
         </div>
       </div>
 
+      {/* Ações Rápidas */}
+      <div className="mb-8">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Ações Rápidas</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button
+            onClick={onCreateProject}
+            className="bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] text-white p-5 rounded-xl shadow-sm hover:shadow-lg transition-all text-left group"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="w-6 h-6" />
+              <span className="font-bold text-sm">Criar Projeto com IA</span>
+            </div>
+            <p className="text-xs text-white/80">Converse com o Marcos e crie seu projeto automaticamente</p>
+          </button>
+          <button
+            onClick={onCreateArtist}
+            className="bg-white border border-gray-200 text-gray-900 p-5 rounded-xl shadow-sm hover:shadow-md hover:border-purple-300 transition-all text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Music className="w-6 h-6 text-purple-600" />
+              <span className="font-bold text-sm">Novo Artista</span>
+            </div>
+            <p className="text-xs text-gray-500">Cadastre um novo talento na plataforma</p>
+          </button>
+          <button
+            onClick={() => navigate('/finance')}
+            className="bg-white border border-gray-200 text-gray-900 p-5 rounded-xl shadow-sm hover:shadow-md hover:border-green-300 transition-all text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <DollarSign className="w-6 h-6 text-green-600" />
+              <span className="font-bold text-sm">Financeiro</span>
+            </div>
+            <p className="text-xs text-gray-500">Gerencie receitas, despesas e relatórios</p>
+          </button>
+          <button
+            onClick={() => navigate('/marketing')}
+            className="bg-white border border-gray-200 text-gray-900 p-5 rounded-xl shadow-sm hover:shadow-md hover:border-pink-300 transition-all text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Rocket className="w-6 h-6 text-pink-600" />
+              <span className="font-bold text-sm">Marketing IA</span>
+            </div>
+            <p className="text-xs text-gray-500">Gere conteúdo com inteligência artificial</p>
+          </button>
+        </div>
+      </div>
+
       {/* Artists Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
