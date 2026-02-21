@@ -26,22 +26,14 @@ interface AIGeneratedPlanning {
  * Gera um planejamento estruturado usando IA (OpenAI)
  */
 export async function generatePlanningWithAI(prompt: string): Promise<AIGeneratedPlanning> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-  if (!apiKey || apiKey === 'sk-proj-your-openai-key-here') {
-    // Modo fallback: retorna planejamento mock
-    return generateMockPlanning(prompt);
-  }
-
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -95,7 +87,7 @@ export async function generatePlanningWithAI(prompt: string): Promise<AIGenerate
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      throw new Error(`AI API error: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -307,22 +299,14 @@ function generateMockPlanning(prompt: string): AIGeneratedPlanning {
  * Processa texto de projeto e gera planejamento estruturado com IA
  */
 export async function parseProjectFromText(text: string, fileName?: string): Promise<AIGeneratedPlanning> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-  if (!apiKey || apiKey === 'sk-proj-your-openai-key-here') {
-    // Modo fallback: retorna planejamento mock
-    return generateMockPlanningFromText(text, fileName);
-  }
-
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -392,7 +376,7 @@ INSTRUÇÕES:
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      throw new Error(`AI API error: ${response.statusText}`);
     }
 
     const data = await response.json();

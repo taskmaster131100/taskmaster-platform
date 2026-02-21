@@ -12,7 +12,7 @@ export default function BetaBanner() {
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm font-medium">
-            TaskMaster Beta - Plataforma completa de gestão musical profissional
+            TaskMaster - Plataforma completa de gestão musical profissional
           </p>
         </div>
         <button

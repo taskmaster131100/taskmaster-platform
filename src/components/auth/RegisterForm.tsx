@@ -126,12 +126,11 @@ export default function RegisterForm() {
       return;
     }
 
-    // Validate invite code in beta mode
-    const betaMode = import.meta.env.VITE_BETA_MODE === 'true';
+    // Validate invite code if invite-only mode is active
     const inviteOnly = import.meta.env.VITE_INVITE_ONLY === 'true';
 
-    if (betaMode && inviteOnly && !inviteValidated) {
-      setError('Código de convite obrigatório para cadastro. Solicite um convite para participar do beta.');
+    if (inviteOnly && !inviteValidated) {
+      setError('Código de convite obrigatório para cadastro. Solicite um convite.');
       toast.error('Código de convite obrigatório');
       return;
     }
@@ -149,7 +148,7 @@ export default function RegisterForm() {
             language,
             account_type: accountType,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            beta_user: true,
+            approved: false,
             invite_code: inviteCode || null,
             created_at: new Date().toISOString()
           }
@@ -167,26 +166,20 @@ export default function RegisterForm() {
 
       console.log('User created successfully:', authData.user.id);
 
-      // Log beta user registration (não bloqueia o cadastro se falhar)
+      // Notificar admin sobre novo cadastro pendente de aprovação
       try {
-        const { error: logError } = await supabase.from('beta_user_logs').insert({
-          user_id: authData.user.id,
-          action_type: 'signup',
-          module: 'auth',
-          metadata: {
-            email,
-            account_type: accountType,
-            language,
-            signup_source: 'web',
-            invite_code: inviteCode || null
-          }
+        await fetch('/api/notify-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userName: name,
+            userEmail: email,
+            accountType,
+            userId: authData.user.id
+          })
         });
-
-        if (logError) {
-          console.error('Failed to log beta user:', logError);
-        }
-      } catch (logErr) {
-        console.error('Beta log insert failed:', logErr);
+      } catch (notifyErr) {
+        console.error('Falha ao notificar admin:', notifyErr);
       }
 
       // Increment invite code usage (não bloqueia o cadastro se falhar)
@@ -205,10 +198,10 @@ export default function RegisterForm() {
 
       console.log('Signup complete, redirecting to /');
 
-      toast.success('Cadastro realizado com sucesso! Bem-vindo ao TaskMaster!');
+      toast.success('Cadastro realizado! Seu acesso será liberado após aprovação do administrador. Você receberá um email quando for aprovado.');
 
-      // Redirect to onboarding
-      navigate('/');
+      // Redirect to pending approval page
+      navigate('/pending-approval');
     } catch (err: any) {
       console.error('Signup failed:', err);
 
@@ -317,7 +310,7 @@ export default function RegisterForm() {
                       validateInviteCode(e.target.value);
                     }
                   }}
-                  placeholder="BETA-2025-XXXXXX"
+                  placeholder="TM-2026-XXXXXX"
                   required={import.meta.env.VITE_INVITE_ONLY === 'true'}
                   disabled={!!inviteCodeFromUrl}
                   className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent transition-all ${
@@ -340,7 +333,7 @@ export default function RegisterForm() {
               )}
               {import.meta.env.VITE_INVITE_ONLY === 'true' && !inviteValidated && (
                 <p className="mt-1 text-xs text-gray-500">
-                  O cadastro está disponível apenas para beta testers convidados
+                  O cadastro requer um código de convite válido
                 </p>
               )}
             </div>

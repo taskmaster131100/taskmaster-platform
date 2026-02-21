@@ -37,7 +37,6 @@ const ApprovalsPage = React.lazy(() => import('./pages/ApprovalsPage'));
 const FunctionalityValidator = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.FunctionalityValidator })));
 const SystemValidator = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.SystemValidator })));
 const BetaBanner = React.lazy(() => import('./components/BetaBanner'));
-const DemoBanner = React.lazy(() => import('./components/DemoBanner'));
 const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const Onboarding = React.lazy(() => import('./components/Onboarding'));
 const LoginForm = React.lazy(() => import('./components/auth/LoginForm'));
@@ -45,8 +44,7 @@ const RegisterForm = React.lazy(() => import('./components/auth/RegisterForm'));
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword'));
 const DashboardRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.DashboardRedirect })));
 const VisaoGeralRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.VisaoGeralRedirect })));
-const BetaDashboard = React.lazy(() => import('./components/beta/BetaDashboard'));
-const BetaFeedbackWidget = React.lazy(() => import('./components/beta/BetaFeedbackWidget'));
+const PendingApproval = React.lazy(() => import('./pages/PendingApproval'));
 const MusicHub = React.lazy(() => import('./components/music/MusicHub'));
 const FileLibrary = React.lazy(() => import('./components/FileLibrary'));
 const AITextGenerator = React.lazy(() => import('./components/AITextGenerator'));
@@ -506,6 +504,11 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             </>
           )}
 
+          <Route path="/pending-approval" element={
+            <React.Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFAD85]"></div></div>}>
+              <PendingApproval />
+            </React.Suspense>
+          } />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
@@ -680,9 +683,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       <React.Suspense fallback={<div></div>}>
         <BetaBanner />
       </React.Suspense>
-      <React.Suspense fallback={<div></div>}>
-        <DemoBanner />
-      </React.Suspense>
+
 
       {/* Onboarding for new users */}
       {showOnboarding && (
@@ -771,9 +772,9 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             <SystemValidator />
           </React.Suspense>
         } />
-        <Route path="/beta-dashboard" element={
+        <Route path="/pending-approval" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <BetaDashboard />
+            <PendingApproval />
           </React.Suspense>
         } />
 
@@ -973,12 +974,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         </div>
       )}
 
-      {/* Beta Feedback Widget */}
-      {user && (
-        <React.Suspense fallback={<div></div>}>
-          <BetaFeedbackWidget />
-        </React.Suspense>
-      )}
+
 
       {/* Marcos Menezes AI Mentor - Global Widgets */}
       {user && (

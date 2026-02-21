@@ -224,14 +224,6 @@ export async function generateMentorResponse(
   const category = categorizeQuestion(userQuestion);
 
   try {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey || apiKey === 'sk-proj-your-openai-key-here') {
-      // Fallback para respostas locais se não tiver API key
-      return generateLocalResponse(userQuestion, category);
-    }
-
-    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o';
-
     const historyMessages = (context?.conversationHistory || []).slice(-10).map(msg => ({
       role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
       content: msg.content
@@ -239,14 +231,13 @@ export async function generateMentorResponse(
 
     const contextInfo = context ? `\n\nContexto do artista: Nível ${context.careerLevel}, Função: ${context.userRole}${context.genre ? `, Gênero: ${context.genre}` : ''}${context.recentShows ? `, Shows recentes: ${context.recentShows}` : ''}` : '';
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model,
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + contextInfo },
           ...historyMessages,

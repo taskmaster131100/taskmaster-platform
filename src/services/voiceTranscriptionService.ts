@@ -82,21 +82,13 @@ export class AudioRecorder {
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
   try {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('API key não configurada');
-    }
-
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.webm');
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt');
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('/api/ai-transcribe', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
       body: formData
     });
 
@@ -137,12 +129,7 @@ export async function processVoiceMessage(
   conversationHistory?: any[]
 ): Promise<string> {
   try {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('API key não configurada');
-    }
-
-    const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o';
+    const model = 'gpt-4o';
 
     // Construir histórico de conversa para contexto
     const historyMessages = (conversationHistory || []).slice(-10).map(msg => ({
@@ -205,11 +192,10 @@ ${context?.mode === 'module' && context?.module ? `## CONTEXTO ATUAL\nO usuário
 
 Você é o Marcos. Fala como o Marcos. Ajuda como o Marcos.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model,

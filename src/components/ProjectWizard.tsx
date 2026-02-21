@@ -73,11 +73,10 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
 // Função para analisar projeto com IA
 async function analyzeProjectWithAI(text: string): Promise<ProjectData> {
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || ''}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4o',

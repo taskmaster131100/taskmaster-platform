@@ -1,7 +1,4 @@
-import { OpenAI } from 'openai';
-
-// O cliente OpenAI já vem pré-configurado no ambiente Manus
-const client = new OpenAI();
+// AI Marketing Service - usa proxy do servidor
 
 export interface MarketingStrategyRequest {
   artistName: string;
@@ -43,19 +40,32 @@ export async function generateMarketingStrategy(request: MarketingStrategyReques
   `;
 
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: "Você é um assistente de marketing musical que fala português brasileiro. Responda apenas com o JSON solicitado." },
-        { role: "user", content: prompt }
-      ],
-      response_format: { type: "json_object" }
+    const response = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Você é um assistente de marketing musical que fala português brasileiro. Responda apenas com o JSON solicitado.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7
+      })
     });
 
-    const content = response.choices[0].message.content;
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content;
     if (!content) throw new Error('Falha ao gerar conteúdo de marketing');
 
-    return JSON.parse(content) as MarketingContent;
+    // Remove markdown code blocks if present
+    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    return JSON.parse(cleanContent) as MarketingContent;
   } catch (error) {
     console.error('Erro na IA de Marketing:', error);
     throw new Error('Não foi possível gerar a estratégia de marketing no momento.');
