@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { localDatabase } from '../services/localDatabase';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -163,9 +164,41 @@ SEUS SUPERPODERES:
 4. Você divide projetos em etapas e acompanha o progresso
 5. Você lembra de prazos, cobranças pendentes e tarefas atrasadas
 6. Você analisa documentos/projetos anexados e transforma em plano de ação
+7. Você TRANSFORMA conversas e documentos em FLUXOS DE TRABALHO completos dentro da plataforma
 
 DADOS ATUAIS DA PLATAFORMA DO USUÁRIO:
 ${contextStr}
+
+FLUXO DE CRIAÇÃO DE PROJETO (MUITO IMPORTANTE):
+Quando o usuário conversar sobre uma ideia, projeto ou anexar um documento:
+1. PRIMEIRO: Faça perguntas naturais para entender melhor (nome do projeto, artista, tipo, prazos, orçamento, equipe envolvida)
+2. SEGUNDO: Quando tiver informação suficiente, SEMPRE pergunte:
+   "Entendi tudo! Quer que eu transforme isso em um fluxo de trabalho completo dentro da plataforma? Vou criar o projeto com todas as tarefas organizadas por fase."
+3. TERCEIRO: Quando o usuário aceitar (sim, ok, pode criar, bora, etc.), responda com um JSON estruturado no formato abaixo:
+
+[CRIAR_PROJETO]
+{"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes"},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes"}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
+[/CRIAR_PROJETO]
+
+CATEGORIAS DE TAREFAS (use nos campos category):
+- conteudo: Gravação, mixagem, masterização, produção musical
+- marketing: Divulgação, redes sociais, press release, conteúdo visual
+- shows: Booking, rider técnico, logística de shows
+- logistica: Transporte, hospedagem, equipamentos
+- estrategia: Posicionamento, parcerias, distribuição
+- financeiro: Orçamento, pagamentos, contratos
+- lancamento: Distribuição digital, data de lançamento, playlists
+
+TIPOS DE PROJETO (use em project_type):
+- single_release: Lançamento de single
+- album_release: Lançamento de álbum/EP
+- tour: Turnê
+- music_video: Clipe/videoclipe
+- artist_management: Gestão geral do artista
+- event: Evento específico
+- branding: Identidade visual/marca
+
+Se o usuário já subir um projeto COMPLETO com todas as informações (valores, datas, equipe), NÃO faça muitas perguntas - vá direto para a confirmação e crie o fluxo de trabalho.
 
 REGRAS:
 - Sempre baseie suas respostas nos dados reais acima
@@ -173,10 +206,11 @@ REGRAS:
 - Quando mencionar membros da equipe, use os nomes reais cadastrados
 - Sugira ações específicas com prazos concretos
 - Se detectar tarefas atrasadas ou prazos próximos, avise IMEDIATAMENTE
-- Quando o usuário anexar um arquivo, analise profundamente e gere um plano de ação completo
+- Quando o usuário anexar um arquivo, analise profundamente e OFEREÇA transformar em fluxo de trabalho
 - Use os 4 Pilares (Conteúdo, Shows & Vendas, Logística, Estratégia) para organizar recomendações
 - Seja proativo: "Vi que você tem um show em 5 dias e o rider técnico não está pronto. Quer que eu ajude?"
 - Sugira contatar pessoas da equipe: "O ${platformContext.teamMembers[0]?.name || 'responsável de marketing'} precisa saber sobre isso. Quer que eu mande uma mensagem?"
+- NUNCA responda só com análise sem oferecer ação concreta. Sempre pergunte se quer criar o fluxo de trabalho.
 
 ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
 
@@ -435,12 +469,76 @@ export default function PlanningCopilot() {
 
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: aiResponse
-      };
+      // Detectar se a IA gerou um projeto para criar
+      const projectMatch = aiResponse.match(/\[CRIAR_PROJETO\]([\s\S]*?)\[\/CRIAR_PROJETO\]/);
+      if (projectMatch) {
+        try {
+          const projectJson = JSON.parse(projectMatch[1].trim());
+          const projectData = projectJson.project;
+          
+          // Criar o projeto via localDatabase
+          const newProject = localDatabase.createProject({
+            name: projectData.name || 'Novo Projeto',
+            description: projectData.description || '',
+            project_type: projectData.project_type || 'artist_management',
+            status: 'active',
+            startDate: new Date().toISOString(),
+            budget: Number(projectData.budget) || 0,
+            totalCost: 0,
+            ownerId: 'user_1',
+            members: [],
+            phases: projectData.phases || [],
+            whatsappGroup: '',
+            tasks: []
+          });
 
-      setMessages(prev => [...prev, assistantMessage]);
+          // Criar tarefas para cada fase
+          if (projectData.phases && newProject) {
+            projectData.phases.forEach((phase: any, phaseIndex: number) => {
+              if (phase.tasks) {
+                phase.tasks.forEach((task: any, taskIndex: number) => {
+                  localDatabase.createTask({
+                    title: task.title,
+                    description: task.description || '',
+                    status: 'pending',
+                    priority: task.priority || 'medium',
+                    category: task.category || 'conteudo',
+                    projectId: newProject.id,
+                    phase: phase.name,
+                    order: taskIndex
+                  });
+                });
+              }
+            });
+          }
+
+          toast.success(`Projeto "${projectData.name}" criado com sucesso! Todas as tarefas foram organizadas por fase.`);
+          
+          // Limpar o JSON da mensagem para o usuário ver só o texto
+          const cleanResponse = aiResponse
+            .replace(/\[CRIAR_PROJETO\][\s\S]*?\[\/CRIAR_PROJETO\]/, '')
+            .trim() + `\n\n✅ **Projeto "${projectData.name}" criado com sucesso!**\nTodas as tarefas foram organizadas por fase dentro da plataforma. Acesse o Dashboard para acompanhar o progresso.`;
+          
+          const assistantMessage: Message = {
+            role: 'assistant',
+            content: cleanResponse
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+        } catch (parseErr) {
+          console.error('Erro ao parsear projeto:', parseErr);
+          const assistantMessage: Message = {
+            role: 'assistant',
+            content: aiResponse
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+      } else {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: aiResponse
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error('Erro ao chamar IA:', error);
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';

@@ -283,23 +283,22 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const handleArtistSubmit = async (artistData: any) => {
     try {
-      // Garantir que todos os campos obrigatórios estão presentes
-      const safeArtistData = {
+      // Enviar apenas os campos que existem na tabela artists do Supabase
+      const safeArtistData: Record<string, any> = {
         name: artistData.name || 'Novo Artista',
-        artistic_name: artistData.artistic_name || artistData.artisticName,
+        artistic_name: artistData.artistic_name || artistData.artisticName || null,
         genre: artistData.genre || 'Não definido',
         status: artistData.status || 'active',
-        contact_email: artistData.contact_email || artistData.contactEmail,
-        contact_phone: artistData.contact_phone || artistData.contactPhone,
-        bio: artistData.bio,
-        image_url: artistData.image_url || artistData.imageUrl,
-        exclusivity: Boolean(artistData.exclusivity),
-        contract_start_date: artistData.contract_start_date || artistData.contractStartDate,
-        contract_end_date: artistData.contract_end_date || artistData.contractEndDate,
-        commission_rate: artistData.commission_rate || artistData.commissionRate,
-        manager_id: user?.id,
-        social_media: artistData.social_media || artistData.socialMedia || {}
+        bio: artistData.bio || null,
+        photo_url: artistData.photo_url || artistData.image_url || artistData.imageUrl || null,
+        contract_type: artistData.contract_type || null,
+        created_by: user?.id || null
       };
+
+      // Remover campos com valor undefined para evitar erros no Supabase
+      Object.keys(safeArtistData).forEach(key => {
+        if (safeArtistData[key] === undefined) delete safeArtistData[key];
+      });
 
       const { data: newArtist, error } = await supabase
         .from('artists')
@@ -310,15 +309,17 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       if (error) throw error;
 
       if (newArtist) {
+        // Atualizar lista instantaneamente sem esperar reload
         setArtists(prev => [...prev, newArtist as Artist]);
         toast.success('Artista criado com sucesso!');
-        // Recarregar dados após criar artista
+        // Recarregar dados em background
         loadData();
       }
       setShowCreateArtist(false);
     } catch (error) {
       console.error('Erro ao criar artista:', error);
-      toast.error('Erro ao criar artista no banco de dados. Tente novamente.');
+      const errMsg = error instanceof Error ? error.message : (error as any)?.message || 'Erro desconhecido';
+      toast.error(`Erro ao criar artista: ${errMsg}`);
     }
   };
 
