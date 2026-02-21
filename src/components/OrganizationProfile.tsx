@@ -39,8 +39,10 @@ export default function OrganizationProfile() {
   });
 
   useEffect(() => {
-    loadOrganization();
-  }, []);
+    if (user) {
+      loadOrganization();
+    }
+  }, [user]);
 
   const loadOrganization = async () => {
     try {
@@ -51,11 +53,50 @@ export default function OrganizationProfile() {
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!userOrg) {
-        toast.error('Organização não encontrada');
-        return;
+        // Tentar criar organização automaticamente
+        try {
+          const { data: bootstrapResult, error: bootstrapError } = await supabase.rpc('bootstrap_organization', {
+            org_name: 'Minha Organização'
+          });
+
+          if (bootstrapError) {
+            console.error('Erro ao criar organização:', bootstrapError);
+            toast.error('Não foi possível criar a organização. Tente recarregar a página.');
+            return;
+          }
+
+          if (bootstrapResult?.organization_id) {
+            setOrgId(bootstrapResult.organization_id);
+            // Recarregar dados da organização
+            const { data: org } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('id', bootstrapResult.organization_id)
+              .single();
+
+            if (org) {
+              setFormData({
+                id: org.id,
+                name: org.name || '',
+                phone: org.phone || '',
+                description: org.description || '',
+                website: org.website || '',
+                address: org.address || '',
+                logo_url: org.logo_url || '',
+                social_media: org.social_media || {}
+              });
+            }
+            toast.success('Organização criada com sucesso! Preencha os dados abaixo.');
+            return;
+          }
+        } catch (err) {
+          console.error('Erro ao criar organização:', err);
+          toast.error('Erro ao configurar organização. Tente recarregar a página.');
+          return;
+        }
       }
 
       setOrgId(userOrg.organization_id);

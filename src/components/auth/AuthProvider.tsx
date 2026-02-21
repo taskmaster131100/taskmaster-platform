@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkSingleSession(session.user.id);
+        ensureOrganization();
       }
       setLoading(false);
     });
@@ -32,12 +33,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkSingleSession(session.user.id);
+        ensureOrganization();
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Função para garantir que o usuário tem uma organização
+  const ensureOrganization = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Verificar se já tem organização
+      const { data: existingOrg } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (existingOrg) return; // Já tem organização, não precisa criar
+
+      // Chamar a função bootstrap_organization para criar automaticamente
+      const { data, error } = await supabase.rpc('bootstrap_organization', {
+        org_name: 'Minha Organização'
+      });
+
+      if (error) {
+        console.error('Erro ao criar organização:', error);
+        return;
+      }
+
+      if (data?.success && !data?.skipped) {
+        console.log('Organização criada automaticamente:', data.organization_id);
+      }
+    } catch (err) {
+      console.error('Erro ao verificar/criar organização:', err);
+    }
+  };
 
   // Função para garantir sessão única
   const checkSingleSession = async (userId: string) => {

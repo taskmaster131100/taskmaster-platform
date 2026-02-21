@@ -64,15 +64,43 @@ export default function TeamPage() {
       setLoading(true);
       
       // Get current organization
-      const { data: orgData } = await supabase
+      let { data: orgData } = await supabase
         .from('user_organizations')
         .select('organization_id, role')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!orgData) {
-        toast.error('Organização não encontrada');
-        return;
+        // Tentar criar organização automaticamente
+        try {
+          const { data: bootstrapResult, error: bootstrapError } = await supabase.rpc('bootstrap_organization', {
+            org_name: 'Minha Organização'
+          });
+
+          if (bootstrapError || !bootstrapResult?.organization_id) {
+            toast.error('Organização não encontrada. Tente recarregar a página.');
+            return;
+          }
+
+          // Recarregar dados da organização
+          const { data: newOrgData } = await supabase
+            .from('user_organizations')
+            .select('organization_id, role')
+            .eq('user_id', user?.id)
+            .maybeSingle();
+
+          if (!newOrgData) {
+            toast.error('Erro ao configurar organização. Tente recarregar a página.');
+            return;
+          }
+
+          orgData = newOrgData;
+          toast.success('Organização criada com sucesso!');
+        } catch (err) {
+          console.error('Erro ao criar organização:', err);
+          toast.error('Erro ao configurar organização.');
+          return;
+        }
       }
 
       setCurrentUserRole(orgData.role);
@@ -170,10 +198,10 @@ export default function TeamPage() {
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!orgData) {
-        toast.error('Organização não encontrada');
+        toast.error('Organização não encontrada. Vá em Organização para configurar.');
         return;
       }
 

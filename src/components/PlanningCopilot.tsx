@@ -206,7 +206,17 @@ ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Erro na API: ${response.status} - ${errorData.error?.message || 'Erro desconhecido'}`);
+    const errorMessage = errorData.error?.message || 'Erro desconhecido';
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Chave da API OpenAI inválida ou expirada. Entre em contato com o suporte.');
+    }
+    if (response.status === 429) {
+      throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.');
+    }
+    if (response.status === 500 || response.status === 503) {
+      throw new Error('Serviço de IA temporariamente indisponível. Tente novamente em instantes.');
+    }
+    throw new Error(`Erro na API: ${response.status} - ${errorMessage}`);
   }
 
   const data = await response.json();
@@ -347,9 +357,12 @@ export default function PlanningCopilot() {
           } else {
             fileContent = await currentFile.text();
           }
+          if (!fileContent || fileContent.trim().length === 0) {
+            fileContent = `[O arquivo ${currentFile.name} não contém texto extraível. Pode ser um PDF de imagem/escaneado.]`;
+          }
         } catch (err) {
           console.error('Erro ao extrair texto:', err);
-          fileContent = `[Não foi possível extrair o texto do arquivo ${currentFile.name}]`;
+          fileContent = `[Não foi possível extrair o texto do arquivo ${currentFile.name}. Erro: ${err instanceof Error ? err.message : 'Formato não suportado'}]`;
         }
       }
 
