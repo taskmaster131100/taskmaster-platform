@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Send, Bot, User, Loader2, CheckCircle2,
   Calendar, Music, Megaphone, Truck, DollarSign,
-  Target, Zap, Paperclip, FileText, X, Users, Bell
+  Target, Zap, Paperclip, FileText, X, Users, Bell, Mic, MicOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -267,6 +267,11 @@ export default function PlanningCopilot() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [platformContext, setPlatformContext] = useState<PlatformContext | null>(null);
   const [contextLoading, setContextLoading] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conversationHistory = useRef<{ role: string; content: string }[]>([]);
@@ -306,6 +311,64 @@ export default function PlanningCopilot() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Gravação de áudio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size > 0) await handleAudioMessage(audioBlob);
+      };
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } catch (err) {
+      toast.error('Não foi possível acessar o microfone.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+  };
+
+  const handleAudioMessage = async (audioBlob: Blob) => {
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const userMsg: Message = { role: 'user', content: '🎤 Mensagem de áudio...' };
+    setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'audio.webm');
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'pt');
+      const res = await fetch('/api/ai-transcribe', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Erro na transcrição');
+      const data = await res.json();
+      const text = data.text;
+      if (!text?.trim()) throw new Error('Não foi possível entender o áudio');
+      setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: `🎤 "${text}"` } : m));
+      conversationHistory.current.push({ role: 'user', content: text });
+      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext!);
+      conversationHistory.current.push({ role: 'assistant', content: aiResponse });
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao processar áudio.');
+      setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: '🎤 Não foi possível transcrever. Tente novamente.' } : m));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -480,6 +543,12 @@ export default function PlanningCopilot() {
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-100">
+        {isRecording && (
+          <div className="mb-3 flex items-center gap-2 p-2 bg-red-50 border border-red-100 rounded-lg">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-red-700">Gravando... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</span>
+          </div>
+        )}
         {attachedFile && (
           <div className="mb-3 flex items-center justify-between p-2 bg-purple-50 border border-purple-100 rounded-lg">
             <div className="flex items-center gap-2">
@@ -505,6 +574,14 @@ export default function PlanningCopilot() {
             title="Anexar projeto (PDF/Doc)"
           >
             <Paperclip className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading || contextLoading}
+            className={`p-3 border rounded-xl transition-all ${isRecording ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+            title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+          >
+            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
           <div className="relative flex-1">
             <input
