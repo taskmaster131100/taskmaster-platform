@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Upload, MessageSquare, FileText, Check, Loader2, Send, ArrowRight, ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, FileText, Check, Loader2, Send, ArrowRight, Sparkles, AlertCircle, Mic, Square, Paperclip } from 'lucide-react';
 
 interface ProjectWizardProps {
   onComplete: (projectData: any) => void;
@@ -9,6 +9,8 @@ interface ProjectWizardProps {
 interface Message {
   role: 'assistant' | 'user';
   content: string;
+  type?: 'text' | 'audio' | 'file';
+  fileName?: string;
 }
 
 interface ProjectData {
@@ -22,6 +24,61 @@ interface ProjectData {
   description: string;
 }
 
+// System prompt para o assistente conversacional
+const PROJECT_CHAT_SYSTEM_PROMPT = `Você é Marcos Menezes, consultor estratégico musical com 20+ anos de experiência. Você está ajudando um artista/gestor a criar um projeto dentro da plataforma TaskMaster.
+
+## SEU OBJETIVO
+Conduzir uma conversa NATURAL para entender o que o artista quer fazer e depois montar o projeto completo. NÃO faça perguntas como formulário. Converse como um amigo consultor que está entendendo a situação.
+
+## COMO CONDUZIR A CONVERSA
+1. Comece se apresentando brevemente e perguntando o que o artista tem em mente
+2. Baseado na resposta, faça perguntas NATURAIS para entender melhor (não siga uma lista fixa)
+3. Se o artista é iniciante, explique conceitos e dê exemplos práticos
+4. Se o artista é experiente, vá direto ao ponto e aprofunde
+5. Adapte suas perguntas ao que o artista já disse — não repita o que ele já falou
+6. Quando sentir que tem informação suficiente, diga algo como "Beleza, acho que já tenho uma boa ideia do que você precisa. Deixa eu montar seu projeto..."
+
+## INFORMAÇÕES QUE VOCÊ PRECISA COLETAR (naturalmente, ao longo da conversa):
+- O que o artista quer fazer (lançamento, turnê, marca, gravação, etc.)
+- Nome do artista/projeto
+- Gênero musical
+- Em que pé está (já tem material? está começando do zero?)
+- Prazo/urgência
+- Recursos disponíveis (equipe, orçamento — mas não pressione se não quiser falar)
+- Expectativas e metas
+
+## REGRAS
+- Máximo 2-3 parágrafos por mensagem
+- Fale como o Marcos: direto, prático, motivador
+- Use "olha só", "é o seguinte", "vou te falar"
+- Se o artista mandar áudio transcrito, trate como se fosse uma mensagem normal
+- Se o artista anexar um PDF, analise o conteúdo e use na conversa
+- NÃO gere o projeto até ter informação suficiente
+- Quando tiver informação suficiente, INCLUA no final da sua mensagem a tag especial: [PROJETO_PRONTO]
+
+## QUANDO INCLUIR [PROJETO_PRONTO]
+Inclua essa tag SOMENTE quando você tiver pelo menos:
+- O que o artista quer fazer
+- Nome do artista
+- Gênero musical
+- Alguma ideia de prazo ou escopo
+
+Quando incluir [PROJETO_PRONTO], adicione também um bloco JSON no formato:
+\`\`\`json
+{
+  "name": "Nome do Projeto",
+  "artistName": "Nome do Artista",
+  "genre": "Gênero",
+  "objective": "Objetivo detalhado",
+  "duration": "Duração estimada",
+  "phases": ["Fase 1 - Descrição", "Fase 2 - Descrição"],
+  "tasks": ["Tarefa 1 (Responsável) - Prazo", "Tarefa 2 (Responsável) - Prazo"],
+  "description": "Descrição executiva do projeto"
+}
+\`\`\`
+As tasks devem ter 15-25 itens específicos e acionáveis com responsável e prazo.
+As phases devem ter 5-8 fases detalhadas.`;
+
 // Função para extrair texto de PDF usando pdf.js
 async function extractTextFromPDF(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,11 +86,8 @@ async function extractTextFromPDF(file: File): Promise<string> {
     reader.onload = async (e) => {
       try {
         const typedArray = new Uint8Array(e.target?.result as ArrayBuffer);
-        
-        // Usar pdf.js via CDN
         const pdfjsLib = (window as any).pdfjsLib;
         if (!pdfjsLib) {
-          // Carregar pdf.js dinamicamente
           const script = document.createElement('script');
           script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
           script.onload = async () => {
@@ -41,6 +95,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
             const text = await extractPDFText(typedArray);
             resolve(text);
           };
+          script.onerror = () => reject(new Error('Não foi possível carregar o leitor de PDF'));
           document.head.appendChild(script);
         } else {
           const text = await extractPDFText(typedArray);
@@ -59,358 +114,343 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
   const pdfjsLib = (window as any).pdfjsLib;
   const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
   let fullText = '';
-  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const pageText = textContent.items.map((item: any) => item.str).join(' ');
-    fullText += pageText + '\n\n';
+    fullText += pageText + '\n';
   }
-  
   return fullText;
 }
 
-// Função para analisar projeto com IA
-async function analyzeProjectWithAI(text: string): Promise<ProjectData> {
-  try {
-    const response = await fetch('/api/ai-chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `Você é Marcos Menezes, consultor estratégico com 20+ anos de experiência na indústria musical.
-Sua missão é analisar projetos musicais e transformá-los em planos de ação completos.
+// Classe simples de gravação de áudio
+class SimpleAudioRecorder {
+  private mediaRecorder: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
 
-Analise o texto do projeto e retorne um JSON com:
-- name: nome do projeto (criativo e descritivo)
-- artistName: nome do artista ou banda
-- genre: gênero musical principal e subgêneros
-- objective: objetivo principal detalhado (2-3 frases)
-- duration: duração prevista com justificativa
-- phases: array com 5-8 fases detalhadas do projeto (cada fase deve ser uma string descritiva como "Fase 1 - Pré-produção: Definição de repertório, arranjos e cronograma de gravação")
-- tasks: array com 15-25 tarefas específicas e acionáveis (cada tarefa deve incluir a ação, responsável sugerido e prazo estimado, ex: "Definir repertório final (Artista + Produtor) - Semana 1-2")
-- description: descrição executiva do projeto (3-5 frases)
-
-IMPORTANTE:
-- Cada fase deve ter nome, descrição e duração estimada
-- Cada tarefa deve ser específica, mensurável e ter responsável sugerido
-- Inclua tarefas de marketing, distribuição, audiovisual e gestão financeira
-- Considere o mercado atual de música independente
-- Seja detalhado e profissional
-
-Responda APENAS com o JSON válido, sem markdown, sem explicações, sem blocos de código.`
-          },
-          {
-            role: 'user',
-            content: `Analise este projeto artístico em profundidade e crie um plano de ação completo com todas as etapas, tarefas e responsabilidades:\n\n${text.substring(0, 12000)}`
-          }
-        ],
-        temperature: 0.4
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Erro na API');
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    // Tentar parsear o JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    
-    throw new Error('Resposta inválida');
-  } catch (error) {
-    console.error('Erro ao analisar com IA:', error);
-    // Fallback: extrair informações básicas do texto
-    return extractBasicInfo(text);
+  async start() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.chunks = [];
+    this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.chunks.push(e.data);
+    };
+    this.mediaRecorder.start(1000);
   }
-}
 
-// Fallback: extrair informações básicas do texto sem IA
-function extractBasicInfo(text: string): ProjectData {
-  const lines = text.split('\n').filter(l => l.trim());
-  
-  // Tentar encontrar nome do artista
-  let artistName = 'Artista';
-  const artistMatch = text.match(/artista[:\s]+([^\n]+)/i) || 
-                      text.match(/projeto[:\s]+([^\n]+)/i) ||
-                      text.match(/nome[:\s]+([^\n]+)/i);
-  if (artistMatch) artistName = artistMatch[1].trim();
-  
-  // Tentar encontrar gênero
-  let genre = 'A definir';
-  const genreMatch = text.match(/gênero[:\s]+([^\n]+)/i) ||
-                     text.match(/estilo[:\s]+([^\n]+)/i);
-  if (genreMatch) genre = genreMatch[1].trim();
-  
-  // Identificar fases
-  const phases: string[] = [];
-  const phaseMatches = text.match(/fase\s*\d+[:\s-]+([^\n]+)/gi);
-  if (phaseMatches) {
-    phaseMatches.forEach(m => {
-      const phaseName = m.replace(/fase\s*\d+[:\s-]+/i, '').trim();
-      if (phaseName) phases.push(phaseName);
+  stop(): Promise<Blob> {
+    return new Promise((resolve) => {
+      if (!this.mediaRecorder) {
+        resolve(new Blob());
+        return;
+      }
+      this.mediaRecorder.onstop = () => {
+        const blob = new Blob(this.chunks, { type: 'audio/webm' });
+        this.mediaRecorder?.stream.getTracks().forEach(t => t.stop());
+        resolve(blob);
+      };
+      this.mediaRecorder.stop();
     });
   }
-  
-  // Identificar tarefas/atividades
-  const tasks: string[] = [];
-  const taskKeywords = ['gravação', 'produção', 'lançamento', 'show', 'conteúdo', 'distribuição', 'marketing', 'audiovisual'];
-  taskKeywords.forEach(keyword => {
-    const regex = new RegExp(`[^.]*${keyword}[^.]*`, 'gi');
-    const matches = text.match(regex);
-    if (matches) {
-      matches.slice(0, 2).forEach(m => {
-        const task = m.trim().substring(0, 100);
-        if (task && !tasks.includes(task)) tasks.push(task);
-      });
-    }
-  });
-  
-  // Adicionar tarefas padrão se não encontrou
-  if (tasks.length === 0) {
-    tasks.push('Definir cronograma do projeto (Gestor) - Semana 1');
-    tasks.push('Montar equipe de trabalho (Gestor + Artista) - Semana 1-2');
-    tasks.push('Definir orçamento e fontes de receita (Financeiro) - Semana 2');
-    tasks.push('Criar estratégia de divulgação (Marketing) - Semana 3');
-    tasks.push('Planejar conteúdo audiovisual (Diretor Criativo) - Semana 3-4');
-    tasks.push('Definir canais de distribuição (Distribuidor) - Semana 4');
-    tasks.push('Agendar sessões de gravação (Produtor) - Semana 4-5');
-    tasks.push('Criar identidade visual do projeto (Designer) - Semana 2-3');
-  }
-  
-  return {
-    name: `Projeto ${artistName}`,
-    artistName,
-    genre,
-    objective: 'Desenvolvimento artístico e lançamento',
-    duration: '12 meses',
-    phases: phases.length > 0 ? phases : ['Pré-produção', 'Produção', 'Lançamento'],
-    tasks,
-    description: lines.slice(0, 3).join(' ').substring(0, 200)
-  };
 }
 
 export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
-  const [step, setStep] = useState<'choice' | 'upload' | 'chat' | 'processing' | 'review' | 'error'>('choice');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [step, setStep] = useState<'choice' | 'chat' | 'review' | 'error'>('choice');
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [projectData, setProjectData] = useState<ProjectData>({
-    name: '',
-    artistName: '',
-    genre: '',
-    objective: '',
-    duration: '',
-    phases: [],
-    tasks: [],
-    description: ''
+    name: '', artistName: '', genre: '', objective: '',
+    duration: '', phases: [], tasks: [], description: ''
   });
-  const [chatStep, setChatStep] = useState(0);
+
+  const conversationHistory = useRef<Array<{ role: string; content: string }>>([]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<SimpleAudioRecorder | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const chatQuestions = [
-    { question: "Olá! Vamos criar seu projeto juntos. Qual é o nome do artista ou projeto?", field: 'artistName' },
-    { question: "Qual é o gênero musical principal?", field: 'genre' },
-    { question: "Qual é o objetivo principal deste projeto? (Ex: lançamento de álbum, turnê, construção de marca...)", field: 'objective' },
-    { question: "Em quanto tempo você pretende executar este projeto? (Ex: 3 meses, 6 meses, 1 ano)", field: 'duration' },
-    { question: "Quais são as principais fases ou etapas que você imagina? (Pode listar separado por vírgula)", field: 'phases' },
-    { question: "Tem mais alguma informação importante sobre o projeto que gostaria de adicionar?", field: 'description' }
-  ];
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  // Iniciar chat
-  const startChat = () => {
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  // Chamar a IA via proxy
+  const callAI = async (userContent: string, fileContent?: string): Promise<string> => {
+    const fullContent = fileContent
+      ? `${userContent}\n\n[Conteúdo do documento anexado]:\n${fileContent.substring(0, 10000)}`
+      : userContent;
+
+    conversationHistory.current.push({ role: 'user', content: fullContent });
+
+    const response = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: PROJECT_CHAT_SYSTEM_PROMPT },
+          ...conversationHistory.current.slice(-16)
+        ],
+        temperature: 0.8,
+        max_tokens: 1500
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro ao comunicar com a IA');
+
+    const data = await response.json();
+    const aiMessage = data.choices[0]?.message?.content || 'Desculpe, tive um problema. Pode repetir?';
+    conversationHistory.current.push({ role: 'assistant', content: aiMessage });
+    return aiMessage;
+  };
+
+  // Verificar se a IA indicou que o projeto está pronto
+  const checkProjectReady = (aiResponse: string): ProjectData | null => {
+    if (!aiResponse.includes('[PROJETO_PRONTO]')) return null;
+    try {
+      const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[1]);
+        return {
+          name: parsed.name || 'Novo Projeto',
+          artistName: parsed.artistName || 'A definir',
+          genre: parsed.genre || 'A definir',
+          objective: parsed.objective || '',
+          duration: parsed.duration || '6 meses',
+          phases: Array.isArray(parsed.phases) ? parsed.phases : ['Planejamento', 'Execução', 'Lançamento'],
+          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+          description: parsed.description || ''
+        };
+      }
+    } catch (e) {
+      console.error('Erro ao parsear projeto da IA:', e);
+    }
+    return null;
+  };
+
+  // Limpar tag e JSON da mensagem visível
+  const cleanAIMessage = (msg: string): string => {
+    return msg.replace('[PROJETO_PRONTO]', '').replace(/```json[\s\S]*?```/, '').trim();
+  };
+
+  // Processar resposta da IA (texto, áudio ou ficheiro)
+  const processAIResponse = async (userText: string, fileContent?: string) => {
+    setIsLoading(true);
+    try {
+      const aiResponse = await callAI(userText, fileContent);
+      const project = checkProjectReady(aiResponse);
+      if (project) {
+        setMessages(prev => [...prev, { role: 'assistant', content: cleanAIMessage(aiResponse) }]);
+        setTimeout(() => { setProjectData(project); setStep('review'); }, 2000);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Ops, tive um problema aqui. Pode repetir o que disse?' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Iniciar conversa
+  const startChat = (withFile?: boolean) => {
     setStep('chat');
-    setMessages([{ role: 'assistant', content: chatQuestions[0].question }]);
+    if (!withFile) {
+      const greeting: Message = {
+        role: 'assistant',
+        content: 'E aí! Sou o Marcos, vou te ajudar a montar seu projeto aqui na plataforma. Me conta — o que você tem em mente? Pode ser um lançamento, uma turnê, construção de marca, gravação... qualquer coisa. Me fala o que tá rolando que a gente vai montando juntos!'
+      };
+      setMessages([greeting]);
+      conversationHistory.current = [{ role: 'assistant', content: greeting.content }];
+    }
   };
 
-  // Processar resposta do chat
-  const handleChatSubmit = async () => {
-    if (!currentInput.trim()) return;
-
-    const userMessage = currentInput.trim();
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+  // Enviar mensagem de texto
+  const handleSend = async () => {
+    if (!currentInput.trim() || isLoading) return;
+    const userText = currentInput.trim();
     setCurrentInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userText, type: 'text' }]);
+    await processAIResponse(userText);
+  };
 
-    // Salvar resposta no campo correspondente
-    const currentQuestion = chatQuestions[chatStep];
-    if (currentQuestion.field === 'phases') {
-      setProjectData(prev => ({
-        ...prev,
-        [currentQuestion.field]: userMessage.split(',').map(s => s.trim())
-      }));
-    } else {
-      setProjectData(prev => ({
-        ...prev,
-        [currentQuestion.field]: userMessage
-      }));
-    }
-
-    // Próxima pergunta ou finalizar
-    if (chatStep < chatQuestions.length - 1) {
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: chatQuestions[chatStep + 1].question 
-        }]);
-        setChatStep(chatStep + 1);
-      }, 500);
-    } else {
-      // Finalizar e processar
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: "Perfeito! Estou organizando seu projeto... 🎯" 
-        }]);
-        setTimeout(() => processProject('chat'), 1000);
-      }, 500);
+  // Gravar áudio
+  const startRecording = async () => {
+    try {
+      recorderRef.current = new SimpleAudioRecorder();
+      await recorderRef.current.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Não consegui acessar o microfone. Verifique as permissões do navegador e tente novamente, ou digite sua mensagem.'
+      }]);
     }
   };
 
-  // Upload de arquivo
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const stopRecording = async () => {
+    if (!recorderRef.current) return;
+    try {
+      const blob = await recorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+
+      if (!blob || blob.size === 0) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Não captei nenhum áudio. Tenta de novo ou digita sua mensagem.' }]);
+        return;
+      }
+
+      const duration = recordingDuration;
+      setMessages(prev => [...prev, { role: 'user', content: `🎤 Áudio (${duration}s) — Transcrevendo...`, type: 'audio' }]);
+      setIsLoading(true);
+
+      // Transcrever via proxy
+      const formData = new FormData();
+      formData.append('file', blob, 'audio.webm');
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'pt');
+
+      const transcribeResponse = await fetch('/api/ai-transcribe', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!transcribeResponse.ok) throw new Error('Erro na transcrição');
+      const transcription = await transcribeResponse.json();
+
+      if (!transcription.text || transcription.text.trim().length === 0) {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'user', content: '🎤 Áudio — Não consegui entender. Tenta de novo?', type: 'audio' };
+          return updated;
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Atualizar mensagem com transcrição
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'user', content: `🎤 "${transcription.text}"`, type: 'audio' };
+        return updated;
+      });
+
+      // Enviar para IA
+      setIsLoading(false);
+      await processAIResponse(transcription.text);
+    } catch (error) {
+      console.error('Erro na gravação/transcrição:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Tive um problema ao processar o áudio. Pode tentar de novo ou digitar sua mensagem.' }]);
+      setIsLoading(false);
+      setRecordingDuration(0);
+    }
+  };
+
+  // Upload de arquivo no chat
+  const handleFileInChat = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name} — Analisando...`, type: 'file', fileName: file.name }]);
+    setIsLoading(true);
+
+    try {
+      let fileContent = '';
+      if (file.type === 'application/pdf') {
+        fileContent = await extractTextFromPDF(file);
+      } else {
+        fileContent = await file.text();
+      }
+
+      if (!fileContent || fileContent.trim().length < 30) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Não consegui ler o conteúdo desse arquivo. Se for um PDF escaneado (imagem), infelizmente não consigo ler. Pode me contar sobre o projeto por texto ou áudio?' }]);
+        setIsLoading(false);
+        return;
+      }
+
+      setMessages(prev => {
+        const updated = [...prev];
+        const idx = updated.length - 1;
+        if (updated[idx]?.type === 'file') {
+          updated[idx] = { role: 'user', content: `📎 ${file.name} — Documento anexado`, type: 'file', fileName: file.name };
+        }
+        return updated;
+      });
+
+      setIsLoading(false);
+      await processAIResponse(`Analise meu projeto que está neste documento: ${file.name}`, fileContent);
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Tive um problema ao ler o arquivo. Pode me contar sobre o projeto por texto ou áudio?' }]);
+      setIsLoading(false);
+    }
+  };
+
+  // Upload direto (tela inicial → vai para chat com arquivo)
+  const handleDirectUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadedFile(file);
-    setStep('processing');
-    setProcessingStatus('Lendo arquivo...');
-    
-    try {
-      // Extrair texto do PDF
-      setProcessingStatus('Extraindo texto do documento...');
-      let text = '';
-      
-      if (file.type === 'application/pdf') {
-        text = await extractTextFromPDF(file);
-      } else {
-        // Para DOC/DOCX, ler como texto
-        text = await file.text();
+    startChat(true);
+
+    setTimeout(async () => {
+      const greeting: Message = { role: 'assistant', content: 'Boa! Recebi seu documento. Deixa eu analisar aqui...' };
+      setMessages([greeting]);
+      conversationHistory.current = [{ role: 'assistant', content: greeting.content }];
+
+      setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name} — Analisando...`, type: 'file', fileName: file.name }]);
+      setIsLoading(true);
+
+      try {
+        let fileContent = '';
+        if (file.type === 'application/pdf') {
+          fileContent = await extractTextFromPDF(file);
+        } else {
+          fileContent = await file.text();
+        }
+
+        if (!fileContent || fileContent.trim().length < 30) {
+          setMessages(prev => [...prev, { role: 'assistant', content: 'Hmm, não consegui extrair texto desse arquivo. Se for um PDF escaneado, infelizmente não consigo ler. Me conta sobre o projeto por texto ou áudio que a gente monta juntos!' }]);
+          setIsLoading(false);
+          return;
+        }
+
+        setMessages(prev => {
+          const updated = [...prev];
+          const fileIdx = updated.findIndex(m => m.type === 'file');
+          if (fileIdx >= 0) {
+            updated[fileIdx] = { role: 'user', content: `📎 ${file.name} — Documento anexado`, type: 'file', fileName: file.name };
+          }
+          return updated;
+        });
+
+        setIsLoading(false);
+        await processAIResponse(
+          `O artista enviou um documento de projeto para análise: ${file.name}. Analise o conteúdo, faça um resumo do que entendeu, e se tiver informação suficiente, monte o projeto. Se faltar algo, pergunte naturalmente.`,
+          fileContent
+        );
+      } catch (error) {
+        console.error('Erro:', error);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Tive um problema ao processar o arquivo. Pode me contar sobre o projeto por texto ou áudio?' }]);
+        setIsLoading(false);
       }
-      
-      if (!text || text.trim().length < 50) {
-        throw new Error('Não foi possível extrair texto suficiente do documento');
-      }
-      
-      // Analisar com IA
-      setProcessingStatus('Analisando projeto com IA...');
-      const extractedData = await analyzeProjectWithAI(text);
-      
-      setProcessingStatus('Organizando informações...');
-      
-      // Garantir que temos dados válidos
-      const validatedData: ProjectData = {
-        name: extractedData.name || `Projeto - ${file.name.replace(/\.[^/.]+$/, '')}`,
-        artistName: extractedData.artistName || 'A definir',
-        genre: extractedData.genre || 'A definir',
-        objective: extractedData.objective || 'Desenvolvimento artístico',
-        duration: extractedData.duration || '12 meses',
-        phases: Array.isArray(extractedData.phases) && extractedData.phases.length > 0 
-          ? extractedData.phases 
-          : ['Pré-produção', 'Produção', 'Lançamento'],
-        tasks: Array.isArray(extractedData.tasks) && extractedData.tasks.length > 0
-          ? extractedData.tasks
-          : ['Definir cronograma', 'Montar equipe', 'Criar estratégia'],
-        description: extractedData.description || `Projeto importado de: ${file.name}`
-      };
-      
-      setProjectData(validatedData);
-      setStep('review');
-      
-    } catch (error) {
-      console.error('Erro ao processar arquivo:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Erro ao processar o arquivo');
-      setStep('error');
-    }
+    }, 300);
   };
 
-  // Processar projeto (chat ou upload)
-  const processProject = async (source: 'chat' | 'upload') => {
-    setStep('processing');
-    setProcessingStatus('Gerando tarefas automaticamente...');
-    
-    // Gerar tarefas automaticamente baseado nos dados
-    const generatedTasks = generateTasks(projectData);
-    
-    setTimeout(() => {
-      setProjectData(prev => ({
-        ...prev,
-        name: prev.artistName ? `Projeto ${prev.artistName}` : prev.name,
-        tasks: generatedTasks
-      }));
-      setStep('review');
-    }, 1500);
-  };
-
-  // Gerar tarefas automaticamente
-  const generateTasks = (data: ProjectData): string[] => {
-    const tasks: string[] = [];
-    
-    // Tarefas essenciais de gestão
-    tasks.push('Definir orçamento completo do projeto (Gestor Financeiro) - Semana 1');
-    tasks.push('Montar equipe de trabalho e definir responsabilidades (Gestor) - Semana 1');
-    tasks.push('Criar cronograma detalhado com marcos (Gestor) - Semana 1');
-    
-    // Tarefas baseadas no objetivo
-    const obj = data.objective.toLowerCase();
-    if (obj.includes('lançamento') || obj.includes('album') || obj.includes('álbum') || obj.includes('single') || obj.includes('ep')) {
-      tasks.push('Definir data de lançamento e estratégia (Artista + Gestor) - Semana 2');
-      tasks.push('Selecionar e contratar distribuidora digital (Gestor) - Semana 2');
-      tasks.push('Criar arte de capa e materiais visuais (Designer) - Semana 3-4');
-      tasks.push('Preparar press release e kit de imprensa (Assessoria) - Semana 4');
-      tasks.push('Criar estratégia de pré-lançamento nas redes (Marketing) - Semana 3');
-      tasks.push('Planejar conteúdo de teasers e behind the scenes (Audiovisual) - Semana 3-4');
-      tasks.push('Submeter música para playlists e curadoria (Distribuidor) - Semana 4');
-    }
-    
-    if (obj.includes('marca') || obj.includes('construção') || obj.includes('branding') || obj.includes('identidade')) {
-      tasks.push('Definir identidade visual completa (Designer) - Semana 2-3');
-      tasks.push('Criar e otimizar perfis em redes sociais (Marketing) - Semana 2');
-      tasks.push('Desenvolver estratégia de conteúdo mensal (Marketing) - Semana 3');
-      tasks.push('Produzir sessão de fotos profissional (Fotógrafo) - Semana 3');
-      tasks.push('Criar biografia e EPK digital (Assessoria) - Semana 2');
-    }
-    
-    if (obj.includes('show') || obj.includes('turnê') || obj.includes('tour') || obj.includes('ao vivo')) {
-      tasks.push('Mapear casas de show e festivais (Booking) - Semana 2-3');
-      tasks.push('Preparar rider técnico e hospitality (Produção) - Semana 2');
-      tasks.push('Criar material de divulgação de shows (Marketing) - Semana 3');
-      tasks.push('Negociar cachês e contratos (Gestor) - Semana 3-4');
-      tasks.push('Planejar logística de viagem e hospedagem (Produção) - Semana 4');
-    }
-    
-    if (obj.includes('gravação') || obj.includes('produção') || obj.includes('estúdio')) {
-      tasks.push('Selecionar estúdio de gravação (Produtor) - Semana 2');
-      tasks.push('Finalizar arranjos e partituras (Produtor + Artista) - Semana 2-3');
-      tasks.push('Agendar sessões de gravação (Produtor) - Semana 3');
-      tasks.push('Mixagem e masterização (Engenheiro de áudio) - Semana 5-6');
-    }
-    
-    // Tarefas baseadas nas fases
-    data.phases.forEach((phase, i) => {
-      tasks.push(`Planejar e executar: ${phase} (Equipe) - Fase ${i + 1}`);
-    });
-    
-    // Tarefas de encerramento
-    tasks.push('Reunião de avaliação de resultados (Toda equipe) - Final');
-    tasks.push('Relatório financeiro final (Gestor Financeiro) - Final');
-    
-    return tasks;
-  };
-
-  // Finalizar e criar projeto
+  // Finalizar projeto
   const handleComplete = () => {
     onComplete({
       name: projectData.name || `Projeto ${projectData.artistName}`,
@@ -426,151 +466,143 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
     });
   };
 
-  // Tentar novamente após erro
-  const handleRetry = () => {
-    setStep('choice');
-    setErrorMessage('');
-    setUploadedFile(null);
-  };
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
     <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-5 text-white">
         <div className="flex items-center gap-3">
           <Sparkles className="w-6 h-6" />
           <h2 className="text-xl font-bold">Assistente de Projeto</h2>
         </div>
-        <p className="text-orange-100 mt-1">
-          {step === 'choice' && 'Como você gostaria de criar seu projeto?'}
-          {step === 'upload' && 'Faça upload do seu projeto'}
-          {step === 'chat' && 'Vamos criar juntos!'}
-          {step === 'processing' && processingStatus}
-          {step === 'review' && 'Revise seu projeto'}
+        <p className="text-orange-100 mt-1 text-sm">
+          {step === 'choice' && 'Como você quer criar seu projeto?'}
+          {step === 'chat' && 'Converse comigo — texto, áudio ou documento'}
+          {step === 'review' && 'Revise e confirme seu projeto'}
           {step === 'error' && 'Ops! Algo deu errado'}
         </p>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-hidden flex flex-col">
+
         {/* Escolha inicial */}
         {step === 'choice' && (
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setStep('upload')}
-              className="p-6 border-2 border-dashed border-orange-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group"
-            >
-              <Upload className="w-12 h-12 mx-auto text-orange-400 group-hover:text-orange-500 mb-3" />
-              <h3 className="font-semibold text-gray-800">Já tenho um projeto</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Faça upload do PDF e a IA vai organizar tudo automaticamente
-              </p>
-            </button>
-            
-            <button
-              onClick={startChat}
-              className="p-6 border-2 border-dashed border-blue-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group"
-            >
-              <MessageSquare className="w-12 h-12 mx-auto text-blue-400 group-hover:text-blue-500 mb-3" />
-              <h3 className="font-semibold text-gray-800">Criar do zero</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Responda algumas perguntas e criamos seu projeto juntos
-              </p>
-            </button>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                onClick={() => startChat()}
+                className="p-5 border-2 border-dashed border-orange-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group text-center"
+              >
+                <Sparkles className="w-10 h-10 mx-auto text-orange-400 group-hover:text-orange-500 mb-2" />
+                <h3 className="font-semibold text-gray-800 text-sm">Criar conversando</h3>
+                <p className="text-xs text-gray-500 mt-1">Me conta sua ideia por texto ou áudio</p>
+              </button>
+
+              <label className="p-5 border-2 border-dashed border-blue-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group text-center cursor-pointer">
+                <input type="file" accept=".pdf,.doc,.docx" onChange={handleDirectUpload} className="hidden" />
+                <Upload className="w-10 h-10 mx-auto text-blue-400 group-hover:text-blue-500 mb-2" />
+                <h3 className="font-semibold text-gray-800 text-sm">Já tenho um projeto</h3>
+                <p className="text-xs text-gray-500 mt-1">Upload do PDF e a IA organiza</p>
+              </label>
+
+              <button
+                onClick={() => { startChat(); setTimeout(() => startRecording(), 500); }}
+                className="p-5 border-2 border-dashed border-green-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all group text-center"
+              >
+                <Mic className="w-10 h-10 mx-auto text-green-400 group-hover:text-green-500 mb-2" />
+                <h3 className="font-semibold text-gray-800 text-sm">Falar sobre o projeto</h3>
+                <p className="text-xs text-gray-500 mt-1">Grave um áudio explicando sua ideia</p>
+              </button>
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-2">Você pode combinar texto, áudio e documentos durante a conversa</p>
           </div>
         )}
 
-        {/* Upload */}
-        {step === 'upload' && (
-          <div className="text-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="project-file-upload"
-            />
-            <label
-              htmlFor="project-file-upload"
-              className="block p-12 border-2 border-dashed border-gray-300 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer"
-            >
-              <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 font-medium">Clique para selecionar o arquivo</p>
-              <p className="text-sm text-gray-400 mt-1">PDF, DOC ou DOCX (máx. 10MB)</p>
-            </label>
-            
-            <button
-              onClick={() => setStep('choice')}
-              className="mt-4 text-gray-500 hover:text-gray-700 flex items-center gap-2 mx-auto"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar
-            </button>
-          </div>
-        )}
-
-        {/* Chat */}
+        {/* Chat conversacional */}
         {step === 'chat' && (
-          <div className="flex flex-col h-[400px]">
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+          <>
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '50vh' }}>
               {messages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      msg.role === 'user'
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {msg.content}
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
+                    msg.role === 'user'
+                      ? 'bg-orange-500 text-white rounded-br-md'
+                      : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                  }`}>
+                    {msg.role === 'assistant' && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                        <span className="text-xs font-semibold text-orange-600">Marcos</span>
+                      </div>
+                    )}
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 p-3 rounded-2xl rounded-bl-md">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                      <span className="text-xs text-gray-500">Marcos está pensando...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleChatSubmit()}
-                placeholder="Digite sua resposta..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-              <button
-                onClick={handleChatSubmit}
-                disabled={!currentInput.trim()}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="w-5 h-5" />
-              </button>
+
+            {/* Input area */}
+            <div className="border-t p-3">
+              {isRecording ? (
+                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-3">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-sm text-red-700 font-medium flex-1">Gravando... {formatTime(recordingDuration)}</span>
+                  <button onClick={stopRecording} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors" title="Parar gravação">
+                    <Square className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-end gap-2">
+                  <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" onChange={handleFileInChat} className="hidden" />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="p-2 text-gray-400 hover:text-orange-500 transition-colors disabled:opacity-50" title="Anexar documento">
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex-1">
+                    <textarea
+                      value={currentInput}
+                      onChange={(e) => setCurrentInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                      placeholder="Digite sua mensagem..."
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                      rows={1}
+                      disabled={isLoading}
+                      style={{ minHeight: '42px', maxHeight: '120px' }}
+                    />
+                  </div>
+
+                  <button onClick={startRecording} disabled={isLoading} className="p-2 text-gray-400 hover:text-green-500 transition-colors disabled:opacity-50" title="Gravar áudio">
+                    <Mic className="w-5 h-5" />
+                  </button>
+
+                  <button onClick={handleSend} disabled={isLoading || !currentInput.trim()} className="p-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 transition-colors">
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          </>
         )}
 
-        {/* Processing */}
-        {step === 'processing' && (
-          <div className="text-center py-12">
-            <Loader2 className="w-16 h-16 mx-auto text-orange-500 animate-spin mb-4" />
-            <p className="text-gray-600 font-medium">{processingStatus}</p>
-            <p className="text-sm text-gray-400 mt-2">Isso pode levar alguns segundos...</p>
-          </div>
-        )}
-
-        {/* Error */}
+        {/* Erro */}
         {step === 'error' && (
-          <div className="text-center py-12">
-            <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
-            <p className="text-gray-800 font-medium">Erro ao processar o arquivo</p>
+          <div className="p-6 text-center">
+            <AlertCircle className="w-16 h-16 mx-auto text-red-400 mb-4" />
+            <p className="text-gray-800 font-medium">Erro ao processar</p>
             <p className="text-sm text-gray-500 mt-2">{errorMessage}</p>
-            <button
-              onClick={handleRetry}
-              className="mt-6 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-            >
+            <button onClick={() => { setStep('choice'); setErrorMessage(''); }} className="mt-6 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
               Tentar novamente
             </button>
           </div>
@@ -578,83 +610,52 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
 
         {/* Review */}
         {step === 'review' && (
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-              <Check className="w-6 h-6 text-green-500" />
-              <p className="text-green-700 font-medium">Projeto analisado com sucesso!</p>
+          <div className="p-6 overflow-y-auto space-y-5" style={{ maxHeight: '60vh' }}>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
+              <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <p className="text-green-700 font-medium text-sm">Projeto montado! Revise e ajuste o que quiser.</p>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Projeto</label>
-                <input
-                  type="text"
-                  value={projectData.name}
-                  onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                />
+                <label className="block text-xs font-medium text-gray-700 mb-1">Nome do Projeto</label>
+                <input type="text" value={projectData.name} onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Artista</label>
-                <input
-                  type="text"
-                  value={projectData.artistName}
-                  onChange={(e) => setProjectData(prev => ({ ...prev, artistName: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                />
+                <label className="block text-xs font-medium text-gray-700 mb-1">Artista</label>
+                <input type="text" value={projectData.artistName} onChange={(e) => setProjectData(prev => ({ ...prev, artistName: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gênero</label>
-                <input
-                  type="text"
-                  value={projectData.genre}
-                  onChange={(e) => setProjectData(prev => ({ ...prev, genre: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                />
+                <label className="block text-xs font-medium text-gray-700 mb-1">Gênero</label>
+                <input type="text" value={projectData.genre} onChange={(e) => setProjectData(prev => ({ ...prev, genre: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duração</label>
-                <input
-                  type="text"
-                  value={projectData.duration}
-                  onChange={(e) => setProjectData(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                />
+                <label className="block text-xs font-medium text-gray-700 mb-1">Duração</label>
+                <input type="text" value={projectData.duration} onChange={(e) => setProjectData(prev => ({ ...prev, duration: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
               </div>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Objetivo</label>
-              <input
-                type="text"
-                value={projectData.objective}
-                onChange={(e) => setProjectData(prev => ({ ...prev, objective: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Objetivo</label>
+              <textarea value={projectData.objective} onChange={(e) => setProjectData(prev => ({ ...prev, objective: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" rows={2} />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fases do Projeto ({projectData.phases.length})
-              </label>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Fases do Projeto ({projectData.phases.length})</label>
               <div className="flex flex-wrap gap-2">
                 {projectData.phases.map((phase, i) => (
-                  <span key={i} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                    {phase}
-                  </span>
+                  <span key={i} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">{phase}</span>
                 ))}
               </div>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tarefas Identificadas ({projectData.tasks.length})
-              </label>
-              <div className="max-h-40 overflow-y-auto space-y-1">
+              <label className="block text-xs font-medium text-gray-700 mb-2">Tarefas ({projectData.tasks.length})</label>
+              <div className="max-h-36 overflow-y-auto space-y-1 border border-gray-100 rounded-lg p-2">
                 {projectData.tasks.map((task, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check className="w-4 h-4 text-green-500" />
-                    {task}
+                  <div key={i} className="flex items-start gap-2 text-xs text-gray-600 py-0.5">
+                    <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>{task}</span>
                   </div>
                 ))}
               </div>
@@ -664,21 +665,12 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
       </div>
 
       {/* Footer */}
-      <div className="border-t p-4 flex justify-between">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800"
-        >
-          Cancelar
-        </button>
-        
+      <div className="border-t p-3 flex justify-between items-center">
+        <button onClick={onCancel} className="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm">Cancelar</button>
+        {step === 'chat' && <span className="text-xs text-gray-400">Texto • Áudio • Documentos</span>}
         {step === 'review' && (
-          <button
-            onClick={handleComplete}
-            className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2"
-          >
-            Criar Projeto
-            <ArrowRight className="w-4 h-4" />
+          <button onClick={handleComplete} className="px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2 text-sm font-medium">
+            Criar Projeto <ArrowRight className="w-4 h-4" />
           </button>
         )}
       </div>
