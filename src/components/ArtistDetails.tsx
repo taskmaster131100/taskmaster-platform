@@ -80,8 +80,8 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
             </div>
             <div className="text-center md:text-left flex-1">
               <h2 className="text-3xl font-bold text-gray-900 mb-1">{artist.name}</h2>
-              {artist.artistic_name && (
-                <p className="text-xl text-purple-600 font-medium mb-2">"{artist.artistic_name}"</p>
+              {artist.stage_name && (
+                <p className="text-xl text-purple-600 font-medium mb-2">"{artist.stage_name}"</p>
               )}
               <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
                 {artist.genre && (

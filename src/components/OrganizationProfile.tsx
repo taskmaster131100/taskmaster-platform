@@ -68,15 +68,19 @@ export default function OrganizationProfile() {
             return;
           }
 
-          if (bootstrapResult?.organization_id) {
-            setOrgId(bootstrapResult.organization_id);
-            // Recarregar dados da organização
+          // Re-buscar organização (funciona tanto para nova quanto para skipped)
+          const { data: reloadedOrg } = await supabase
+            .from('user_organizations')
+            .select('organization_id')
+            .eq('user_id', user?.id)
+            .maybeSingle();
+          if (reloadedOrg?.organization_id) {
+            setOrgId(reloadedOrg.organization_id);
             const { data: org } = await supabase
               .from('organizations')
               .select('*')
-              .eq('id', bootstrapResult.organization_id)
+              .eq('id', reloadedOrg.organization_id)
               .single();
-
             if (org) {
               setFormData({
                 id: org.id,
@@ -89,7 +93,9 @@ export default function OrganizationProfile() {
                 social_media: org.social_media || {}
               });
             }
-            toast.success('Organização criada com sucesso! Preencha os dados abaixo.');
+            if (!bootstrapResult?.skipped) {
+              toast.success('Organização criada com sucesso! Preencha os dados abaixo.');
+            }
             return;
           }
         } catch (err) {

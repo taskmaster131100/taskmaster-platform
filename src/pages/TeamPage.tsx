@@ -77,12 +77,12 @@ export default function TeamPage() {
             org_name: 'Minha Organização'
           });
 
-          if (bootstrapError || !bootstrapResult?.organization_id) {
-            toast.error('Organização não encontrada. Tente recarregar a página.');
+          if (bootstrapError) {
+            toast.error('Erro ao criar organização. Tente recarregar a página.');
             return;
           }
 
-          // Recarregar dados da organização
+          // Recarregar dados da organização (funciona tanto para nova quanto para skipped)
           const { data: newOrgData } = await supabase
             .from('user_organizations')
             .select('organization_id, role')
@@ -90,12 +90,14 @@ export default function TeamPage() {
             .maybeSingle();
 
           if (!newOrgData) {
-            toast.error('Erro ao configurar organização. Tente recarregar a página.');
+            toast.error('Organização não encontrada. Tente recarregar a página.');
             return;
           }
 
           orgData = newOrgData;
-          toast.success('Organização criada com sucesso!');
+          if (!bootstrapResult?.skipped) {
+            toast.success('Organização criada com sucesso!');
+          }
         } catch (err) {
           console.error('Erro ao criar organização:', err);
           toast.error('Erro ao configurar organização.');

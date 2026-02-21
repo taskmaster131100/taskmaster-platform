@@ -419,10 +419,10 @@ export default function OrganizationDashboard({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {artist.artistic_name?.charAt(0) || artist.name?.charAt(0) || 'A'}
+                        {artist.stage_name?.charAt(0) || artist.name?.charAt(0) || 'A'}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{artist.artistic_name || artist.name}</div>
+                        <div className="font-semibold text-gray-900">{artist.stage_name || artist.name}</div>
                         <div className="text-sm text-gray-500">{artist.genre}</div>
                       </div>
                     </div>

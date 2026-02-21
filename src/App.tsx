@@ -283,21 +283,37 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const handleArtistSubmit = async (artistData: any) => {
     try {
+      // Buscar organization_id do utilizador
+      let orgId: string | null = null;
+      try {
+        const { data: orgData } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', user?.id)
+          .maybeSingle();
+        orgId = orgData?.organization_id || null;
+      } catch { /* ignore */ }
+
       // Enviar apenas os campos que existem na tabela artists do Supabase
+      // Colunas reais: name, stage_name, genre, subgenre, bio, instagram, spotify, youtube, tiktok, email, phone, organization_id
       const safeArtistData: Record<string, any> = {
         name: artistData.name || 'Novo Artista',
-        artistic_name: artistData.artistic_name || artistData.artisticName || null,
+        stage_name: artistData.artistic_name || artistData.artisticName || artistData.stage_name || artistData.name || null,
         genre: artistData.genre || 'Não definido',
-        status: artistData.status || 'active',
+        subgenre: artistData.subgenre || null,
         bio: artistData.bio || null,
-        photo_url: artistData.photo_url || artistData.image_url || artistData.imageUrl || null,
-        contract_type: artistData.contract_type || null,
-        created_by: user?.id || null
+        instagram: artistData.instagram || null,
+        spotify: artistData.spotify || null,
+        youtube: artistData.youtube || null,
+        tiktok: artistData.tiktok || null,
+        email: artistData.email || artistData.contact_email || null,
+        phone: artistData.phone || artistData.contact_phone || null,
+        organization_id: orgId
       };
 
-      // Remover campos com valor undefined para evitar erros no Supabase
+      // Remover campos com valor null/undefined para evitar erros no Supabase
       Object.keys(safeArtistData).forEach(key => {
-        if (safeArtistData[key] === undefined) delete safeArtistData[key];
+        if (safeArtistData[key] === undefined || safeArtistData[key] === null) delete safeArtistData[key];
       });
 
       const { data: newArtist, error } = await supabase

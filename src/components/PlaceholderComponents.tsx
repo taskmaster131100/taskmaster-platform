@@ -19,7 +19,7 @@ export function ArtistManager({ onSelectArtist, onCreateArtist, onSelectProject 
 
   const filteredArtists = artists.filter(artist =>
     artist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    artist.artisticName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    artist.stage_name || artist.artisticName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     artist.genre?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -107,8 +107,8 @@ export function ArtistManager({ onSelectArtist, onCreateArtist, onSelectProject 
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900">{artist.name}</h3>
-                    {artist.artisticName && (
-                      <p className="text-sm text-gray-600">{artist.artisticName}</p>
+                    {artist.stage_name || artist.artisticName && (
+                      <p className="text-sm text-gray-600">{artist.stage_name || artist.artisticName}</p>
                     )}
                   </div>
                 </div>
@@ -206,8 +206,8 @@ export function ArtistDetails({ artistId, onBack, onSelectProject, onCreateProje
           </div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{artist.name}</h1>
-            {artist.artisticName && (
-              <p className="text-xl text-gray-600 mb-2">{artist.artisticName}</p>
+            {artist.stage_name || artist.artisticName && (
+              <p className="text-xl text-gray-600 mb-2">{artist.stage_name || artist.artisticName}</p>
             )}
             <div className="flex items-center gap-3">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${

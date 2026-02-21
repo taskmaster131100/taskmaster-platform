@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 export interface Artist {
   id?: string;
   name: string;
-  artistic_name?: string;
+  stage_name?: string;
   genre?: string;
   bio?: string;
   photo_url?: string;

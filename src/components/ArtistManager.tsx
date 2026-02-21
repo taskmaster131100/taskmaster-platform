@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 interface Artist {
   id: string;
   name: string;
-  artistic_name?: string;
+  stage_name?: string;
   genre?: string;
   image_url?: string;
   [key: string]: any;
@@ -63,7 +63,7 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
 
   const filteredArtists = artists.filter(artist =>
     artist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    artist.artistic_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    artist.stage_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     artist.genre?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -166,8 +166,8 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
 
                   <div className="flex-1 sm:text-center">
                     <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{artist.name}</h3>
-                    {artist.artistic_name && (
-                      <p className="text-sm text-gray-600 line-clamp-1">"{artist.artistic_name}"</p>
+                    {artist.stage_name && (
+                      <p className="text-sm text-gray-600 line-clamp-1">"{artist.stage_name}"</p>
                     )}
                     {artist.genre && (
                       <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
