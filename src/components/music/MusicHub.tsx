@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
-import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown } from 'lucide-react';
+import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown, Upload, File, Image, Headphones, Download } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface UploadedFile {
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+}
 
 interface Song {
   id: string;
@@ -13,6 +20,7 @@ interface Song {
   lyrics?: string;
   chords?: string;
   notes?: string;
+  files?: UploadedFile[];
   createdAt: string;
 }
 
@@ -28,6 +36,7 @@ interface Arrangement {
   instruments: string[];
   sections?: ArrangementSection[];
   notes?: string;
+  files?: UploadedFile[];
   status: 'rascunho' | 'em_progresso' | 'finalizado';
   createdAt: string;
 }
@@ -108,6 +117,119 @@ export default function MusicHub() {
   const [viewingArrangement, setViewingArrangement] = useState<Arrangement | null>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [arrangementSections, setArrangementSections] = useState<ArrangementSection[]>([]);
+  const [arrangementFiles, setArrangementFiles] = useState<UploadedFile[]>([]);
+  const [songFiles, setSongFiles] = useState<UploadedFile[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const handleFileUpload = (files: FileList | null, target: 'arrangement' | 'song') => {
+    if (!files || files.length === 0) return;
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/aac', 'audio/mp4', 'audio/x-m4a'];
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const newFiles: UploadedFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!allowedTypes.includes(file.type) && !file.name.endsWith('.pdf') && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && !file.name.endsWith('.m4a')) {
+        toast.error(`Formato não suportado: ${file.name}. Use PDF, imagem ou áudio.`);
+        continue;
+      }
+      if (file.size > maxSize) {
+        toast.error(`Arquivo muito grande: ${file.name}. Máximo 50MB.`);
+        continue;
+      }
+      // Criar URL local para preview (em produção usaria Supabase Storage)
+      const url = URL.createObjectURL(file);
+      newFiles.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url
+      });
+    }
+    if (target === 'arrangement') {
+      setArrangementFiles(prev => [...prev, ...newFiles]);
+    } else {
+      setSongFiles(prev => [...prev, ...newFiles]);
+    }
+    if (newFiles.length > 0) {
+      toast.success(`${newFiles.length} arquivo(s) anexado(s)`);
+    }
+  };
+
+  const removeFile = (index: number, target: 'arrangement' | 'song') => {
+    if (target === 'arrangement') {
+      setArrangementFiles(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setSongFiles(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return <Image className="w-4 h-4 text-blue-500" />;
+    if (type.startsWith('audio/')) return <Headphones className="w-4 h-4 text-purple-500" />;
+    if (type.includes('pdf')) return <FileText className="w-4 h-4 text-red-500" />;
+    return <File className="w-4 h-4 text-gray-500" />;
+  };
+
+  const FileUploadArea = ({ target, files: uploadedFiles }: { target: 'arrangement' | 'song'; files: UploadedFile[] }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        <Upload className="w-4 h-4 inline mr-1" />
+        Anexar Arquivos (PDF, Imagem, Áudio)
+      </label>
+      <div
+        className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer"
+        onClick={() => document.getElementById(`file-input-${target}`)?.click()}
+        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-green-400', 'bg-green-50'); }}
+        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-green-400', 'bg-green-50'); }}
+        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-green-400', 'bg-green-50'); handleFileUpload(e.dataTransfer.files, target); }}
+      >
+        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-sm text-gray-600">Clique ou arraste arquivos aqui</p>
+        <p className="text-xs text-gray-400 mt-1">PDF, Imagens (PNG, JPG), Áudio (MP3, WAV, M4A) — Máx. 50MB</p>
+        <input
+          id={`file-input-${target}`}
+          type="file"
+          multiple
+          accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.ogg,.aac,.m4a"
+          className="hidden"
+          onChange={(e) => handleFileUpload(e.target.files, target)}
+        />
+      </div>
+      {uploadedFiles.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {uploadedFiles.map((file, idx) => (
+            <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2.5 group">
+              {getFileIcon(file.type)}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
+                <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+              </div>
+              {file.type.startsWith('audio/') && (
+                <audio controls className="h-8 max-w-[200px]">
+                  <source src={file.url} type={file.type} />
+                </audio>
+              )}
+              {file.type.startsWith('image/') && (
+                <img src={file.url} alt={file.name} className="w-10 h-10 object-cover rounded border" />
+              )}
+              <a href={file.url} download={file.name} className="p-1 hover:bg-blue-50 rounded" title="Baixar">
+                <Download className="w-4 h-4 text-blue-500" />
+              </a>
+              <button type="button" onClick={() => removeFile(idx, target)} className="p-1 hover:bg-red-50 rounded">
+                <X className="w-4 h-4 text-red-400" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const tabs = [
     { id: 'repertoire', label: 'Repertório', icon: Library, count: songs.length },
@@ -283,6 +405,15 @@ export default function MusicHub() {
                         {song.genre && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">{song.genre}</span>}
                       </div>
                       {song.notes && <p className="text-xs text-gray-500 mt-2 line-clamp-2">{song.notes}</p>}
+                      {song.files && song.files.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                          <Upload className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">{song.files.length} arquivo(s)</span>
+                          {song.files.map((f, i) => (
+                            <a key={i} href={f.url} download={f.name} className="text-xs text-blue-500 hover:text-blue-700 underline truncate max-w-[100px]" title={f.name}>{f.name}</a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -364,6 +495,12 @@ export default function MusicHub() {
                           )}
                           {arr.sections && arr.sections.length > 0 && (
                             <p className="text-xs text-gray-400">{arr.sections.length} seções • {arr.sections.reduce((acc, s) => acc + s.bars, 0)} compassos</p>
+                          )}
+                          {arr.files && arr.files.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <Upload className="w-3 h-3 text-gray-400" />
+                              <span className="text-xs text-gray-500">{arr.files.length} arquivo(s) anexado(s)</span>
+                            </div>
                           )}
                         </div>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
@@ -503,10 +640,12 @@ export default function MusicHub() {
                 lyrics: fd.get('lyrics') as string || undefined,
                 chords: fd.get('chords') as string || undefined,
                 notes: fd.get('notes') as string || undefined,
+                files: songFiles.length > 0 ? [...songFiles] : undefined,
                 createdAt: new Date().toISOString()
               };
               setSongs([...songs, newSong]);
               setShowSongModal(false);
+              setSongFiles([]);
               toast.success('Música adicionada com sucesso!');
             }}>
               <div className="space-y-4">
@@ -551,9 +690,10 @@ export default function MusicHub() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                   <textarea name="notes" rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85]" />
                 </div>
+                <FileUploadArea target="song" files={songFiles} />
               </div>
               <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => setShowSongModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
+                <button type="button" onClick={() => { setShowSongModal(false); setSongFiles([]); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A]">Adicionar</button>
               </div>
             </form>
@@ -583,6 +723,7 @@ export default function MusicHub() {
                 instruments: selectedInstruments,
                 sections: arrangementSections.length > 0 ? arrangementSections : undefined,
                 notes: fd.get('notes') as string || undefined,
+                files: arrangementFiles.length > 0 ? [...arrangementFiles] : undefined,
                 status: (fd.get('status') as Arrangement['status']) || 'rascunho',
                 createdAt: new Date().toISOString()
               };
@@ -590,6 +731,7 @@ export default function MusicHub() {
               setShowArrangementModal(false);
               setSelectedInstruments([]);
               setArrangementSections([]);
+              setArrangementFiles([]);
               toast.success('Arranjo criado com sucesso!');
             }}>
               <div className="space-y-5">
@@ -717,9 +859,10 @@ export default function MusicHub() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Observações Gerais</label>
                   <textarea name="notes" rows={3} placeholder="Dinâmica, referências, detalhes de produção..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" />
                 </div>
+                <FileUploadArea target="arrangement" files={arrangementFiles} />
               </div>
               <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => setShowArrangementModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
+                <button type="button" onClick={() => { setShowArrangementModal(false); setArrangementFiles([]); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Criar Arranjo</button>
               </div>
             </form>
@@ -908,6 +1051,34 @@ export default function MusicHub() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-1">Observações</h4>
                   <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{viewingArrangement.notes}</p>
+                </div>
+              )}
+
+              {viewingArrangement.files && viewingArrangement.files.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Arquivos Anexados</h4>
+                  <div className="space-y-2">
+                    {viewingArrangement.files.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                        {getFileIcon(file.type)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
+                          <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                        </div>
+                        {file.type.startsWith('audio/') && (
+                          <audio controls className="h-8 max-w-[200px]">
+                            <source src={file.url} type={file.type} />
+                          </audio>
+                        )}
+                        {file.type.startsWith('image/') && (
+                          <img src={file.url} alt={file.name} className="w-12 h-12 object-cover rounded border" />
+                        )}
+                        <a href={file.url} download={file.name} className="p-2 hover:bg-blue-50 rounded-lg" title="Baixar">
+                          <Download className="w-4 h-4 text-blue-500" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
