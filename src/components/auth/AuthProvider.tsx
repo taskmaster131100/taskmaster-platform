@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Função para garantir sessão única
   const checkSingleSession = async (userId: string) => {
-    const sessionId = Math.random().toString(36).substring(7);
+    const sessionId = crypto.randomUUID();
     localStorage.setItem('tm_session_id', sessionId);
 
     // Atualizar o ID da sessão no banco de dados (tabela profiles ou similar)
