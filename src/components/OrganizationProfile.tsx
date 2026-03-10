@@ -105,6 +105,8 @@ export default function OrganizationProfile() {
         }
       }
 
+      if (!userOrg) return;
+
       setOrgId(userOrg.organization_id);
 
       // Get organization data

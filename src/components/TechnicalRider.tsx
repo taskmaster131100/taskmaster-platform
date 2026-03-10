@@ -23,7 +23,7 @@ interface InputListItem {
   stand: string;
 }
 
-export default function TechnicalRider({ showId, artistId }: TechnicalRiderProps) {
+export default function TechnicalRider({ showId, artistId, showData }: TechnicalRiderProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'audio' | 'lighting' | 'stage'>('audio');
   

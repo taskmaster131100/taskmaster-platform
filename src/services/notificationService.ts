@@ -455,3 +455,67 @@ export function getNotificationIcon(type: NotificationType): string {
 export function getNotificationColor(type: NotificationType): string {
   return NOTIFICATION_CONFIG[type]?.color || 'gray';
 }
+
+// ============================================
+// NOTIFICAÇÕES EXTERNAS (Email + WhatsApp)
+// ============================================
+
+/**
+ * Envia notificação via email e/ou WhatsApp (Supabase Edge Function)
+ * Chamado automaticamente por createNotification quando aplicável
+ */
+export async function sendExternalNotification(data: {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  channels?: ('email' | 'whatsapp')[];
+}): Promise<void> {
+  try {
+    const { error } = await supabase.functions.invoke('send-notification', {
+      body: {
+        user_id: data.userId,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        link: data.link,
+        channels: data.channels || ['email', 'whatsapp'],
+      },
+    });
+    if (error) console.warn('[Notification] Edge function error:', error.message);
+  } catch (e) {
+    // Notificações externas são best-effort; não quebrar o fluxo principal
+    console.warn('[Notification] Failed to send external notification:', e);
+  }
+}
+
+/**
+ * Cria notificação in-app + envia externamente (email/WhatsApp)
+ * Usar esta função para notificações importantes
+ */
+export async function createAndSendNotification(data: {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  referenceType?: Notification['reference_type'];
+  referenceId?: string;
+  sendExternal?: boolean;
+}): Promise<Notification> {
+  const notification = await createNotification(data);
+
+  if (data.sendExternal !== false) {
+    // Fire-and-forget para não bloquear
+    sendExternalNotification({
+      userId: data.userId,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      link: data.link,
+    });
+  }
+
+  return notification;
+}

@@ -5,7 +5,7 @@ import { PLAN_LIMITS, FREE_TRIAL } from '../config/pricing';
 export interface Subscription {
   id: string;
   organization_id: string;
-  plan_id: 'starter' | 'pro' | 'enterprise';
+  plan_id: 'starter' | 'pro' | 'professional' | 'enterprise';
   status: string;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
@@ -79,7 +79,7 @@ export function useSubscription(organizationId?: string): SubscriptionStatus {
     subscription.trial_end ? new Date(subscription.trial_end) > now : false;
   
   const isActive = subscription?.status === 'active' ||
-    (isTrialing && subscription.trial_end ? new Date(subscription.trial_end) > now : false);
+    (isTrialing && subscription?.trial_end ? new Date(subscription.trial_end) > now : false);
 
   const isPastDue = subscription?.status === 'past_due';
 
@@ -89,7 +89,7 @@ export function useSubscription(organizationId?: string): SubscriptionStatus {
 
   // Get plan limits
   const planId = subscription?.plan_id || 'starter';
-  const limits: SubscriptionLimits = PLAN_LIMITS[planId] || PLAN_LIMITS.starter;
+  const limits: SubscriptionLimits = (PLAN_LIMITS as any)[planId] || PLAN_LIMITS.starter;
 
   return {
     subscription,

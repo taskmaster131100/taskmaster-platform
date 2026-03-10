@@ -59,6 +59,9 @@ const FAQ = React.lazy(() => import('./pages/DocsPages').then(module => ({ defau
 const Changelog = React.lazy(() => import('./pages/DocsPages').then(module => ({ default: module.Changelog })));
 
 const ToursManager = React.lazy(() => import('./pages/ToursManager'));
+const CRMPage = React.lazy(() => import('./pages/CRMPage'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 
 // Marcos Menezes AI Mentor Components
 const MentorChatWithVoice = React.lazy(() => import('./components/MentorChatWithVoice'));
@@ -122,6 +125,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     };
   }, []);
 
+  // Recarregar projetos quando o Planning Copilot criar um novo
+  useEffect(() => {
+    const handleProjectCreated = () => loadData();
+    window.addEventListener('taskmaster:project-created', handleProjectCreated);
+    return () => window.removeEventListener('taskmaster:project-created', handleProjectCreated);
+  }, []);
+
   useEffect(() => {
     // Check database mode on app start
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -139,8 +149,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (user && dbMode === 'ready') {
       loadData();
 
-      // Check if user has seen onboarding
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+      // Check if user has seen onboarding — localStorage ou user_metadata (funciona em incognito)
+      const hasSeenOnboarding =
+        localStorage.getItem('hasSeenOnboarding') ||
+        user.user_metadata?.onboarding_completed === true;
       if (!hasSeenOnboarding) {
         setShowOnboarding(true);
       } else {
@@ -296,24 +308,37 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
       // Enviar apenas os campos que existem na tabela artists do Supabase
       // Colunas reais: name, stage_name, genre, subgenre, bio, instagram, spotify, youtube, tiktok, email, phone, organization_id
+      // Garantir que name e stage_name sempre têm valor (NOT NULL no banco)
+      const resolvedName = artistData.name?.trim() || 'Novo Artista';
+      const resolvedStageName = (
+        artistData.artistic_name?.trim() ||
+        artistData.artisticName?.trim() ||
+        artistData.stage_name?.trim() ||
+        resolvedName
+      );
+
       const safeArtistData: Record<string, any> = {
-        name: artistData.name || 'Novo Artista',
-        stage_name: artistData.artistic_name || artistData.artisticName || artistData.stage_name || artistData.name || null,
-        genre: artistData.genre || 'Não definido',
-        subgenre: artistData.subgenre || null,
-        bio: artistData.bio || null,
-        instagram: artistData.instagram || null,
-        spotify: artistData.spotify || null,
-        youtube: artistData.youtube || null,
-        tiktok: artistData.tiktok || null,
-        email: artistData.email || artistData.contact_email || null,
-        phone: artistData.phone || artistData.contact_phone || null,
+        name: resolvedName,
+        stage_name: resolvedStageName,
+        genre: artistData.genre?.trim() || 'Não definido',
         organization_id: orgId
       };
 
-      // Remover campos com valor null/undefined para evitar erros no Supabase
-      Object.keys(safeArtistData).forEach(key => {
-        if (safeArtistData[key] === undefined || safeArtistData[key] === null) delete safeArtistData[key];
+      // Adicionar campos opcionais apenas se tiverem valor
+      const optionalFields: Record<string, any> = {
+        subgenre: artistData.subgenre,
+        bio: artistData.bio,
+        instagram: artistData.instagram,
+        spotify: artistData.spotify,
+        youtube: artistData.youtube,
+        tiktok: artistData.tiktok,
+        email: artistData.email || artistData.contact_email,
+        phone: artistData.phone || artistData.contact_phone,
+      };
+      Object.entries(optionalFields).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          safeArtistData[key] = String(val).trim();
+        }
       });
 
       const { data: newArtist, error } = await supabase
@@ -526,6 +551,19 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
               <PendingApproval />
             </React.Suspense>
           } />
+
+          <Route path="/termos" element={
+            <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+              <TermsPage />
+            </React.Suspense>
+          } />
+
+          <Route path="/privacidade" element={
+            <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+              <PrivacyPage />
+            </React.Suspense>
+          } />
+
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
@@ -673,10 +711,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'preferences') return <UserPreferences />;
     if (activeTab === 'role-features') return <UserRoleFeatures />;
     if (activeTab === 'about') return <About />;
-    if (activeTab === 'mentor-chat') return <MentorChatWithVoice />;
+    if (activeTab === 'mentor-chat') return <MentorChatWithVoice userId={user?.id || ''} />;
     if (activeTab === 'mentor-diagnosis') return <MentorDiagnosticOnboarding />;
     if (activeTab === 'mentor-dashboard') return <MentorExecutiveDashboard />;
-    if (activeTab === 'mentor-consulting') return <PremiumConsultingBooking />;
+    if (activeTab === 'mentor-consulting') return <PremiumConsultingBooking userId={user?.id || ''} />;
     if (activeTab === 'reports') {
       return <ReportsPage />;
     }
@@ -709,11 +747,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             onComplete={() => {
               setShowOnboarding(false);
               localStorage.setItem('hasSeenOnboarding', 'true');
+              supabase.auth.updateUser({ data: { onboarding_completed: true } });
               navigate('/');
             }}
             onSkip={() => {
               setShowOnboarding(false);
               localStorage.setItem('hasSeenOnboarding', 'true');
+              supabase.auth.updateUser({ data: { onboarding_completed: true } });
               navigate('/');
             }}
           />
@@ -724,7 +764,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       {showWelcome && !showOnboarding && (
         <React.Suspense fallback={<div></div>}>
           <WelcomeModal
-            userName={user.name || user.email.split('@')[0]}
+            userName={user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário'}
             onClose={() => setShowWelcome(false)}
           />
         </React.Suspense>
@@ -902,10 +942,28 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           </React.Suspense>
         } />
 
+        <Route path="/crm" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <CRMPage />
+          </React.Suspense>
+        } />
+
+        <Route path="/termos" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <TermsPage />
+          </React.Suspense>
+        } />
+
+        <Route path="/privacidade" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <PrivacyPage />
+          </React.Suspense>
+        } />
+
         {/* Marcos Menezes AI Mentor Routes */}
         <Route path="/mentor-chat" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <MentorChatWithVoice />
+            <MentorChatWithVoice userId={user?.id || ''} />
           </React.Suspense>
         } />
         <Route path="/mentor-diagnosis" element={
@@ -920,7 +978,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         } />
         <Route path="/mentor-consulting" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <PremiumConsultingBooking />
+            <PremiumConsultingBooking userId={user?.id || ''} />
           </React.Suspense>
         } />
 
@@ -997,7 +1055,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       {user && (
         <React.Suspense fallback={<div></div>}>
           <VirtualAgentWidget />
-          <MentorProactiveNotification />
+          <MentorProactiveNotification userId={user?.id || ''} />
         </React.Suspense>
       )}
     </div>

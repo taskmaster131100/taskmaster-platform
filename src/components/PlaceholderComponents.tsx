@@ -1,5 +1,5 @@
 import React from 'react';
-import { Music, Users, Calendar, Sparkles, FileText, BarChart3, Settings, User, Search, ArrowLeft, Plus, X, Check, Clock, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
+import { Music, Users, Calendar as CalendarIcon, Sparkles, FileText, BarChart3, Settings, User, Search, ArrowLeft, Plus, X, Check, Clock, TrendingUp, DollarSign, AlertCircle, Rocket } from 'lucide-react';
 
 export function ArtistManager({ onSelectArtist, onCreateArtist, onSelectProject }: any) {
   const [artists, setArtists] = React.useState<any[]>([]);
@@ -666,7 +666,7 @@ export function Calendar({ tasks = [], onTaskUpdate }: any) {
               })
               .map(event => (
                 <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Calendar className="w-5 h-5 text-cyan-600" />
+                  <CalendarIcon className="w-5 h-5 text-cyan-600" />
                   <div>
                     <p className="font-medium text-gray-900">{event.title}</p>
                     <p className="text-sm text-gray-600">

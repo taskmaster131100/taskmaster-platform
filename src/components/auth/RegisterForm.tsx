@@ -20,7 +20,6 @@ export default function RegisterForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   // Validate invite code on mount if present in URL

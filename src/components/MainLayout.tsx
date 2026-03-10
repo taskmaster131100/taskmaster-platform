@@ -147,6 +147,7 @@ export default function MainLayout({
       items: [
         { id: 'team', label: 'Equipe', icon: UsersRound, link: '/team' },
         { id: 'finance', label: 'Financeiro', icon: DollarSign, link: '/finance' },
+        { id: 'crm', label: 'CRM / Vendas', icon: TrendingUp, link: '/crm' },
       ]
     },
     {
@@ -327,7 +328,7 @@ export default function MainLayout({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.name || user?.email?.split('@')[0] || 'Usuário'}
+                {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário'}
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
@@ -389,7 +390,7 @@ export default function MainLayout({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.name || user?.email?.split('@')[0] || 'Usuário'}
+                    {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário'}
                   </p>
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>

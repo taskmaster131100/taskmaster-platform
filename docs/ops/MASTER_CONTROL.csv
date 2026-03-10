@@ -1,0 +1,96 @@
+MASTER CONTROL — TaskMaster Operação Completa,,,,,,,,,,
+Atualizado:,04/03/2026,,,,,,,,,
+,,,,,,,,,,
+=== ABA 1: FERRAMENTAS & CREDENCIAIS ===,,,,,,,,,,
+,,,,,,,,,,
+FERRAMENTA,CATEGORIA,PARA QUE SERVE,PRECISA DE API/CREDENCIAL,TIPO DE CREDENCIAL,CUSTO,TENHO?,LINK PARA CRIAR,STATUS,OBSERVAÇÃO
+n8n,Automação,Orquestrador de todos os agentes,SIM,API Key própria do n8n,Grátis (self-hosted),SIM (v2.2.4),localhost:5678,✅ INSTALADO,Precisa subir e checar URL externa
+OpenAI,IA,GPT-4o para todos os agentes,SIM,API Key,Pago por uso (~$0.01/1k tokens),?,https://platform.openai.com/api-keys,⬜ VERIFICAR,Chave principal de tudo
+Evolution API,WhatsApp,Enviar/receber mensagens WhatsApp,SIM,API Key + instância,Grátis (self-hosted) ou pago,?,https://evolution-api.com,⬜ VERIFICAR,Alternativa: Z-API ou Twilio
+Google Calendar,Agenda,Agente pessoal — agenda do Marcos,SIM,OAuth2 Google,Grátis,?,console.cloud.google.com,⬜ VERIFICAR,Ativar Google Calendar API
+Google Sheets,Dados,CRM básico + finanças pessoais + calendário editorial,SIM,OAuth2 Google (mesmo acima),Grátis,?,console.cloud.google.com,⬜ VERIFICAR,Mesmo projeto OAuth do Calendar
+Google Analytics GA4,Analytics,Métricas do site,SIM,Measurement ID,Grátis,?,analytics.google.com,⬜ VERIFICAR,
+SendGrid,Email,Disparar emails automáticos (newsletter / onboarding / follow-up),SIM,API Key,Grátis até 100 emails/dia,?,https://sendgrid.com,⬜ VERIFICAR,Alternativa: Resend.com (mais fácil)
+Notion,Documentação,Base de conhecimento + backlog + conteúdo gerado,SIM,API Key (Integration Token),Grátis,?,https://www.notion.so/my-integrations,⬜ VERIFICAR,
+Supabase,Banco de dados,Dados da plataforma TaskMaster,SIM,URL + Service Role Key,Grátis até certo limite,SIM (já em uso),supabase.com/dashboard,✅ JÁ TEM,Está configurado na plataforma
+Calendly,Agendamento,Agendar demos e calls automaticamente,SIM,API Key,Grátis (básico),?,https://calendly.com/integrations/api_webhooks,⬜ VERIFICAR,Alternativa: Cal.com (open source)
+HubSpot CRM,CRM,Gerenciar pipeline de vendas e leads,SIM,API Key,Grátis (CRM básico),?,https://developers.hubspot.com,⬜ VERIFICAR,Alternativa: usar Google Sheets no início
+LinkedIn,Redes Sociais,Prospecção SDR + posts do Marcos,SIM,Cookie de sessão ou API,API: aprovação demorada,?,linkedin.com/developers,⬜ VERIFICAR,Mais fácil usar cookie de sessão no n8n
+Meta Pixel,Ads,Rastrear visitantes para remarketing,SIM,Pixel ID,Grátis,?,business.facebook.com,⬜ VERIFICAR,
+Hotjar,UX,Gravar sessões e heatmaps do site,SIM,Site ID,Grátis até 35 sessões/dia,?,https://www.hotjar.com,⬜ VERIFICAR,
+Resend,Email (alternativa),Email transacional mais simples que SendGrid,SIM,API Key,Grátis até 3k emails/mês,?,https://resend.com,⬜ VERIFICAR,Mais simples de configurar
+Clicksign / DocuSign,Assinatura Digital,Assinar contratos com clientes,SIM,API Key,Pago,?,https://www.clicksign.com,⬜ VERIFICAR,Clicksign é BR e mais barato
+Vercel,Deploy,Hospedar a plataforma TaskMaster,SIM,Token,Grátis (hobby),SIM (já em uso),,✅ JÁ TEM,Já configurado
+,,,,,,,,,,
+=== ABA 2: CRONOGRAMA DE IMPLEMENTAÇÃO ===,,,,,,,,,,
+,,,,,,,,,,
+FASE,SEMANA,TAREFA,CATEGORIA,RESPONSÁVEL,STATUS,PRIORIDADE,DEPENDE DE,ESTIMATIVA,OBSERVAÇÃO
+1 - Base,Semana 1 (05-09/Mar),Levantar quais credenciais Marcos já tem,Setup,Marcos,⬜ PENDENTE,🔴 CRÍTICO,,30min,Fazer hoje com a planilha
+1 - Base,Semana 1 (05-09/Mar),Criar projeto OAuth no Google Cloud Console,Setup,Marcos,⬜ PENDENTE,🔴 CRÍTICO,,20min,Libera Calendar + Sheets
+1 - Base,Semana 1 (05-09/Mar),Obter API Key da OpenAI,Setup,Marcos,⬜ PENDENTE,🔴 CRÍTICO,,10min,Base de todos os agentes
+1 - Base,Semana 1 (05-09/Mar),Subir e testar n8n com URL acessível,Setup,Claude,⬜ PENDENTE,🔴 CRÍTICO,n8n instalado,1h,n8n já instalado v2.2.4
+1 - Base,Semana 1 (05-09/Mar),Configurar Evolution API para WhatsApp,Setup,Claude,⬜ PENDENTE,🔴 CRÍTICO,Servidor n8n rodando,2h,Canal principal de comunicação
+1 - Base,Semana 1 (05-09/Mar),Construir Agente Maestro (Orquestrador),n8n,Claude,⬜ PENDENTE,🔴 CRÍTICO,OpenAI + WhatsApp,3h,Ponto central de controle
+1 - Base,Semana 1 (05-09/Mar),Construir Agente Pessoal — Agenda,n8n,Claude,⬜ PENDENTE,🔴 CRÍTICO,Google Calendar + Maestro,2h,
+1 - Base,Semana 1 (05-09/Mar),Construir Agente Pessoal — Finanças,n8n,Claude,⬜ PENDENTE,🔴 CRÍTICO,Google Sheets + Maestro,2h,
+1 - Base,Semana 1 (05-09/Mar),Construir Briefing Diário automático (7h30),n8n,Claude,⬜ PENDENTE,🔴 CRÍTICO,Agenda + Finanças,1h,
+1 - Base,Semana 1 (05-09/Mar),Testar Maestro + Agente Pessoal completo,Teste,Marcos + Claude,⬜ PENDENTE,🔴 CRÍTICO,Tudo da Fase 1,1h,
+2 - Vendas,Semana 2 (10-14/Mar),Configurar CRM (Google Sheets ou HubSpot),Vendas,Marcos,⬜ PENDENTE,🟠 ALTO,Google Sheets OAuth,1h,
+2 - Vendas,Semana 2 (10-14/Mar),Construir Agente SDR (prospecção),n8n,Claude,⬜ PENDENTE,🟠 ALTO,CRM + LinkedIn + WhatsApp,4h,
+2 - Vendas,Semana 2 (10-14/Mar),Construir Agente Follow-up (pós-demo),n8n,Claude,⬜ PENDENTE,🟠 ALTO,CRM + Email + WhatsApp,3h,
+2 - Vendas,Semana 2 (10-14/Mar),Construir Agente Proposta (PDF automático),n8n,Claude,⬜ PENDENTE,🟠 ALTO,CRM + Email + OpenAI,4h,
+2 - Vendas,Semana 2 (10-14/Mar),Configurar Calendly e integrar ao n8n,Vendas,Marcos,⬜ PENDENTE,🟠 ALTO,,30min,
+2 - Vendas,Semana 2 (10-14/Mar),Testar fluxo completo pré → venda → proposta,Teste,Marcos + Claude,⬜ PENDENTE,🟠 ALTO,Todos da Fase 2,2h,
+3 - Marketing,Semana 3 (15-19/Mar),Criar calendário editorial no Google Sheets,Marketing,Marcos,⬜ PENDENTE,🟡 MÉDIO,,1h,Base do Agente Conteúdo
+3 - Marketing,Semana 3 (15-19/Mar),Configurar SendGrid / Resend para emails,Marketing,Marcos,⬜ PENDENTE,🟡 MÉDIO,,30min,
+3 - Marketing,Semana 3 (15-19/Mar),Construir Agente de Conteúdo (geração semanal),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,OpenAI + Sheets + WhatsApp,4h,
+3 - Marketing,Semana 3 (15-19/Mar),Construir Agente Newsletter (disparo automático),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,SendGrid + Sheets,3h,
+3 - Marketing,Semana 3 (15-19/Mar),Construir Agente Lead Capture (site → CRM),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,CRM + WhatsApp,2h,
+3 - Marketing,Semana 3 (15-19/Mar),Construir Agente Relatório Marketing (2ª 8h),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,GA4 + Sheets + WhatsApp,3h,
+3 - Marketing,Semana 3 (15-19/Mar),Testar cadeia de marketing completa,Teste,Marcos + Claude,⬜ PENDENTE,🟡 MÉDIO,Todos da Fase 3,2h,
+4 - Suporte,Semana 4 (22-26/Mar),Montar base de conhecimento FAQ no Notion,Suporte,Marcos,⬜ PENDENTE,🟡 MÉDIO,,2h,Marcos preenche as perguntas
+4 - Suporte,Semana 4 (22-26/Mar),Construir Agente Triagem (classificação),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,OpenAI + WhatsApp,3h,
+4 - Suporte,Semana 4 (22-26/Mar),Construir Agente FAQ (respostas automáticas),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,Notion + OpenAI,3h,
+4 - Suporte,Semana 4 (22-26/Mar),Construir Agente Onboarding (D+0 ao D+30),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,Email + WhatsApp + Supabase,4h,
+4 - Suporte,Semana 4 (22-26/Mar),Construir Agente Churn (monitoramento diário),n8n,Claude,⬜ PENDENTE,🟡 MÉDIO,Supabase + WhatsApp + CRM,3h,
+4 - Suporte,Semana 4 (22-26/Mar),Testar cadeia de suporte completa,Teste,Marcos + Claude,⬜ PENDENTE,🟡 MÉDIO,Todos da Fase 4,2h,
+5 - Refinamento,Semana 5 (29/Mar-02/Abr),Agente Pessoal — LinkedIn (rascunhos de posts),n8n,Claude,⬜ PENDENTE,🟢 BAIXO,LinkedIn + OpenAI,3h,
+5 - Refinamento,Semana 5 (29/Mar-02/Abr),Agente NPS (disparo e consolidação),n8n,Claude,⬜ PENDENTE,🟢 BAIXO,Email + WhatsApp + Sheets,2h,
+5 - Refinamento,Semana 5 (29/Mar-02/Abr),Dashboard unificado de métricas (Google Sheets),Dados,Claude,⬜ PENDENTE,🟢 BAIXO,Todos os agentes,3h,
+5 - Refinamento,Semana 5 (29/Mar-02/Abr),Revisão e ajuste fino de todos os agentes,Refinamento,Marcos + Claude,⬜ PENDENTE,🟢 BAIXO,Fases 1-4 completas,4h,
+5 - Refinamento,Semana 5 (29/Mar-02/Abr),Documentar fluxos para manutenção futura,Docs,Claude,⬜ PENDENTE,🟢 BAIXO,,2h,
+,,,,,,,,,,
+=== ABA 3: CHECKLIST DE CREDENCIAIS (PREENCHER HOJE) ===,,,,,,,,,,
+,,,,,,,,,,
+SERVIÇO,TENHO A CONTA?,TENHO A API KEY / CREDENCIAL?,ONDE ESTÁ SALVA?,AÇÃO NECESSÁRIA
+OpenAI (GPT-4o),,,,
+n8n (já instalado — checar API Key),,,,
+Google Cloud OAuth (Calendar + Sheets),,,,
+Evolution API (WhatsApp),,,,
+SendGrid ou Resend (email),,,,
+Notion (API Integration Token),,,,
+Supabase (já tem — pegar Service Key),,,,
+HubSpot ou planilha CRM,,,,
+Calendly,,,,
+LinkedIn (conta ativa),,,,
+,,,,,,,,,,
+=== ABA 4: AGENTES — STATUS DETALHADO ===,,,,,,,,,,
+,,,,,,,,,,
+AGENTE,FASE,CATEGORIA,CREDENCIAIS NECESSÁRIAS,COMPLEXIDADE,STATUS,DATA INÍCIO,DATA FIM,OBSERVAÇÃO
+Maestro (Orquestrador),1,Base,OpenAI + Evolution API + n8n API,Alta,⬜ PENDENTE,,,Ponto central — construir primeiro
+Agente Pessoal — Agenda,1,Pessoal,Google Calendar OAuth,Média,⬜ PENDENTE,,,
+Agente Pessoal — Finanças,1,Pessoal,Google Sheets OAuth,Média,⬜ PENDENTE,,,
+Agente Pessoal — LinkedIn,5,Pessoal,LinkedIn session + OpenAI,Média,⬜ PENDENTE,,,Deixar para fase 5
+Agente Briefing Diário,1,Pessoal,Calendar + Sheets + WhatsApp,Baixa,⬜ PENDENTE,,,Automático 7h30 todo dia
+Agente SDR,2,Vendas,LinkedIn + WhatsApp + OpenAI + CRM,Alta,⬜ PENDENTE,,,
+Agente Follow-up,2,Vendas,Email + WhatsApp + CRM + OpenAI,Média,⬜ PENDENTE,,,
+Agente Proposta,2,Vendas,OpenAI + Email + CRM + Google Drive,Alta,⬜ PENDENTE,,,
+Agente NPS,5,Vendas,Email + WhatsApp + Sheets,Baixa,⬜ PENDENTE,,,
+Agente Conteúdo,3,Marketing,OpenAI + Google Sheets + WhatsApp + Notion,Média,⬜ PENDENTE,,,
+Agente Newsletter,3,Marketing,SendGrid/Resend + Sheets + OpenAI,Média,⬜ PENDENTE,,,
+Agente Lead Capture,3,Marketing,Webhook site + CRM + WhatsApp,Baixa,⬜ PENDENTE,,,
+Agente Relatório Mkt,3,Marketing,GA4 + Sheets + WhatsApp + OpenAI,Média,⬜ PENDENTE,,,
+Agente Triagem,4,Suporte,WhatsApp + OpenAI + Notion,Média,⬜ PENDENTE,,,
+Agente FAQ,4,Suporte,Notion + OpenAI + WhatsApp,Baixa,⬜ PENDENTE,,,
+Agente Onboarding,4,Suporte,Email + WhatsApp + Supabase,Média,⬜ PENDENTE,,,
+Agente Churn,4,Suporte,Supabase + WhatsApp + CRM,Alta,⬜ PENDENTE,,,

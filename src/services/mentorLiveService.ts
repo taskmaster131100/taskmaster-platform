@@ -23,7 +23,7 @@ export interface MentorProactiveMessage {
   urgency: 'low' | 'medium' | 'high';
   actionLabel?: string;
   actionPath?: string;
-  timestamp: Date;
+  timestamp?: Date;
 }
 
 /**

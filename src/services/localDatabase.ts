@@ -63,7 +63,7 @@ class LocalDatabase {
   }
 
   createProject(projectData: any) {
-    const projects = this.getCollection('projects');
+    const projects = this.getCollection<any>('projects');
     const newProject = {
       id: `project_${Date.now()}`,
       ...projectData,
@@ -77,7 +77,7 @@ class LocalDatabase {
   }
 
   updateProject(projectId: string, updates: any) {
-    const projects = this.getCollection('projects');
+    const projects = this.getCollection<any>('projects');
     const index = projects.findIndex((p: any) => p.id === projectId);
     if (index !== -1) {
       projects[index] = { ...projects[index], ...updates, updatedAt: new Date().toISOString() };
@@ -90,7 +90,7 @@ class LocalDatabase {
   }
 
   deleteProject(projectId: string) {
-    const projects = this.getCollection('projects');
+    const projects = this.getCollection<any>('projects');
     const filtered = projects.filter((p: any) => p.id !== projectId);
     this.setCollection('projects', filtered);
     this.log('DELETE', 'projects', { id: projectId });
@@ -98,7 +98,7 @@ class LocalDatabase {
   }
 
   createArtist(artistData: any) {
-    const artists = this.getCollection('artists');
+    const artists = this.getCollection<any>('artists');
     const newArtist = {
       id: `artist_${Date.now()}`,
       ...artistData,
@@ -112,7 +112,7 @@ class LocalDatabase {
   }
 
   updateArtist(artistId: string, updates: any) {
-    const artists = this.getCollection('artists');
+    const artists = this.getCollection<any>('artists');
     const index = artists.findIndex((a: any) => a.id === artistId);
     if (index !== -1) {
       artists[index] = { ...artists[index], ...updates, updatedAt: new Date().toISOString() };
@@ -125,7 +125,7 @@ class LocalDatabase {
   }
 
   deleteArtist(artistId: string) {
-    const artists = this.getCollection('artists');
+    const artists = this.getCollection<any>('artists');
     const filtered = artists.filter((a: any) => a.id !== artistId);
     this.setCollection('artists', filtered);
     this.log('DELETE', 'artists', { id: artistId });
@@ -133,7 +133,7 @@ class LocalDatabase {
   }
 
   createTask(taskData: any) {
-    const tasks = this.getCollection('tasks');
+    const tasks = this.getCollection<any>('tasks');
     const newTask = {
       id: `task_${Date.now()}`,
       ...taskData,
@@ -147,7 +147,7 @@ class LocalDatabase {
   }
 
   updateTask(taskId: string, updates: any) {
-    const tasks = this.getCollection('tasks');
+    const tasks = this.getCollection<any>('tasks');
     const index = tasks.findIndex((t: any) => t.id === taskId);
     if (index !== -1) {
       tasks[index] = { ...tasks[index], ...updates, updatedAt: new Date().toISOString() };
@@ -160,7 +160,7 @@ class LocalDatabase {
   }
 
   deleteTask(taskId: string) {
-    const tasks = this.getCollection('tasks');
+    const tasks = this.getCollection<any>('tasks');
     const filtered = tasks.filter((t: any) => t.id !== taskId);
     this.setCollection('tasks', filtered);
     this.log('DELETE', 'tasks', { id: taskId });
@@ -294,11 +294,11 @@ class LocalDatabase {
   // Estatísticas
   getStats() {
     const stats = {
-      projects: this.getCollection('projects').length,
-      artists: this.getCollection('artists').length,
-      tasks: this.getCollection('tasks').length,
-      departments: this.getCollection('departments').length,
-      teamMembers: this.getCollection('teamMembers').length,
+      projects: this.getCollection<any>('projects').length,
+      artists: this.getCollection<any>('artists').length,
+      tasks: this.getCollection<any>('tasks').length,
+      departments: this.getCollection<any>('departments').length,
+      teamMembers: this.getCollection<any>('teamMembers').length,
       logs: this.getLogs().length
     };
 

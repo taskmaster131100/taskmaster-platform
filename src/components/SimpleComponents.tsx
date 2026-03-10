@@ -755,31 +755,111 @@ export const UserManagement = () => {
 // User Preferences - Configurações do Usuário
 // ============================================================
 export const UserPreferences = () => {
-  const [prefs, setPrefs] = useState({
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [userId, setUserId] = React.useState<string | null>(null);
+  const [generalPrefs, setGeneralPrefs] = React.useState({
     language: 'pt',
-    theme: 'light',
-    notifications_email: true,
-    notifications_push: true,
-    notifications_whatsapp: false,
+    currency: 'BRL',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    currency: 'BRL'
+  });
+  const [notifPrefs, setNotifPrefs] = React.useState({
+    email_tasks: true,
+    email_shows: true,
+    email_releases: true,
+    email_financial: true,
+    email_team_invites: true,
+    email_weekly_summary: true,
+    push_tasks: false,
+    push_shows: false,
+    push_releases: false,
+    whatsapp_enabled: false,
+    whatsapp_number: '',
   });
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('tm_preferences') || 'null');
-    if (stored) setPrefs(stored);
+  React.useEffect(() => {
+    loadPrefs();
   }, []);
 
-  const savePrefs = (updated: typeof prefs) => {
-    setPrefs(updated);
+  async function loadPrefs() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+
+      // Load general prefs from localStorage
+      const stored = JSON.parse(localStorage.getItem('tm_preferences') || 'null');
+      if (stored) {
+        setGeneralPrefs(p => ({ ...p, ...stored }));
+      }
+
+      // Load notification prefs from Supabase
+      const { data } = await supabase
+        .from('user_notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setNotifPrefs({
+          email_tasks: data.email_tasks ?? true,
+          email_shows: data.email_shows ?? true,
+          email_releases: data.email_releases ?? true,
+          email_financial: data.email_financial ?? true,
+          email_team_invites: data.email_team_invites ?? true,
+          email_weekly_summary: data.email_weekly_summary ?? true,
+          push_tasks: data.push_tasks ?? false,
+          push_shows: data.push_shows ?? false,
+          push_releases: data.push_releases ?? false,
+          whatsapp_enabled: data.whatsapp_enabled ?? false,
+          whatsapp_number: data.whatsapp_number ?? '',
+        });
+      }
+    } catch (e) {
+      console.error('Erro ao carregar preferências:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveNotifPrefs(updated: typeof notifPrefs) {
+    setNotifPrefs(updated);
+    if (!userId) return;
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('user_notification_preferences')
+        .upsert({ user_id: userId, ...updated }, { onConflict: 'user_id' });
+      if (error) throw error;
+      toast.success('Preferências de notificação salvas!');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function saveGeneralPrefs(updated: typeof generalPrefs) {
+    setGeneralPrefs(updated);
     localStorage.setItem('tm_preferences', JSON.stringify(updated));
     toast.success('Preferências salvas!');
-  };
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-[#FFAD85] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-6"><Settings className="w-8 h-8 text-gray-600" /> Preferências</h2>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-6">
+          <Settings className="w-8 h-8 text-gray-600" /> Preferências
+        </h2>
 
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -787,7 +867,11 @@ export const UserPreferences = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
-                <select value={prefs.language} onChange={e => savePrefs({...prefs, language: e.target.value})} className="w-full px-4 py-2 border rounded-lg">
+                <select
+                  value={generalPrefs.language}
+                  onChange={e => saveGeneralPrefs({ ...generalPrefs, language: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                >
                   <option value="pt">Português</option>
                   <option value="en">English</option>
                   <option value="es">Español</option>
@@ -795,7 +879,11 @@ export const UserPreferences = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Moeda</label>
-                <select value={prefs.currency} onChange={e => savePrefs({...prefs, currency: e.target.value})} className="w-full px-4 py-2 border rounded-lg">
+                <select
+                  value={generalPrefs.currency}
+                  onChange={e => saveGeneralPrefs({ ...generalPrefs, currency: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                >
                   <option value="BRL">Real (R$)</option>
                   <option value="USD">Dólar (US$)</option>
                   <option value="EUR">Euro (€)</option>
@@ -805,19 +893,57 @@ export const UserPreferences = () => {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Notificações</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Notificações por Email</h3>
+              {saving && <Loader2 className="w-4 h-4 text-[#FFAD85] animate-spin" />}
+            </div>
             <div className="space-y-3">
               {[
-                { key: 'notifications_email', label: 'Notificações por E-mail' },
-                { key: 'notifications_push', label: 'Notificações Push' },
-                { key: 'notifications_whatsapp', label: 'Notificações por WhatsApp' }
+                { key: 'email_tasks', label: 'Tarefas (atribuição, prazo)' },
+                { key: 'email_shows', label: 'Shows (novo, confirmado)' },
+                { key: 'email_releases', label: 'Releases (atualização de status)' },
+                { key: 'email_financial', label: 'Financeiro (pagamentos, vencimentos)' },
+                { key: 'email_team_invites', label: 'Convites de equipe' },
+                { key: 'email_weekly_summary', label: 'Resumo semanal' },
               ].map(item => (
-                <label key={item.key} className="flex items-center justify-between py-2">
-                  <span className="text-gray-700">{item.label}</span>
-                  <input type="checkbox" checked={(prefs as any)[item.key]} onChange={e => savePrefs({...prefs, [item.key]: e.target.checked})} className="w-5 h-5 text-[#FFAD85] rounded" />
+                <label key={item.key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <span className="text-gray-700 text-sm">{item.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={(notifPrefs as any)[item.key]}
+                    onChange={e => saveNotifPrefs({ ...notifPrefs, [item.key]: e.target.checked })}
+                    className="w-5 h-5 accent-[#FF9B6A] rounded cursor-pointer"
+                  />
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">WhatsApp</h3>
+            <label className="flex items-center justify-between py-2 mb-3">
+              <span className="text-gray-700 text-sm">Ativar notificações via WhatsApp</span>
+              <input
+                type="checkbox"
+                checked={notifPrefs.whatsapp_enabled}
+                onChange={e => saveNotifPrefs({ ...notifPrefs, whatsapp_enabled: e.target.checked })}
+                className="w-5 h-5 accent-[#FF9B6A] rounded cursor-pointer"
+              />
+            </label>
+            {notifPrefs.whatsapp_enabled && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Número WhatsApp</label>
+                <input
+                  type="tel"
+                  value={notifPrefs.whatsapp_number}
+                  onChange={e => setNotifPrefs(p => ({ ...p, whatsapp_number: e.target.value }))}
+                  onBlur={() => saveNotifPrefs(notifPrefs)}
+                  placeholder="+55 11 99999-9999"
+                  className="w-full px-4 py-2 border rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Integração via n8n/Evolution API</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

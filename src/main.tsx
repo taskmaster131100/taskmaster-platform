@@ -5,8 +5,11 @@ import App from './App.tsx';  // Main app with full functionality
 import { AuthProvider } from './components/auth/AuthProvider';
 import { OrganizationProvider } from './components/organization/OrganizationContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { initSentry } from './lib/sentry';
 import './i18n';  // Initialize i18n
 import './index.css';
+
+initSentry();
 
 // Use HashRouter when classic routes are enabled for easier preview access
 const ENABLE_CLASSIC_ROUTES = import.meta.env.VITE_ENABLE_CLASSIC_ROUTES === 'true';

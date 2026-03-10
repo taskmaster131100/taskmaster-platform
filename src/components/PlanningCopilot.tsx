@@ -592,6 +592,9 @@ export default function PlanningCopilot() {
 
         toast.success(`Projeto criado com sucesso!`);
 
+        // Notificar App.tsx para recarregar a lista de projetos
+        window.dispatchEvent(new CustomEvent('taskmaster:project-created'));
+
         // Montar mensagem amigável (SEM código, SEM JSON)
         const friendlyMessage = `✅ **Pronto! Seu projeto "${projectData.name}" foi transformado em um fluxo de trabalho completo dentro da plataforma!**
 
