@@ -26,6 +26,7 @@
     "idb": "^8.0.0",
     "lucide-react": "^0.301.0",
     "openai": "^6.18.0",
+    "posthog-js": "^1.360.1",
     "qrcode": "^1.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

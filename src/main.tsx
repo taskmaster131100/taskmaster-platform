@@ -6,10 +6,12 @@ import { AuthProvider } from './components/auth/AuthProvider';
 import { OrganizationProvider } from './components/organization/OrganizationContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { initSentry } from './lib/sentry';
+import { initAnalytics } from './lib/analytics';
 import './i18n';  // Initialize i18n
 import './index.css';
 
 initSentry();
+initAnalytics();
 
 // Use HashRouter when classic routes are enabled for easier preview access
 const ENABLE_CLASSIC_ROUTES = import.meta.env.VITE_ENABLE_CLASSIC_ROUTES === 'true';

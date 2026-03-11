@@ -59,6 +59,9 @@
     "VITE_FEATURE_PLANNING_COPILOT": "true",
     "VITE_FEATURE_BILLING": "false",
     "VITE_FEATURE_SUBSCRIPTIONS": "false",
-    "VITE_FEATURE_OWNERSHIP": "false"
+    "VITE_FEATURE_OWNERSHIP": "false",
+    "VITE_POSTHOG_KEY": "phc_wjiQuLpqaAL8HgG9257Bthy19EbaTQd2wuAAVADIaXZ",
+    "VITE_POSTHOG_HOST": "https://app.posthog.com",
+    "VITE_SENTRY_DSN": "https://1592351761f161a9b64eb4cc9dbb4a1a@o4511025851531264.ingest.us.sentry.io/4511025950949376"
   }
 }
