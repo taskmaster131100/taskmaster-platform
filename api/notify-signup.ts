@@ -3,7 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ktspxbucvfzaqyszpyso.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contact@taskmaster.works';
+const TG_BOT = process.env.TG_OPS_BOT || '8393382023:AAFjxZf0hdHhAQWG6SfAbavz8KNw-GDvC40';
+const TG_CHAT = process.env.TG_OPS_CHAT || '-5294873764';
+
+async function sendTelegram(msg: string) {
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_BOT}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'HTML' }),
+    });
+  } catch {}
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,8 +52,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // For now, log the signup. Email notification can be added via Supabase Edge Functions or a service like Resend/SendGrid
-    console.log(`[NEW SIGNUP] Name: ${name}, Email: ${email}, Type: ${accountType}, UserID: ${userId}`);
+    const typeLabel: Record<string, string> = { artist: 'Artista', office: 'Escritório', producer: 'Produtor' };
+    await sendTelegram(
+      `🆕 <b>Novo cadastro na TaskMaster</b>\n\n` +
+      `👤 <b>${name}</b>\n` +
+      `📧 ${email}\n` +
+      `🏷️ ${typeLabel[accountType] || accountType}\n\n` +
+      `Para aprovar: acesse taskmaster.works/admin/usuarios`
+    );
 
     return res.status(200).json({ 
       success: true, 

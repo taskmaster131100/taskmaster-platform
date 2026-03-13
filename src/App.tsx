@@ -76,6 +76,7 @@ const TeamPage = React.lazy(() => import('./pages/TeamPage'));
 const OrganizationProfile = React.lazy(() => import('./components/OrganizationProfile'));
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 const InvitePage = React.lazy(() => import('./pages/InvitePage'));
+const AdminUsuarios = React.lazy(() => import('./pages/AdminUsuarios'));
 
 // Classic Routes Preview (feature flag controlled)
 const WelcomePreview = React.lazy(() => import('./pages/WelcomePreview'));
@@ -832,6 +833,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/pending-approval" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <PendingApproval />
+          </React.Suspense>
+        } />
+
+        <Route path="/admin/usuarios" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <AdminUsuarios />
           </React.Suspense>
         } />
 

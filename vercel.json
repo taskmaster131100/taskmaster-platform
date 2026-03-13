@@ -51,8 +51,8 @@
   "env": {
     "VITE_APP_ENV": "production",
     "VITE_BETA_MODE": "true",
-    "VITE_INVITE_ONLY": "true",
-    "VITE_PUBLIC_SIGNUPS": "false",
+    "VITE_INVITE_ONLY": "false",
+    "VITE_PUBLIC_SIGNUPS": "true",
     "VITE_FEATURE_PIPELINE_V2": "true",
     "VITE_FEATURE_APPROVALS": "true",
     "VITE_FEATURE_COMMAND_CENTER": "true",
