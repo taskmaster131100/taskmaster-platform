@@ -37,14 +37,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Verify admin is authorized
     if (adminId) {
-      const { data: adminData } = await supabase
-        .from('user_organizations')
-        .select('role')
-        .eq('user_id', adminId)
-        .single();
-
-      if (!adminData || adminData.role !== 'owner') {
-        return res.status(403).json({ error: 'Only organization owners can approve users' });
+      const { data: adminUser } = await supabase.auth.admin.getUserById(adminId);
+      const adminEmail = adminUser?.user?.email;
+      const adminRole = adminUser?.user?.user_metadata?.role;
+      if (adminEmail !== 'marcos@taskmaster.works' && adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Unauthorized' });
       }
     }
 

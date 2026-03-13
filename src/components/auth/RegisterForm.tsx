@@ -4,6 +4,7 @@ import { Music, Mail, Lock, User, AlertCircle, CheckCircle, Globe, Building, Gif
 import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
 import { supabase } from '../../lib/supabase';
+import { sendWelcomeEmail } from '../../lib/email';
 
 export default function RegisterForm() {
   const [searchParams] = useSearchParams();
@@ -164,6 +165,10 @@ export default function RegisterForm() {
       }
 
       console.log('User created successfully:', authData.user.id);
+
+      // Enviar email de boas-vindas
+      const firstName = name.split(' ')[0];
+      sendWelcomeEmail(email, firstName).catch(() => {});
 
       // Notificar admin sobre novo cadastro pendente de aprovação
       try {
