@@ -771,7 +771,17 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         </React.Suspense>
       )}
 
-      <Routes>
+      {/* Bloqueia acesso ao dashboard para usuários registrados mas não aprovados */}
+      {user?.user_metadata?.approved === false && (
+        <Routes>
+          <Route path="/pending-approval" element={
+            <React.Suspense fallback={<div />}><PendingApproval /></React.Suspense>
+          } />
+          <Route path="*" element={<Navigate to="/pending-approval" replace />} />
+        </Routes>
+      )}
+
+      {user?.user_metadata?.approved !== false && <Routes>
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/reset-password" element={<Navigate to="/" replace />} />
@@ -1018,7 +1028,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             </MainLayout>
           </React.Suspense>
         } />
-      </Routes>
+      </Routes>}
 
       {/* Modal de Novo Projeto */}
       {showCreateProject && (

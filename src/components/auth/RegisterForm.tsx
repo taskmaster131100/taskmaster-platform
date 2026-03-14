@@ -176,8 +176,8 @@ export default function RegisterForm() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userName: name,
-            userEmail: email,
+            name: name,
+            email: email,
             accountType,
             userId: authData.user.id
           })
