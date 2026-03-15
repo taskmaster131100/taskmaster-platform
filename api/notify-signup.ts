@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ktspxbucvfzaqyszpyso.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://ktspxbucvfzaqyszpyso.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0c3B4YnVjdmZ6YXF5c3pweXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NDcyNzQsImV4cCI6MjA3MTAyMzI3NH0.-UfFVeGoCJFc69FHSwZ2FHlcQs1uidkxg0tItxmpPTc';
 const TG_BOT = process.env.TG_OPS_BOT || '8393382023:AAFjxZf0hdHhAQWG6SfAbavz8KNw-GDvC40';
 const TG_CHAT = process.env.TG_OPS_CHAT || '-5294873764';
 
@@ -36,10 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'userId, email, and name are required' });
     }
 
-    // Log the signup request in pending_approvals table
-    if (SUPABASE_SERVICE_KEY) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-      
+    // Log the signup request in pending_approvals table (uses anon key — policy allows insert)
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       await supabase.from('pending_approvals').insert({
         user_id: userId,
         email,
@@ -47,9 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         account_type: accountType || 'artist',
         status: 'pending',
         created_at: new Date().toISOString()
-      }).catch(err => {
-        console.error('Failed to insert pending approval:', err);
       });
+    } catch (err) {
+      console.error('Failed to insert pending approval:', err);
     }
 
     const typeLabel: Record<string, string> = { artist: 'Artista', office: 'Escritório', producer: 'Produtor' };

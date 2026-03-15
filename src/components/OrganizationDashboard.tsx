@@ -223,6 +223,53 @@ export default function OrganizationDashboard({
         </div>
       </div>
 
+      {/* Empty State — new user onboarding */}
+      {artists.length === 0 && !loading && (
+        <div className="mb-8 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-[#FFAD85] rounded-xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Bem-vindo ao TaskMaster!</h2>
+              <p className="text-gray-600 text-sm">Comece cadastrando seu primeiro artista para ativar todos os módulos.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              onClick={onCreateArtist}
+              className="flex items-center gap-3 p-4 bg-white rounded-xl border border-orange-200 hover:border-[#FFAD85] hover:shadow-md transition-all text-left"
+            >
+              <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Music className="w-5 h-5 text-[#FF8C5A]" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 text-sm">Criar Artista</div>
+                <div className="text-xs text-gray-500">Passo 1 de 3</div>
+              </div>
+            </button>
+            <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 opacity-60 cursor-not-allowed text-left">
+              <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-5 h-5 text-gray-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-700 text-sm">Adicionar Show</div>
+                <div className="text-xs text-gray-400">Passo 2 de 3</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 opacity-60 cursor-not-allowed text-left">
+              <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Rocket className="w-5 h-5 text-gray-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-700 text-sm">Planejar Lançamento</div>
+                <div className="text-xs text-gray-400">Passo 3 de 3</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with Stats */}
       <div className="mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

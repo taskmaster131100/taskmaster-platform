@@ -77,13 +77,8 @@ export default function MainLayout({
         { id: 'reports', label: 'Relatórios', icon: BarChart3 },
       ]
     },
-    {
-      title: 'PLANEJAMENTO',
-      items: [
-        { id: 'planejamento', label: 'Planejamento', icon: Sparkles, link: '/planejamento' },
-        { id: 'biblioteca', label: 'Biblioteca', icon: FolderArchive, link: '/biblioteca' },
-      ]
-    },
+    // PLANEJAMENTO: oculto até módulo estar pronto
+    // { title: 'PLANEJAMENTO', items: [{ id: 'planejamento', label: 'Planejamento', icon: Sparkles, link: '/planejamento' }, { id: 'biblioteca', label: 'Biblioteca', icon: FolderArchive, link: '/biblioteca' }] },
     {
       title: 'CONTEÚDO',
       expandable: true,

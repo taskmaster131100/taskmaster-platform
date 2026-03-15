@@ -4,7 +4,7 @@ import { useAuth } from '../components/auth/AuthProvider';
 import { CheckCircle, XCircle, Clock, User, Mail, Tag, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ADMIN_EMAIL = 'marcos@taskmaster.works';
+const ADMIN_EMAILS = ['marcos@taskmaster.works', 'balmarcos131100@gmail.com', 'balmarcos@hotmail.com'];
 
 interface PendingUser {
   id: string;
@@ -28,7 +28,7 @@ export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
 
-  const isAdmin = user?.email === ADMIN_EMAIL || user?.user_metadata?.role === 'admin';
+  const isAdmin = ADMIN_EMAILS.includes(user?.email || '') || user?.user_metadata?.role === 'admin';
 
   const load = async () => {
     setLoading(true);
@@ -54,7 +54,7 @@ export default function AdminUsuarios() {
       toast.success(`${u.name} aprovado!`);
       await load();
     } catch {
-      toast.error('Erro ao aprovar. Verifique SUPABASE_SERVICE_ROLE_KEY no Vercel.');
+      toast.error('Erro ao aprovar usuário. Tente novamente.');
     } finally {
       setActing(null);
     }

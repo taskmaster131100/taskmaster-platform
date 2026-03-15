@@ -1,8 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { Client } from 'pg';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ktspxbucvfzaqyszpyso.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const DB_URL = process.env.SUPABASE_DB_URL || 'postgresql://postgres:HubIb1E6qF0Q3GoG@db.ktspxbucvfzaqyszpyso.supabase.co:5432/postgres';
+const ADMIN_EMAILS = ['marcos@taskmaster.works', 'balmarcos131100@gmail.com', 'balmarcos@hotmail.com'];
+
+async function getDb() {
+  const client = new Client({ connectionString: DB_URL, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+  return client;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const allowedOrigin = process.env.ALLOWED_ORIGIN || '';
@@ -10,17 +16,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!SUPABASE_SERVICE_KEY) {
-    return res.status(500).json({ error: 'Server configuration error: missing service key' });
-  }
+  const db = await getDb();
 
   try {
     const { userId, action, adminId } = req.body;
@@ -28,55 +27,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!userId || !action) {
       return res.status(400).json({ error: 'userId and action (approve/reject) are required' });
     }
-
     if (!['approve', 'reject'].includes(action)) {
       return res.status(400).json({ error: 'action must be "approve" or "reject"' });
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
     // Verify admin is authorized
     if (adminId) {
-      const { data: adminUser } = await supabase.auth.admin.getUserById(adminId);
-      const adminEmail = adminUser?.user?.email;
-      const adminRole = adminUser?.user?.user_metadata?.role;
-      if (adminEmail !== 'marcos@taskmaster.works' && adminRole !== 'admin') {
+      const adminResult = await db.query(
+        'SELECT email, raw_user_meta_data FROM auth.users WHERE id = $1 LIMIT 1',
+        [adminId]
+      );
+      if (adminResult.rows.length === 0) {
+        return res.status(403).json({ error: 'Unauthorized: admin not found' });
+      }
+      const { email, raw_user_meta_data } = adminResult.rows[0];
+      const role = raw_user_meta_data?.role;
+      if (!ADMIN_EMAILS.includes(email) && role !== 'admin') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
     }
 
+    const now = new Date().toISOString();
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    // Update pending_approvals
+    await db.query(
+      `UPDATE public.pending_approvals SET status = $1, approved_by = $2, approved_at = $3 WHERE user_id = $4`,
+      [newStatus, adminId || null, now, userId]
+    );
+
     if (action === 'approve') {
-      // Update pending_approvals status
-      await supabase
-        .from('pending_approvals')
-        .update({ 
-          status: 'approved', 
-          approved_by: adminId,
-          approved_at: new Date().toISOString() 
-        })
-        .eq('user_id', userId);
-
-      // Update user metadata to mark as approved
-      await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: { approved: true }
-      });
-
+      // Update auth.users metadata to mark as approved
+      await db.query(
+        `UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || $1::jsonb WHERE id = $2`,
+        [JSON.stringify({ approved: true }), userId]
+      );
       return res.status(200).json({ success: true, message: 'User approved successfully' });
     } else {
-      // Reject
-      await supabase
-        .from('pending_approvals')
-        .update({ 
-          status: 'rejected', 
-          approved_by: adminId,
-          approved_at: new Date().toISOString() 
-        })
-        .eq('user_id', userId);
-
       return res.status(200).json({ success: true, message: 'User rejected' });
     }
   } catch (error: any) {
     console.error('Approve user error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
+  } finally {
+    await db.end();
   }
 }

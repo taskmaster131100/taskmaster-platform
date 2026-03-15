@@ -1,8 +1,31 @@
-import React from 'react';
-import { Clock, Mail, Music } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Clock, Mail, Music, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export default function PendingApproval() {
+  const [checking, setChecking] = useState(false);
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
+
+  async function checkApproval() {
+    setChecking(true);
+    try {
+      const { data } = await supabase.auth.refreshSession();
+      if (data?.session?.user?.user_metadata?.approved === true) {
+        // onAuthStateChange will fire and App.tsx will redirect automatically
+        window.location.href = '/';
+      }
+    } catch {}
+    setLastCheck(new Date());
+    setChecking(false);
+  }
+
+  // Auto-poll every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(checkApproval, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 sm:p-8">
       <div className="w-full max-w-md text-center">
@@ -37,13 +60,27 @@ export default function PendingApproval() {
           </div>
 
           <div className="space-y-3">
+            <button
+              onClick={checkApproval}
+              disabled={checking}
+              className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+              {checking ? 'Verificando...' : 'Verificar aprovação'}
+            </button>
             <Link
               to="/login"
-              className="block w-full bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg"
+              className="block w-full border border-gray-200 text-gray-600 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all"
             >
               Voltar para Login
             </Link>
           </div>
+
+          {lastCheck && (
+            <p className="mt-4 text-xs text-gray-400">
+              Última verificação: {lastCheck.toLocaleTimeString('pt-BR')}
+            </p>
+          )}
         </div>
 
         <p className="mt-6 text-sm text-gray-500">
