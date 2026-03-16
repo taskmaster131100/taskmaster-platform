@@ -266,7 +266,7 @@ const LandingPage: React.FC = () => {
             <div>
               <h4 className="text-white font-semibold mb-4">Produto</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/pricing" className="hover:text-white transition-colors">Planos</a></li>
+                <li><a href="/register" className="hover:text-white transition-colors">Começar grátis</a></li>
                 <li><a href="/register" className="hover:text-white transition-colors">Criar conta</a></li>
                 <li><a href="/login" className="hover:text-white transition-colors">Entrar</a></li>
               </ul>
