@@ -77,6 +77,7 @@ const OrganizationProfile = React.lazy(() => import('./components/OrganizationPr
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 const InvitePage = React.lazy(() => import('./pages/InvitePage'));
 const AdminUsuarios = React.lazy(() => import('./pages/AdminUsuarios'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 
 // Classic Routes Preview (feature flag controlled)
 const WelcomePreview = React.lazy(() => import('./pages/WelcomePreview'));
@@ -472,10 +473,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   if (!user) {
     return (
       <div>
-        <React.Suspense fallback={<div></div>}>
-          <BetaBanner />
-        </React.Suspense>
         <Routes>
+          <Route path="/" element={
+            <React.Suspense fallback={<div className="min-h-screen bg-white" />}>
+              <LandingPage />
+            </React.Suspense>
+          } />
           <Route path="/login" element={
             <React.Suspense fallback={
               <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -565,7 +568,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             </React.Suspense>
           } />
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     );

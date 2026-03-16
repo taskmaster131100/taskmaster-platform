@@ -127,10 +127,10 @@ const LandingPage: React.FC = () => {
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
-                onClick={() => navigate('/pricing')}
+                onClick={() => navigate('/login')}
                 className="px-8 py-4 border-2 border-gray-300 text-gray-900 rounded-lg hover:border-gray-400 font-semibold text-lg transition-colors"
               >
-                Ver planos
+                Já tenho conta
               </button>
             </div>
             <p className="text-sm text-gray-500 mt-4 flex items-center justify-center gap-4">
