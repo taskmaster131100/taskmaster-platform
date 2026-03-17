@@ -69,6 +69,17 @@ export default function ReleasesManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.release_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const releaseDate = new Date(formData.release_date + 'T00:00:00');
+      if (releaseDate < today && !selectedRelease) {
+        const confirmed = window.confirm(
+          `A data de lançamento (${new Date(formData.release_date + 'T00:00:00').toLocaleDateString('pt-BR')}) é no passado.\n\nDeseja continuar mesmo assim?`
+        );
+        if (!confirmed) return;
+      }
+    }
     try {
       if (selectedRelease) {
         await updateRelease(selectedRelease.id, formData);

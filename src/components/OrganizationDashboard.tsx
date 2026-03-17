@@ -31,6 +31,7 @@ export default function OrganizationDashboard({
 }: OrganizationDashboardProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [artists, setArtists] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>(initialProjects || []);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -170,6 +171,7 @@ export default function OrganizationDashboard({
 
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
+      setLoadError('Não foi possível carregar os dados da organização. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -181,6 +183,26 @@ export default function OrganizationDashboard({
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-[#FFAD85] animate-spin mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Carregando seu escritório virtual...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Erro ao carregar</h2>
+          <p className="text-gray-600 mb-6">{loadError}</p>
+          <button
+            onClick={() => { setLoadError(null); loadDashboardData(); }}
+            className="px-6 py-3 bg-[#FFAD85] text-white rounded-xl font-semibold hover:bg-[#FF9B6A] transition-colors"
+          >
+            Tentar novamente
+          </button>
         </div>
       </div>
     );

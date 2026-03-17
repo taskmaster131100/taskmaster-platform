@@ -43,6 +43,10 @@ export default function ShowForm({ show, onClose, onSave }: ShowFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.artist_split < 0 || formData.artist_split > 100) {
+      toast.error('A porcentagem do artista deve ser entre 0% e 100%');
+      return;
+    }
     setLoading(true);
     try {
       if (show?.id) {
@@ -190,10 +194,27 @@ export default function ShowForm({ show, onClose, onSave }: ShowFormProps) {
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">% Artista</label>
                   <input
                     type="number"
+                    min="0"
+                    max="100"
                     value={formData.artist_split}
-                    onChange={(e) => setFormData({ ...formData, artist_split: Number(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setFormData({ ...formData, artist_split: v });
+                    }}
+                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none ${
+                      formData.artist_split > 100 || formData.artist_split < 0
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
                   />
+                  {(formData.artist_split > 100 || formData.artist_split < 0) && (
+                    <p className="text-xs text-red-600 mt-1">Deve ser entre 0% e 100%</p>
+                  )}
+                  {formData.value > 0 && formData.artist_split >= 0 && formData.artist_split <= 100 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Artista: R$ {((formData.value * formData.artist_split) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Moeda</label>

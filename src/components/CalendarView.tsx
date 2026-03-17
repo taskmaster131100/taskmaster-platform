@@ -459,6 +459,10 @@ function EventFormModal({
   onSave: (data: any) => void;
   onDelete?: () => void;
 }) {
+  const [startTime, setStartTime] = useState(event?.start_time || '');
+  const [endTime, setEndTime] = useState(event?.end_time || '');
+  const [timeError, setTimeError] = useState('');
+
   const eventTypes = [
     { id: 'task', label: 'Tarefa' },
     { id: 'meeting', label: 'Reunião' },
@@ -466,6 +470,19 @@ function EventFormModal({
     { id: 'show', label: 'Show' },
     { id: 'deadline', label: 'Prazo' }
   ];
+
+  const handleTimeChange = (field: 'start' | 'end', value: string) => {
+    const newStart = field === 'start' ? value : startTime;
+    const newEnd = field === 'end' ? value : endTime;
+    if (field === 'start') setStartTime(value);
+    else setEndTime(value);
+
+    if (newStart && newEnd && newEnd <= newStart) {
+      setTimeError('O horário de término deve ser após o horário de início.');
+    } else {
+      setTimeError('');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -479,13 +496,14 @@ function EventFormModal({
 
         <form onSubmit={(e) => {
           e.preventDefault();
+          if (timeError) return;
           const formData = new FormData(e.currentTarget);
           onSave({
             title: formData.get('title'),
             description: formData.get('description'),
             event_type: formData.get('event_type'),
-            start_time: formData.get('start_time'),
-            end_time: formData.get('end_time'),
+            start_time: startTime || null,
+            end_time: endTime || null,
             location: formData.get('location')
           });
         }}>
@@ -536,9 +554,9 @@ function EventFormModal({
                   Início
                 </label>
                 <input
-                  name="start_time"
                   type="time"
-                  defaultValue={event?.start_time}
+                  value={startTime}
+                  onChange={(e) => handleTimeChange('start', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 />
               </div>
@@ -547,13 +565,16 @@ function EventFormModal({
                   Fim
                 </label>
                 <input
-                  name="end_time"
                   type="time"
-                  defaultValue={event?.end_time}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  value={endTime}
+                  onChange={(e) => handleTimeChange('end', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent ${timeError ? 'border-red-400' : 'border-gray-300'}`}
                 />
               </div>
             </div>
+            {timeError && (
+              <p className="text-xs text-red-600 -mt-2">{timeError}</p>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -601,7 +622,8 @@ function EventFormModal({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
+                disabled={!!timeError}
+                className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors disabled:opacity-50"
               >
                 {event ? 'Salvar' : 'Criar Evento'}
               </button>

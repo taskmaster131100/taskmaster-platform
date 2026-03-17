@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Check, Loader2, Send, ArrowRight, Sparkles, AlertCircle, Mic, Square, Paperclip } from 'lucide-react';
+import { Upload, FileText, Check, Loader2, Send, ArrowRight, Sparkles, AlertCircle, Mic, Square, Paperclip, ListChecks } from 'lucide-react';
 
 interface ProjectWizardProps {
   onComplete: (projectData: any) => void;
@@ -164,7 +164,7 @@ class SimpleAudioRecorder {
 }
 
 export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
-  const [step, setStep] = useState<'choice' | 'chat' | 'review' | 'error'>('choice');
+  const [step, setStep] = useState<'choice' | 'chat' | 'review' | 'error' | 'manual'>('choice');
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -251,6 +251,17 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
     return msg.replace('[PROJETO_PRONTO]', '').replace(/```json[\s\S]*?```/, '').trim();
   };
 
+  // Salvar rascunho da conversa no localStorage
+  const saveDraft = (msgs: typeof messages) => {
+    try {
+      localStorage.setItem('project_wizard_draft', JSON.stringify({
+        messages: msgs,
+        history: conversationHistory.current,
+        savedAt: new Date().toISOString()
+      }));
+    } catch {}
+  };
+
   // Processar resposta da IA (texto, áudio ou ficheiro)
   const processAIResponse = async (userText: string, fileContent?: string) => {
     setIsLoading(true);
@@ -258,14 +269,21 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
       const aiResponse = await callAI(userText, fileContent);
       const project = checkProjectReady(aiResponse);
       if (project) {
-        setMessages(prev => [...prev, { role: 'assistant', content: cleanAIMessage(aiResponse) }]);
+        const newMsgs = [...messages, { role: 'assistant' as const, content: cleanAIMessage(aiResponse) }];
+        setMessages(newMsgs);
+        saveDraft(newMsgs);
         setTimeout(() => { setProjectData(project); setStep('review'); }, 2000);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+        const newMsgs = [...messages, { role: 'assistant' as const, content: aiResponse }];
+        setMessages(newMsgs);
+        saveDraft(newMsgs);
       }
     } catch (error) {
       console.error('Erro:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Ops, tive um problema aqui. Pode repetir o que disse?' }]);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Ops, tive um problema ao me conectar. Você pode repetir? Se o problema persistir, clique em "Criar manualmente" abaixo.'
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -498,34 +516,158 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
 
         {/* Escolha inicial */}
         {step === 'choice' && (
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button
-                onClick={() => startChat()}
-                className="p-5 border-2 border-dashed border-orange-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group text-center"
-              >
-                <Sparkles className="w-10 h-10 mx-auto text-orange-400 group-hover:text-orange-500 mb-2" />
-                <h3 className="font-semibold text-gray-800 text-sm">Criar conversando</h3>
-                <p className="text-xs text-gray-500 mt-1">Me conta sua ideia por texto ou áudio</p>
-              </button>
-
-              <label className="p-5 border-2 border-dashed border-blue-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group text-center cursor-pointer">
-                <input type="file" accept=".pdf,.doc,.docx" onChange={handleDirectUpload} className="hidden" />
-                <Upload className="w-10 h-10 mx-auto text-blue-400 group-hover:text-blue-500 mb-2" />
-                <h3 className="font-semibold text-gray-800 text-sm">Já tenho um projeto</h3>
-                <p className="text-xs text-gray-500 mt-1">Upload do PDF e a IA organiza</p>
-              </label>
-
-              <button
-                onClick={() => { startChat(); setTimeout(() => startRecording(), 500); }}
-                className="p-5 border-2 border-dashed border-green-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all group text-center"
-              >
-                <Mic className="w-10 h-10 mx-auto text-green-400 group-hover:text-green-500 mb-2" />
-                <h3 className="font-semibold text-gray-800 text-sm">Falar sobre o projeto</h3>
-                <p className="text-xs text-gray-500 mt-1">Grave um áudio explicando sua ideia</p>
-              </button>
+          <div className="p-6 space-y-5 overflow-y-auto" style={{ maxHeight: '75vh' }}>
+            {/* Templates rápidos */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Começar com template</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    emoji: '🎵',
+                    label: 'Lançamento Musical',
+                    desc: 'Single, EP ou álbum',
+                    data: {
+                      name: 'Lançamento Musical',
+                      artistName: '',
+                      genre: '',
+                      objective: 'Lançar nova música nas plataformas digitais com campanha de divulgação',
+                      duration: '12 semanas',
+                      phases: ['1. Pré-produção (semanas 1-2)', '2. Gravação e Mixagem (semanas 3-6)', '3. Masterização (semana 7)', '4. Distribuição (semanas 8-9)', '5. Divulgação e Marketing (semanas 10-12)'],
+                      tasks: ['Definir repertório', 'Contratar produtor/estúdio', 'Gravar as faixas', 'Fazer mixagem', 'Masterização', 'Criar artes (capa, stories, posts)', 'Enviar para distribuidora (CD Baby, ONErpm, DistroKid)', 'Planejar campanha de lançamento', 'Agendar pitching em playlists', 'Planejar live de lançamento', 'Produzir clipe ou lyric video', 'Redigir press release', 'Enviar para blogs e imprensa', 'Acompanhar métricas pós-lançamento'],
+                      description: 'Projeto de lançamento musical com linha editorial, distribuição e campanha de divulgação.'
+                    }
+                  },
+                  {
+                    emoji: '🎤',
+                    label: 'Turnê / Shows',
+                    desc: 'Agenda de apresentações',
+                    data: {
+                      name: 'Planejamento de Shows',
+                      artistName: '',
+                      genre: '',
+                      objective: 'Organizar agenda de shows e turnê com riders, contratos e logística',
+                      duration: '8 semanas',
+                      phases: ['1. Prospecção e Negociação (semanas 1-2)', '2. Fechamento e Contratos (semanas 3-4)', '3. Pré-produção Técnica (semanas 5-6)', '4. Execução e Pós-show (semanas 7-8)'],
+                      tasks: ['Mapear cidades e venues', 'Contato com produtoras locais', 'Negociar cachês e splits', 'Elaborar rider técnico', 'Elaborar rider de hospitalidade', 'Assinar contratos', 'Confirmar logística de viagem', 'Montar setlist', 'Ensaios de preparação', 'Divulgação dos shows', 'Checklist pré-show', 'Relatório financeiro pós-show'],
+                      description: 'Planejamento completo de agenda de shows com contratos, riders e logística.'
+                    }
+                  },
+                  {
+                    emoji: '🎛️',
+                    label: 'Gravação de Álbum',
+                    desc: 'Projeto de produção musical',
+                    data: {
+                      name: 'Gravação de Álbum',
+                      artistName: '',
+                      genre: '',
+                      objective: 'Produzir e gravar álbum completo em estúdio',
+                      duration: '6 meses',
+                      phases: ['1. Pré-produção e Composição (mês 1)', '2. Pré-gravações e Demos (mês 2)', '3. Gravação Principal (meses 3-4)', '4. Mixagem e Masterização (mês 5)', '5. Arte e Distribuição (mês 6)'],
+                      tasks: ['Selecionar faixas do álbum', 'Definir conceito e direção artística', 'Contratar produtor musical', 'Gravar demos de todas as faixas', 'Gravar instrumentais base', 'Gravar vocais', 'Gravar instrumentos extras', 'Mixagem por faixa', 'Mastering do álbum', 'Criar identidade visual (capa, booklet)', 'Definir distribuidora', 'Planejar campanha de lançamento'],
+                      description: 'Projeto de produção de álbum completo com controle de cronograma, orçamento e entregas.'
+                    }
+                  }
+                ].map((tpl) => (
+                  <button
+                    key={tpl.label}
+                    onClick={() => { setProjectData({ ...tpl.data }); setStep('review'); }}
+                    className="p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
+                  >
+                    <div className="text-2xl mb-1">{tpl.emoji}</div>
+                    <h3 className="font-semibold text-gray-800 text-sm">{tpl.label}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{tpl.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-center text-xs text-gray-400 mt-2">Você pode combinar texto, áudio e documentos durante a conversa</p>
+
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Criar com IA ou documento</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => startChat()}
+                  className="p-4 border-2 border-dashed border-orange-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group text-center"
+                >
+                  <Sparkles className="w-8 h-8 mx-auto text-orange-400 group-hover:text-orange-500 mb-1" />
+                  <h3 className="font-semibold text-gray-800 text-sm">Criar conversando</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Texto ou áudio com IA</p>
+                </button>
+
+                <label className="p-4 border-2 border-dashed border-blue-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group text-center cursor-pointer">
+                  <input type="file" accept=".pdf,.doc,.docx" onChange={handleDirectUpload} className="hidden" />
+                  <Upload className="w-8 h-8 mx-auto text-blue-400 group-hover:text-blue-500 mb-1" />
+                  <h3 className="font-semibold text-gray-800 text-sm">Tenho um documento</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Upload e a IA organiza</p>
+                </label>
+
+                <button
+                  onClick={() => setStep('manual')}
+                  className="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all group text-center"
+                >
+                  <ListChecks className="w-8 h-8 mx-auto text-gray-400 group-hover:text-gray-500 mb-1" />
+                  <h3 className="font-semibold text-gray-800 text-sm">Criar manualmente</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Preencher sem IA</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Formulário manual — fallback sem IA */}
+        {step === 'manual' && (
+          <div className="p-6 overflow-y-auto space-y-4" style={{ maxHeight: '65vh' }}>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Nome do Projeto *</label>
+                <input
+                  type="text"
+                  value={projectData.name}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder="Ex: Lançamento Verão 2026"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Artista *</label>
+                <input
+                  type="text"
+                  value={projectData.artistName}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, artistName: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder="Nome do artista"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Gênero Musical</label>
+                <input
+                  type="text"
+                  value={projectData.genre}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, genre: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder="Ex: MPB, Pop, Sertanejo"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Duração Estimada</label>
+                <input
+                  type="text"
+                  value={projectData.duration}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, duration: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder="Ex: 3 meses"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Objetivo do Projeto</label>
+              <textarea
+                value={projectData.objective}
+                onChange={(e) => setProjectData(prev => ({ ...prev, objective: e.target.value }))}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                placeholder="Descreva o objetivo principal deste projeto..."
+              />
+            </div>
           </div>
         )}
 
@@ -675,8 +817,34 @@ export function ProjectWizard({ onComplete, onCancel }: ProjectWizardProps) {
 
       {/* Footer */}
       <div className="border-t p-3 flex justify-between items-center">
-        <button onClick={onCancel} className="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm">Cancelar</button>
-        {step === 'chat' && <span className="text-xs text-gray-400">Texto • Áudio • Documentos</span>}
+        <button
+          onClick={step === 'manual' ? () => setStep('choice') : onCancel}
+          className="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm"
+        >
+          {step === 'manual' ? 'Voltar' : 'Cancelar'}
+        </button>
+        {step === 'chat' && (
+          <button
+            onClick={() => setStep('manual')}
+            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg"
+          >
+            Criar manualmente
+          </button>
+        )}
+        {step === 'manual' && (
+          <button
+            onClick={() => {
+              if (!projectData.name.trim() || !projectData.artistName.trim()) {
+                return;
+              }
+              setStep('review');
+            }}
+            disabled={!projectData.name.trim() || !projectData.artistName.trim()}
+            className="px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+          >
+            Revisar Projeto <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
         {step === 'review' && (
           <button onClick={handleComplete} className="px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2 text-sm font-medium">
             Criar Projeto <ArrowRight className="w-4 h-4" />
