@@ -27,16 +27,35 @@ interface MentorChatWithVoiceProps {
   module?: string;
 }
 
+// Mensagem de abertura baseada no perfil salvo e se é primeira sessão
+function getOpeningMessage(isFirst: boolean): string {
+  if (!isFirst) return 'E aí! Tô aqui. O que você quer resolver hoje?';
+  const stage = typeof localStorage !== 'undefined' ? localStorage.getItem('mentor_maturity_stage') : null;
+  if (stage === 'dreamer') {
+    return 'Oi! Sou o Marcos Menezes. Antes de começar, me conta rapidinho: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
+  }
+  if (stage === 'band_manager') {
+    return 'E aí! Já vi que você tem alguma operação rodando. Me conta: o que tá te travando mais agora — shows, lançamentos, financeiro, ou outra coisa?';
+  }
+  if (stage === 'scaling_structure' || stage === 'multi_artist_producer') {
+    return 'E aí! Com uma operação mais estruturada, o foco muda. Qual é o maior gargalo da sua operação agora?';
+  }
+  // Sem diagnóstico: identificação via chat
+  return 'Oi! Sou o Marcos Menezes. Antes de começar, me conta: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
+}
+
 export default function MentorChatWithVoice({
   userId,
   mode = 'general',
   module
 }: MentorChatWithVoiceProps) {
+  const isFirstSession = typeof localStorage !== 'undefined' && !localStorage.getItem('mentor_chat_initialized');
+  const [exchangeCount, setExchangeCount] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'mentor',
-      content: 'Olá! Sou o Marcos Menezes. Você pode conversar comigo por texto ou por voz. Como posso ajudar você hoje?',
+      content: getOpeningMessage(isFirstSession),
       timestamp: new Date()
     }
   ]);
@@ -138,8 +157,13 @@ export default function MentorChatWithVoice({
         isVoice: true
       }]);
 
+      // Marcar sessão como iniciada e incrementar trocas
+      if (typeof localStorage !== 'undefined') localStorage.setItem('mentor_chat_initialized', '1');
+      const currentExchange = exchangeCount;
+      setExchangeCount(prev => prev + 1);
+
       // Processar e obter resposta (envia histórico + contexto real do usuário)
-      const response = await processVoiceMessage(result.text, userId, { mode, module, userContext }, messages);
+      const response = await processVoiceMessage(result.text, userId, { mode, module, userContext, isFirstSession, exchangeCount: currentExchange }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
@@ -176,8 +200,13 @@ export default function MentorChatWithVoice({
 
       setInputText('');
 
+      // Marcar sessão como iniciada e incrementar trocas
+      if (typeof localStorage !== 'undefined') localStorage.setItem('mentor_chat_initialized', '1');
+      const currentExchange = exchangeCount;
+      setExchangeCount(prev => prev + 1);
+
       // Processar e obter resposta (envia histórico + contexto real do usuário)
-      const response = await processVoiceMessage(inputText, userId, { mode, module, userContext }, messages);
+      const response = await processVoiceMessage(inputText, userId, { mode, module, userContext, isFirstSession, exchangeCount: currentExchange }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,

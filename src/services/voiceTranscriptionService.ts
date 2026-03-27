@@ -147,8 +147,39 @@ export async function processVoiceMessage(
 
     const maturityCtx = await getMaturityContext();
     const { MARCOS_MENEZES_SYSTEM_PROMPT } = await import('./mentorAIService');
+
+    // Modo identificação de perfil: primeiras 3 trocas ou primeira sessão sem diagnóstico feito
+    const isIdentifyingProfile = (context?.isFirstSession || context?.exchangeCount < 3) && !maturityCtx;
+    const identificationInstructions = isIdentifyingProfile ? `
+
+## MODO IDENTIFICAÇÃO DE PERFIL (OBRIGATÓRIO AGORA)
+Você está nas primeiras trocas com esse usuário. Siga essa ordem:
+
+TROCA 1: Se ainda não sabe quem é a pessoa, pergunte diretamente:
+"Você é artista, produtor musical, trabalha num escritório de música, ou outra coisa?"
+
+TROCA 2: Com base na resposta, pergunte sobre a fase:
+- Se artista: "Você já faz shows e lança música, ou ainda está começando?"
+- Se produtor: "Você produz para outros artistas, trabalha em estúdio próprio, ou está começando agora?"
+- Se escritório/selo: "Quantos artistas você gerencia? Quais são os maiores desafios hoje?"
+- Se comercial/booking: "Você trabalha com que tipo de artista? Regional, nacional?"
+
+TROCA 3: Peça material real para análise (quando fizer sentido):
+- Para artista: "Me manda o link do seu Spotify ou Instagram — quero ver onde você está antes de te orientar."
+- Para produtor: "Tem algum trabalho recente que posso ouvir? Link do SoundCloud, YouTube ou similar."
+- Para escritório: "Me conta sobre um artista do seu roster que você quer focar agora."
+
+REGRAS ABSOLUTAS NESSE MODO:
+- Máximo 2 frases por resposta
+- ZERO conselhos até ter perfil e fase claros
+- Seja humano, curto, direto — como uma mensagem de WhatsApp
+- NÃO faça listas, NÃO use markdown, NÃO seja formal
+- Quando tiver perfil + fase, encerre o modo e responda normalmente
+` : '';
+
     const systemPrompt = MARCOS_MENEZES_SYSTEM_PROMPT
       + maturityCtx
+      + identificationInstructions
       + (context?.mode === 'module' && context?.module ? `\n## CONTEXTO ATUAL\nO usuário está no módulo "${context.module}" da plataforma.\n` : '')
       + (context?.userContext ? `\n## SITUAÇÃO REAL DO USUÁRIO\n${context.userContext}\n` : '');
 
