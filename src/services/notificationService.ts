@@ -10,11 +10,11 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  link?: string;
+  action_url?: string;
   reference_type?: 'task' | 'show' | 'release' | 'payment' | 'team' | 'system';
   reference_id?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  read: boolean;
+  is_read: boolean;
   read_at?: string;
   created_at: string;
 }
@@ -73,11 +73,11 @@ export async function createNotification(data: {
       type: data.type,
       title: data.title,
       message: data.message,
-      link: data.link,
+      action_url: data.link,
       reference_type: data.referenceType,
       reference_id: data.referenceId,
       priority: config.priority,
-      read: false
+      is_read: false
     })
     .select()
     .single();
@@ -104,7 +104,7 @@ export async function listNotifications(filters?: {
     .order('created_at', { ascending: false });
 
   if (filters?.unreadOnly) {
-    query = query.eq('read', false);
+    query = query.eq('is_read', false);
   }
 
   if (filters?.type) {
@@ -127,7 +127,7 @@ export async function markAsRead(notificationId: string): Promise<void> {
   await supabase
     .from('notifications')
     .update({
-      read: true,
+      is_read: true,
       read_at: new Date().toISOString()
     })
     .eq('id', notificationId);
@@ -143,11 +143,11 @@ export async function markAllAsRead(): Promise<void> {
   await supabase
     .from('notifications')
     .update({
-      read: true,
+      is_read: true,
       read_at: new Date().toISOString()
     })
     .eq('user_id', user.id)
-    .eq('read', false);
+    .eq('is_read', false);
 }
 
 /**
@@ -161,7 +161,7 @@ export async function getUnreadCount(): Promise<number> {
     .from('notifications')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
-    .eq('read', false);
+    .eq('is_read', false);
 
   if (error) return 0;
   return count || 0;
@@ -178,7 +178,7 @@ export async function cleanOldNotifications(): Promise<void> {
     .from('notifications')
     .delete()
     .lt('created_at', thirtyDaysAgo.toISOString())
-    .eq('read', true);
+    .eq('is_read', true);
 }
 
 // ============================================

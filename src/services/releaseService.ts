@@ -151,6 +151,24 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
     .single();
 
   if (error) throw error;
+
+  // Sincronizar evento no calendário se data ou título mudaram
+  if (updates.release_date || updates.title) {
+    await supabase
+      .from('calendar_events')
+      .update({
+        title: `Lançamento: ${data.title}`,
+        description: `${data.artist_name} - ${RELEASE_TYPES.find(t => t.value === data.release_type)?.label || data.release_type}`,
+        event_date: data.release_date,
+        metadata: {
+          release_id: data.id,
+          artist_name: data.artist_name,
+          release_type: data.release_type
+        }
+      })
+      .eq('metadata->>release_id', id);
+  }
+
   return data;
 }
 

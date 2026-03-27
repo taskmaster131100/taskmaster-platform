@@ -118,6 +118,7 @@ export async function createShow(showData: Partial<Show>): Promise<Show> {
   if (data.status === 'fechado') {
     await createCompleteChecklist(data.id, data.show_date, user.id);
     await createFinancialEntry(data);
+    await createShowTasksInTaskBoard(data, user.id);
   } else {
     await createDefaultTasks(data.id, data.show_date);
   }
@@ -220,6 +221,53 @@ async function createFinancialEntry(show: Show): Promise<void> {
   });
 }
 
+/**
+ * Cria tarefas-chave do show na tabela geral `tasks` (TaskBoard).
+ * O checklist completo vai para `show_tasks` (visão interna do show).
+ * As tarefas principais vão para `tasks` para aparecer no Kanban diário.
+ */
+async function createShowTasksInTaskBoard(show: Show, userId: string): Promise<void> {
+  const { data: orgData } = await supabase
+    .from('user_organizations')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+
+  if (!orgData?.organization_id) return;
+
+  const showDateObj = new Date(show.show_date + 'T00:00:00');
+
+  const keyTasks = [
+    { title: `Confirmar contrato assinado — ${show.title}`, workstream: 'shows', daysOffset: -30 },
+    { title: `Confirmar rider técnico — ${show.title}`, workstream: 'shows', daysOffset: -21 },
+    { title: `Confirmar entrada (50%) — ${show.title}`, workstream: 'shows', daysOffset: -14 },
+    { title: `Confirmar transporte e hospedagem — ${show.title}`, workstream: 'logistica', daysOffset: -7 },
+    { title: `Preparar setlist — ${show.title}`, workstream: 'shows', daysOffset: -3 },
+    { title: `Divulgação: posts para o show — ${show.title}`, workstream: 'conteudo', daysOffset: -7 },
+  ];
+
+  const tasks = keyTasks.map(t => {
+    const deadline = new Date(showDateObj);
+    deadline.setDate(deadline.getDate() + t.daysOffset);
+    return {
+      organization_id: orgData.organization_id,
+      title: t.title,
+      status: 'todo',
+      workstream: t.workstream,
+      requires_approval: false,
+      deadline: deadline.toISOString().split('T')[0],
+      created_by: userId,
+      metadata: {
+        source: 'show',
+        show_id: show.id,
+        show_title: show.title
+      }
+    };
+  });
+
+  await supabase.from('tasks').insert(tasks);
+}
+
 async function createCalendarEvent(show: Show): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -262,12 +310,14 @@ export async function updateShow(id: string, updates: Partial<Show>, previousSta
   if (updates.status === 'fechado' && previousStatus && previousStatus !== 'fechado') {
     // Remover tarefas basicas existentes
     await supabase.from('show_tasks').delete().eq('show_id', id);
-    
+
     // Criar checklist completo
     if (user) {
       await createCompleteChecklist(id, data.show_date, user.id);
+      // Criar tarefas-chave no TaskBoard geral
+      await createShowTasksInTaskBoard(data, user.id);
     }
-    
+
     // Criar entrada no financeiro
     await createFinancialEntry(data);
   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -18,11 +19,18 @@ const GENRES = [
 ];
 
 const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
+  const navigate = useNavigate();
   const [artist, setArtist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState<any>({});
+
+  // Dados operacionais 360
+  const [artistShows, setArtistShows] = useState<any[]>([]);
+  const [artistReleases, setArtistReleases] = useState<any[]>([]);
+  const [artistTasks, setArtistTasks] = useState<any[]>([]);
+  const [loadingOps, setLoadingOps] = useState(false);
 
   useEffect(() => {
     const loadArtist = async () => {
@@ -49,6 +57,60 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
       loadArtist();
     }
   }, [artistId]);
+
+  // Carrega dados operacionais 360 após o artista estar disponível
+  useEffect(() => {
+    if (!artist?.name) return;
+
+    const loadOpsData = async () => {
+      setLoadingOps(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const [showsResult, releasesResult] = await Promise.all([
+          supabase
+            .from('shows')
+            .select('id, title, show_date, city, status, value')
+            .eq('artist_name', artist.name)
+            .gte('show_date', today)
+            .order('show_date', { ascending: true })
+            .limit(5),
+          supabase
+            .from('releases')
+            .select('id, title, release_date, status, release_type')
+            .eq('artist_name', artist.name)
+            .neq('status', 'released')
+            .order('release_date', { ascending: true })
+            .limit(5)
+        ]);
+
+        const shows = showsResult.data || [];
+        setArtistShows(shows);
+        setArtistReleases(releasesResult.data || []);
+
+        // Buscar tarefas abertas dos shows deste artista
+        if (shows.length > 0) {
+          const showIds = shows.map(s => s.id);
+          const { data: tasksData } = await supabase
+            .from('show_tasks')
+            .select('id, show_id, title, status, due_date, category')
+            .in('show_id', showIds)
+            .neq('status', 'completed')
+            .order('due_date', { ascending: true })
+            .limit(8);
+          setArtistTasks(tasksData || []);
+        } else {
+          setArtistTasks([]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados operacionais:', error);
+      } finally {
+        setLoadingOps(false);
+      }
+    };
+
+    loadOpsData();
+  }, [artist?.name]);
 
   const populateEditData = (data: any) => {
     setEditData({
@@ -376,15 +438,184 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
               )}
             </div>
 
+            {/* ── VISÃO 360 OPERACIONAL ── */}
+
+            {/* Próximos Shows */}
             <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Projetos e Planejamentos</h3>
-                <button className="text-sm text-purple-600 font-bold hover:underline">Ver todos</button>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Mic2 className="w-4 h-4 text-yellow-500" />
+                  Próximos Shows
+                </h3>
+                <button
+                  onClick={() => navigate('/shows')}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  Ver todos <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
-              <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-                <Music className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">Nenhum projeto vinculado no momento.</p>
+              {loadingOps ? (
+                <div className="flex items-center gap-2 py-4 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </div>
+              ) : artistShows.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
+                  <Mic2 className="w-6 h-6 text-gray-300 mx-auto mb-1" />
+                  <p className="text-gray-400 text-sm">Nenhum show agendado</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {artistShows.map(show => (
+                    <li
+                      key={show.id}
+                      onClick={() => navigate('/shows')}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          show.status === 'fechado' ? 'bg-green-500' :
+                          show.status === 'pago' ? 'bg-purple-500' :
+                          show.status === 'proposto' ? 'bg-blue-500' : 'bg-gray-400'
+                        }`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600">{show.title}</p>
+                          <p className="text-xs text-gray-500">{show.city} · {new Date(show.show_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                        show.status === 'fechado' ? 'bg-green-100 text-green-700' :
+                        show.status === 'pago' ? 'bg-purple-100 text-purple-700' :
+                        show.status === 'proposto' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {show.status === 'fechado' ? 'Fechado' :
+                         show.status === 'pago' ? 'Pago' :
+                         show.status === 'proposto' ? 'Proposto' : 'Consultado'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Releases Ativas */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Disc3 className="w-4 h-4 text-purple-500" />
+                  Releases em Andamento
+                </h3>
+                <button
+                  onClick={() => navigate('/releases')}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  Ver todas <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
+              {loadingOps ? (
+                <div className="flex items-center gap-2 py-4 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </div>
+              ) : artistReleases.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
+                  <Disc3 className="w-6 h-6 text-gray-300 mx-auto mb-1" />
+                  <p className="text-gray-400 text-sm">Nenhum lançamento ativo</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {artistReleases.map(release => (
+                    <li
+                      key={release.id}
+                      onClick={() => navigate('/releases')}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600">{release.title}</p>
+                        <p className="text-xs text-gray-500 capitalize">
+                          {release.release_type}
+                          {release.release_date ? ` · ${new Date(release.release_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}
+                        </p>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                        release.status === 'distribution' ? 'bg-green-100 text-green-700' :
+                        release.status === 'mastering' ? 'bg-orange-100 text-orange-700' :
+                        release.status === 'mixing' ? 'bg-yellow-100 text-yellow-700' :
+                        release.status === 'production' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {release.status === 'pre_production' ? 'Pré-prod.' :
+                         release.status === 'production' ? 'Produção' :
+                         release.status === 'mixing' ? 'Mixagem' :
+                         release.status === 'mastering' ? 'Master' :
+                         release.status === 'distribution' ? 'Distribuição' : release.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Tarefas Abertas */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-indigo-500" />
+                  Tarefas em Aberto
+                  {artistTasks.length > 0 && (
+                    <span className="text-xs font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">
+                      {artistTasks.length}
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => navigate('/shows')}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  Ver shows <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+              {loadingOps ? (
+                <div className="flex items-center gap-2 py-4 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </div>
+              ) : artistTasks.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
+                  <CheckSquare className="w-6 h-6 text-gray-300 mx-auto mb-1" />
+                  <p className="text-gray-400 text-sm">
+                    {artistShows.length === 0 ? 'Nenhum show agendado para gerar tarefas' : 'Todas as tarefas concluídas'}
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {artistTasks.map(task => {
+                    const isOverdue = task.due_date && task.due_date < new Date().toISOString().split('T')[0];
+                    return (
+                      <li key={task.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                        <div className={`w-4 h-4 rounded flex-shrink-0 mt-0.5 flex items-center justify-center ${
+                          task.status === 'in_progress' ? 'bg-blue-100' : 'bg-gray-100'
+                        }`}>
+                          {isOverdue
+                            ? <AlertCircle className="w-3 h-3 text-red-500" />
+                            : task.status === 'in_progress'
+                              ? <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              : <div className="w-2 h-2 rounded-full bg-gray-400" />
+                          }
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium truncate ${isOverdue ? 'text-red-700' : 'text-gray-800'}`}>
+                            {task.title}
+                          </p>
+                          {task.due_date && (
+                            <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                              {isOverdue ? 'Atrasada · ' : ''}
+                              Prazo: {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
         </div>

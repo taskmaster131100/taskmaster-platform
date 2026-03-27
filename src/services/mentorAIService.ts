@@ -1,9 +1,80 @@
 /**
  * Serviço de IA para o Mentor FlexMax (Marcos Menezes)
  * Fornece consultoria 360° sobre carreira artística, negócios e vida pessoal
- * 
+ *
  * Este serviço integra-se com OpenAI para fornecer respostas humanizadas e contextualizadas
  */
+
+import { supabase } from '../lib/supabase';
+
+/**
+ * Busca dados reais do usuário no Supabase e compõe uma string de contexto
+ * para injetar no system prompt do Mentor.
+ * São 3 queries paralelas — custo mínimo, impacto máximo.
+ */
+export async function buildUserContext(): Promise<string> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const in30days = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+    const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+    const [showsResult, releasesResult, tasksResult] = await Promise.all([
+      supabase
+        .from('shows')
+        .select('title, show_date, city, status')
+        .gte('show_date', today)
+        .order('show_date', { ascending: true })
+        .limit(3),
+      supabase
+        .from('releases')
+        .select('title, release_date, status')
+        .gte('release_date', today)
+        .lte('release_date', in30days)
+        .order('release_date', { ascending: true })
+        .limit(3),
+      supabase
+        .from('tasks')
+        .select('title, deadline, status')
+        .neq('status', 'done')
+        .lte('deadline', in7days)
+        .order('deadline', { ascending: true })
+        .limit(5)
+    ]);
+
+    const shows = showsResult.data || [];
+    const releases = releasesResult.data || [];
+    const tasks = tasksResult.data || [];
+
+    const showsText = shows.length > 0
+      ? shows.map(s => `"${s.title}" em ${s.city || 'local a definir'} (${s.show_date}) — ${s.status}`).join('; ')
+      : 'nenhum show agendado';
+
+    const releasesText = releases.length > 0
+      ? releases.map(r => `"${r.title}" previsto para ${r.release_date} — ${r.status}`).join('; ')
+      : 'nenhum lançamento nos próximos 30 dias';
+
+    const overdueOrSoon = tasks.filter(t => t.deadline <= today);
+    const tasksText = tasks.length > 0
+      ? tasks.map(t => {
+          const isOverdue = t.deadline < today;
+          return `"${t.title}" (prazo: ${t.deadline}${isOverdue ? ' — ATRASADA' : ''})`;
+        }).join('; ')
+      : 'nenhuma tarefa urgente';
+
+    const urgencyNote = overdueOrSoon.length > 0
+      ? `\nATENÇÃO: ${overdueOrSoon.length} tarefa(s) com prazo hoje ou atrasada(s) — prioridade máxima.`
+      : '';
+
+    return `Próximos shows: ${showsText}
+Lançamentos próximos (30 dias): ${releasesText}
+Tarefas urgentes (esta semana): ${tasksText}${urgencyNote}
+
+Com base nesse contexto, dê respostas específicas à situação real do usuário, não genéricas.`;
+  } catch {
+    // Se falhar, o Mentor continua funcionando sem contexto
+    return '';
+  }
+}
 
 export interface MentorContext {
   userRole: 'artist' | 'producer' | 'manager' | 'band';

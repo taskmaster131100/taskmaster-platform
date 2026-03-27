@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search, 
-  MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles, 
-  AlertTriangle, Info, CheckCircle2, ArrowRight, Building2, Plus
+import {
+  Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search,
+  MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles,
+  AlertTriangle, Info, CheckCircle2, ArrowRight, Building2, Plus,
+  Clock, Mic2, Disc3
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProactiveSuggestions, Suggestion } from '../services/suggestionService';
@@ -35,6 +36,11 @@ export default function OrganizationDashboard({
   const [artists, setArtists] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>(initialProjects || []);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [todayData, setTodayData] = useState<{
+    tasksDueToday: any[];
+    showsThisWeek: any[];
+    releasesThisWeek: any[];
+  }>({ tasksDueToday: [], showsThisWeek: [], releasesThisWeek: [] });
   const [stats, setStats] = useState([
     {
       icon: Music,
@@ -128,6 +134,40 @@ export default function OrganizationDashboard({
       const proactiveSuggestions = await getProactiveSuggestions();
       setSuggestions(proactiveSuggestions);
 
+      // 6. Carregar dados de "Hoje"
+      const today = new Date().toISOString().split('T')[0];
+      const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+      const [tasksTodayResult, showsWeekResult, releasesWeekResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('id, title, status, deadline, priority')
+          .neq('status', 'done')
+          .lte('deadline', today)
+          .order('deadline', { ascending: true })
+          .limit(5),
+        supabase
+          .from('shows')
+          .select('id, title, show_date, city, status')
+          .gte('show_date', today)
+          .lte('show_date', in7days)
+          .order('show_date', { ascending: true })
+          .limit(3),
+        supabase
+          .from('releases')
+          .select('id, title, release_date, status')
+          .gte('release_date', today)
+          .lte('release_date', in7days)
+          .order('release_date', { ascending: true })
+          .limit(3)
+      ]);
+
+      setTodayData({
+        tasksDueToday: tasksTodayResult.data || [],
+        showsThisWeek: showsWeekResult.data || [],
+        releasesThisWeek: releasesWeekResult.data || []
+      });
+
       // Atualizar Stats
       setStats([
         {
@@ -210,10 +250,152 @@ export default function OrganizationDashboard({
 
   const isSoloArtist = artists.length === 1;
 
+  const hasTodayItems =
+    todayData.tasksDueToday.length > 0 ||
+    todayData.showsThisWeek.length > 0 ||
+    todayData.releasesThisWeek.length > 0;
+
+  const todayLabel = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long', day: '2-digit', month: 'long'
+  });
+
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Virtual Agent Proactive Notifications */}
       <VirtualAgentWidget />
+
+      {/* Seção HOJE — prioridades do dia */}
+      {hasTodayItems && (
+        <div className="mb-6 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
+            <Clock className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+              Hoje — {todayLabel}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+
+            {/* Tarefas urgentes */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-2 h-2 rounded-full ${todayData.tasksDueToday.length > 0 ? 'bg-red-500' : 'bg-gray-300'}`} />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Tarefas vencendo
+                </span>
+                {todayData.tasksDueToday.length > 0 && (
+                  <span className="ml-auto text-xs font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                    {todayData.tasksDueToday.length}
+                  </span>
+                )}
+              </div>
+              {todayData.tasksDueToday.length === 0 ? (
+                <p className="text-xs text-gray-400">Nenhuma tarefa urgente</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {todayData.tasksDueToday.map(task => (
+                    <li key={task.id}
+                      onClick={() => navigate('/tasks')}
+                      className="text-sm text-gray-700 hover:text-indigo-600 cursor-pointer flex items-start gap-1.5 group"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" />
+                      <span className="truncate group-hover:underline">{task.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {todayData.tasksDueToday.length > 0 && (
+                <button
+                  onClick={() => navigate('/tasks')}
+                  className="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  Ver todas <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Shows desta semana */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-2 h-2 rounded-full ${todayData.showsThisWeek.length > 0 ? 'bg-yellow-500' : 'bg-gray-300'}`} />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Shows esta semana
+                </span>
+                {todayData.showsThisWeek.length > 0 && (
+                  <span className="ml-auto text-xs font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                    {todayData.showsThisWeek.length}
+                  </span>
+                )}
+              </div>
+              {todayData.showsThisWeek.length === 0 ? (
+                <p className="text-xs text-gray-400">Nenhum show esta semana</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {todayData.showsThisWeek.map(show => (
+                    <li key={show.id}
+                      onClick={() => navigate('/shows')}
+                      className="text-sm text-gray-700 hover:text-indigo-600 cursor-pointer flex items-start gap-1.5 group"
+                    >
+                      <Mic2 className="w-3.5 h-3.5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <span className="truncate group-hover:underline">
+                        {show.title} — {new Date(show.show_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {todayData.showsThisWeek.length > 0 && (
+                <button
+                  onClick={() => navigate('/shows')}
+                  className="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  Ver shows <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Lançamentos esta semana */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-2 h-2 rounded-full ${todayData.releasesThisWeek.length > 0 ? 'bg-purple-500' : 'bg-gray-300'}`} />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Lançamentos esta semana
+                </span>
+                {todayData.releasesThisWeek.length > 0 && (
+                  <span className="ml-auto text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                    {todayData.releasesThisWeek.length}
+                  </span>
+                )}
+              </div>
+              {todayData.releasesThisWeek.length === 0 ? (
+                <p className="text-xs text-gray-400">Nenhum lançamento esta semana</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {todayData.releasesThisWeek.map(release => (
+                    <li key={release.id}
+                      onClick={() => navigate('/releases')}
+                      className="text-sm text-gray-700 hover:text-indigo-600 cursor-pointer flex items-start gap-1.5 group"
+                    >
+                      <Disc3 className="w-3.5 h-3.5 text-purple-500 mt-0.5 flex-shrink-0" />
+                      <span className="truncate group-hover:underline">
+                        {release.title} — {new Date(release.release_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {todayData.releasesThisWeek.length > 0 && (
+                <button
+                  onClick={() => navigate('/releases')}
+                  className="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  Ver lançamentos <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Welcome & Organization Header */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

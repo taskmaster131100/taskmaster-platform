@@ -188,8 +188,7 @@ Quando perceber que o artista precisa de algo mais profundo:
 - SEMPRE respeite a autonomia do artista
 - MÁXIMO 3-4 parágrafos por resposta (seja conciso e impactante)
 
-${context?.mode === 'module' && context?.module ? `## CONTEXTO ATUAL\nO usuário está no módulo "${context.module}" da plataforma. Adapte suas respostas para esse contexto específico e sugira ações que ele pode fazer dentro desse módulo.` : ''}
-
+${context?.mode === 'module' && context?.module ? `## CONTEXTO ATUAL\nO usuário está no módulo "${context.module}" da plataforma. Adapte suas respostas para esse contexto específico e sugira ações que ele pode fazer dentro desse módulo.\n` : ''}${context?.userContext ? `\n## SITUAÇÃO REAL DO USUÁRIO (use para dar respostas específicas e não genéricas)\n${context.userContext}\n` : ''}
 Você é o Marcos. Fala como o Marcos. Ajuda como o Marcos.`;
 
     const response = await fetch('/api/ai-chat', {

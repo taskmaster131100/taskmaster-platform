@@ -9,6 +9,7 @@ import {
   createAudioUrl,
   revokeAudioUrl
 } from '../services/voiceTranscriptionService';
+import { buildUserContext } from '../services/mentorAIService';
 import { toast } from 'sonner';
 
 interface Message {
@@ -45,6 +46,7 @@ export default function MentorChatWithVoice({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [userContext, setUserContext] = useState<string>('');
 
   const recorderRef = useRef<AudioRecorder | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,9 +57,10 @@ export default function MentorChatWithVoice({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Inicializar recorder
+  // Inicializar recorder e buscar contexto real do usuário
   useEffect(() => {
     recorderRef.current = new AudioRecorder();
+    buildUserContext().then(ctx => setUserContext(ctx));
   }, []);
 
   // Atualizar duração da gravação
@@ -135,8 +138,8 @@ export default function MentorChatWithVoice({
         isVoice: true
       }]);
 
-      // Processar e obter resposta (envia histórico para contexto)
-      const response = await processVoiceMessage(result.text, userId, { mode, module }, messages);
+      // Processar e obter resposta (envia histórico + contexto real do usuário)
+      const response = await processVoiceMessage(result.text, userId, { mode, module, userContext }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
@@ -173,8 +176,8 @@ export default function MentorChatWithVoice({
 
       setInputText('');
 
-      // Processar e obter resposta (envia histórico para contexto)
-      const response = await processVoiceMessage(inputText, userId, { mode, module }, messages);
+      // Processar e obter resposta (envia histórico + contexto real do usuário)
+      const response = await processVoiceMessage(inputText, userId, { mode, module, userContext }, messages);
 
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
