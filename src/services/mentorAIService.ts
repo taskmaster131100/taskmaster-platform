@@ -12,6 +12,62 @@ import { supabase } from '../lib/supabase';
  * para injetar no system prompt do Mentor.
  * São 3 queries paralelas — custo mínimo, impacto máximo.
  */
+/**
+ * Lê o perfil de maturidade salvo no localStorage (gravado pelo MentorDiagnosticOnboarding).
+ * Retorna instruções extras para o system prompt do Mentor.
+ */
+export function buildMaturityContext(): string {
+  try {
+    const stage = localStorage.getItem('mentor_maturity_stage');
+    const profile = localStorage.getItem('mentor_maturity_profile');
+    if (!stage) return '';
+
+    const stageLabels: Record<string, string> = {
+      dreamer: 'Iniciante / Sonhador — ainda sem estrutura, começando do zero',
+      band_manager: 'Intermediário — já faz shows e lançamentos, quer profissionalizar',
+      scaling_structure: 'Avançado — operação estruturada, equipe, múltiplos projetos',
+      multi_artist_producer: 'Escritório / Selo — gestão de múltiplos artistas',
+    };
+
+    const stageInstructions: Record<string, string> = {
+      dreamer: `
+## PERFIL IDENTIFICADO: INICIANTE
+- Responda com linguagem simples, sem jargões
+- Explique o básico sem ser condescendente
+- Mostre o primeiro passo concreto, não o plano completo
+- Celebre a intenção, mas seja direto sobre o que falta
+- Prefira "comece por aqui" a "você precisa de estratégia X"
+- Máximo 2 parágrafos curtos`,
+      band_manager: `
+## PERFIL IDENTIFICADO: INTERMEDIÁRIO
+- Assuma que a pessoa já entende o básico
+- Foque em organização, gargalos e oportunidades perdidas
+- Dê visão de negócio: números, margens, comparações de mercado
+- Aponte o que falta para profissionalizar — seja específico
+- Sugira melhorias concretas no que já existe`,
+      scaling_structure: `
+## PERFIL IDENTIFICADO: AVANÇADO / OPERAÇÃO ESTRUTURADA
+- Trate como gestor, não como artista iniciante
+- Foque em escala, performance, eficiência e saúde da operação
+- Use dados e métricas quando disponíveis
+- Aponte gargalos que impedem crescimento
+- Sugira delegação, sistemas e processos`,
+      multi_artist_producer: `
+## PERFIL IDENTIFICADO: ESCRITÓRIO / SELO
+- Foco em gestão de roster, não artista individual
+- Visão de portfólio: quais artistas estão performando, quais estão travados
+- Prioridades da operação como negócio
+- Pergunte sobre equipe, estrutura e metas do negócio`,
+    };
+
+    const label = stageLabels[stage] || stage;
+    const instructions = stageInstructions[stage] || '';
+    return `\n## CONTEXTO DO PERFIL DO USUÁRIO\nNível de maturidade: ${label}${instructions}\n`;
+  } catch {
+    return '';
+  }
+}
+
 export async function buildUserContext(): Promise<string> {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -310,7 +366,7 @@ export async function generateMentorResponse(
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + contextInfo },
+          { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + buildMaturityContext() + contextInfo },
           ...historyMessages,
           { role: 'user', content: userQuestion }
         ],

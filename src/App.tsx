@@ -229,21 +229,17 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     setTeamMembers(Array.isArray(teamMembersData) ? teamMembersData : []);
 
     // Load artists from Supabase (source of truth)
+    // Supabase é sempre a fonte — array vazio = usuário sem artistas ainda (não fazer fallback para local)
     try {
-      const { data: supabaseArtists } = await supabase
+      const { data: supabaseArtists, error: artistsError } = await supabase
         .from('artists')
         .select('*')
         .order('name');
-      if (supabaseArtists && supabaseArtists.length > 0) {
-        setArtists(supabaseArtists as Artist[]);
-      } else {
-        // Fallback to local if Supabase is empty
-        const artistsData = localDatabase.getCollection<Artist>('artists');
-        setArtists(Array.isArray(artistsData) ? artistsData : []);
+      if (!artistsError) {
+        setArtists((supabaseArtists || []) as Artist[]);
       }
     } catch {
-      const artistsData = localDatabase.getCollection<Artist>('artists');
-      setArtists(Array.isArray(artistsData) ? artistsData : []);
+      // Falha de rede: manter estado atual sem sobrescrever
     }
 
     // Select first project if none selected
@@ -323,10 +319,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         name: resolvedName,
         stage_name: resolvedStageName,
         genre: artistData.genre?.trim() || 'Não definido',
-        organization_id: orgId
+        organization_id: orgId,
+        created_by: user?.id || null
       };
 
       // Adicionar campos opcionais apenas se tiverem valor
+      // ATENÇÃO: contact_email e contact_phone são os nomes reais das colunas no banco
       const optionalFields: Record<string, any> = {
         subgenre: artistData.subgenre,
         bio: artistData.bio,
@@ -334,8 +332,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         spotify: artistData.spotify,
         youtube: artistData.youtube,
         tiktok: artistData.tiktok,
-        email: artistData.email || artistData.contact_email,
-        phone: artistData.phone || artistData.contact_phone,
+        contact_email: artistData.contact_email || artistData.email,
+        contact_phone: artistData.contact_phone || artistData.phone,
       };
       Object.entries(optionalFields).forEach(([key, val]) => {
         if (val !== undefined && val !== null && String(val).trim() !== '') {
