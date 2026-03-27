@@ -41,6 +41,12 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
       const userProfile = getUserProfile(calculatedStage);
       const plan = generateActionPlan(calculatedStage);
 
+      // Persistir perfil para o Mentor AI usar nas próximas conversas
+      try {
+        localStorage.setItem('mentor_maturity_stage', calculatedStage);
+        localStorage.setItem('mentor_maturity_profile', userProfile.stageLabel);
+      } catch { /* localStorage indisponível */ }
+
       setStage(calculatedStage);
       setProfile(userProfile);
       setActionPlan(plan);
