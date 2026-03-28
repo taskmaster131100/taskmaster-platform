@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Music, Search, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './auth/AuthProvider';
 import { toast } from 'sonner';
 
 interface Artist {
@@ -23,6 +24,7 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   onCreateArtist,
   onSelectProject
 }) => {
+  const { organizationId } = useAuth();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,11 +32,11 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   const loadArtists = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('artists')
-        .select('*')
-        .order('name');
-      
+      let query = supabase.from('artists').select('*').order('name');
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setArtists(data || []);
     } catch (error) {
@@ -46,12 +48,18 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   };
 
   useEffect(() => {
+    if (!organizationId) return;
     loadArtists();
 
-    // Inscrever para mudanças em tempo real
+    // Inscrever para mudanças em tempo real, filtrado pela organização
     const channel = supabase
-      .channel('artists_changes')
-      .on('postgres_changes', { event: '*', table: 'artists', schema: 'public' }, () => {
+      .channel(`artists_changes_${organizationId}`)
+      .on('postgres_changes', {
+        event: '*',
+        table: 'artists',
+        schema: 'public',
+        filter: `organization_id=eq.${organizationId}`
+      }, () => {
         loadArtists();
       })
       .subscribe();
@@ -59,7 +67,7 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [organizationId]);
 
   const filteredArtists = artists.filter(artist =>
     artist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

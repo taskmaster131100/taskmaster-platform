@@ -92,7 +92,7 @@ import type { Project, Task, Artist, Department, TeamMember } from './types';
 const ENABLE_CLASSIC_ROUTES = import.meta.env.VITE_ENABLE_CLASSIC_ROUTES === 'true';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, organizationId, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [dbMode, setDbMode] = useState<'checking' | 'ready' | null>(null);
@@ -167,7 +167,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         }
       }
     }
-  }, [user, dbMode]);
+  }, [user, dbMode, organizationId]);
 
   // Update activeTab based on route
   useEffect(() => {
@@ -228,13 +228,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     setTeamMembers(Array.isArray(teamMembersData) ? teamMembersData : []);
 
-    // Load artists from Supabase (source of truth)
-    // Supabase é sempre a fonte — array vazio = usuário sem artistas ainda (não fazer fallback para local)
+    // Load artists from Supabase (source of truth), scoped to current organization
     try {
-      const { data: supabaseArtists, error: artistsError } = await supabase
-        .from('artists')
-        .select('*')
-        .order('name');
+      let query = supabase.from('artists').select('*').order('name');
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+      const { data: supabaseArtists, error: artistsError } = await query;
       if (!artistsError) {
         setArtists((supabaseArtists || []) as Artist[]);
       }

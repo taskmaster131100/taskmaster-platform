@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
+  organizationId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', currentUser.id)
         .maybeSingle();
 
-      if (existingOrg) return; // Já tem organização, não precisa criar
+      if (existingOrg?.organization_id) {
+        setOrganizationId(existingOrg.organization_id);
+        return;
+      }
 
       // Chamar a função bootstrap_organization para criar automaticamente
       const { data, error } = await supabase.rpc('bootstrap_organization', {
@@ -66,8 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (data?.success && !data?.skipped) {
-        console.log('Organização criada automaticamente:', data.organization_id);
+      if (data?.success) {
+        // Re-buscar o organization_id após bootstrap
+        const { data: newOrg } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+        if (newOrg?.organization_id) {
+          setOrganizationId(newOrg.organization_id);
+        }
       }
     } catch (err) {
       console.error('Erro ao verificar/criar organização:', err);
@@ -125,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('tm_session_id');
+    setOrganizationId(null);
   };
 
   const resendSignupConfirmation = async (email: string) => {
@@ -136,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, resendSignupConfirmation }}>
+    <AuthContext.Provider value={{ user, organizationId, loading, signIn, signOut, resendSignupConfirmation }}>
       {children}
     </AuthContext.Provider>
   );
