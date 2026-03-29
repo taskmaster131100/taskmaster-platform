@@ -106,6 +106,7 @@ const ReportsPage: React.FC = () => {
   const [showsByStatus, setShowsByStatus] = useState<ShowByStatus[]>([]);
   const [revenueByMonth, setRevenueByMonth] = useState<RevenueByMonth[]>([]);
   const [tasksByStatus, setTasksByStatus] = useState<TaskByStatus[]>([]);
+  const [releasesList, setReleasesList] = useState<{ title: string; status: string; release_date?: string }[]>([]);
 
   useEffect(() => {
     loadMetrics();
@@ -129,7 +130,7 @@ const ReportsPage: React.FC = () => {
         supabase.from('shows').select('status, fee'),
         supabase.from('financial_transactions').select('type, amount, transaction_date, status'),
         supabase.from('plannings').select('status'),
-        supabase.from('releases').select('status'),
+        supabase.from('releases').select('title, status, release_date').order('release_date', { ascending: true }),
         supabase.from('calendar_events').select('event_date').gte('event_date', new Date().toISOString().split('T')[0]),
       ]);
 
@@ -212,6 +213,7 @@ const ReportsPage: React.FC = () => {
       setShowsByStatus(showsByStatusData);
       setRevenueByMonth(months);
       setTasksByStatus(taskStatusData);
+      setReleasesList(releases as { title: string; status: string; release_date?: string }[]);
     } catch (error) {
       console.error('Error loading metrics:', error);
       toast.error('Erro ao carregar métricas');
@@ -525,6 +527,94 @@ const ReportsPage: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Seção dedicada: Lançamentos */}
+      {showSection('lancamentos') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Status dos Lançamentos */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Lançamentos por Status</h3>
+            {releasesList.length > 0 ? (
+              <div className="space-y-2">
+                {(() => {
+                  const statusLabels: Record<string, string> = {
+                    planning: 'Planejamento',
+                    pre_production: 'Pré-produção',
+                    production: 'Produção',
+                    distribution: 'Distribuição',
+                    active: 'Em andamento',
+                    lancado: 'Lançado',
+                    cancelled: 'Cancelado',
+                  };
+                  const statusColors: Record<string, string> = {
+                    planning: 'bg-gray-100 text-gray-700',
+                    pre_production: 'bg-blue-100 text-blue-700',
+                    production: 'bg-indigo-100 text-indigo-700',
+                    distribution: 'bg-orange-100 text-orange-700',
+                    active: 'bg-yellow-100 text-yellow-700',
+                    lancado: 'bg-green-100 text-green-700',
+                    cancelled: 'bg-red-100 text-red-700',
+                  };
+                  return releasesList.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                      <span className="text-sm font-medium text-gray-800 truncate max-w-[60%]">{r.title || 'Sem título'}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {r.release_date && (
+                          <span className="text-xs text-gray-400">{new Date(r.release_date).toLocaleDateString('pt-BR')}</span>
+                        )}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[r.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {statusLabels[r.status] || r.status}
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
+                <Music className="w-8 h-8 mb-2" />
+                <p className="text-sm">Nenhum lançamento cadastrado</p>
+              </div>
+            )}
+          </div>
+
+          {/* Resumo de lançamentos */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Visão Geral</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Music className="w-5 h-5 text-purple-600" />
+                  <span className="text-sm text-gray-700">Total de lançamentos</span>
+                </div>
+                <span className="font-bold text-purple-700">{metrics.totalReleases}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-yellow-600" />
+                  <span className="text-sm text-gray-700">Em andamento</span>
+                </div>
+                <span className="font-bold text-yellow-700">{metrics.activeReleases}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-sm text-gray-700">Lançados</span>
+                </div>
+                <span className="font-bold text-green-700">
+                  {releasesList.filter(r => r.status === 'lancado').length}
+                </span>
+              </div>
+              {metrics.totalReleases === 0 && (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg text-gray-500">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-xs">Cadastre lançamentos no módulo Lançamentos</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

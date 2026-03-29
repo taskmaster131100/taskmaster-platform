@@ -453,6 +453,7 @@ export default function PlanningCopilot() {
     
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setReadyToCreate(false); // nova mensagem cancela o banner de confirmação pendente
     const currentFile = attachedFile;
     setAttachedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -641,7 +642,7 @@ Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
     }
 
     // Detectar se a IA está oferecendo criar o projeto (mas ainda não criou)
-    const offersCreation = /fluxo de trabalho|quer que eu (crie|transforme|organize)|posso (criar|transformar)|criar (o projeto|um projeto)/i.test(cleanText || aiResponse);
+    const offersCreation = /fluxo de trabalho|quer que eu (crie|transforme|organize|estruture|monte)|posso (criar|transformar|montar|estruturar)|criar (o projeto|um projeto|esse projeto|o fluxo)|transformar (isso|esse material|essa ideia)|montar (o projeto|um projeto|o fluxo)|estruturar (o projeto|um projeto)|Quer que eu (crie|transforme|monte|estruture|organize)|Posso (criar|transformar|montar|estruturar)|Entendi tudo|posso montar agora|transformo em fluxo|criar o fluxo/i.test(cleanText || aiResponse);
     if (offersCreation) {
       setReadyToCreate(true);
     }
@@ -659,14 +660,15 @@ Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
     setReadyToCreate(false);
     setIsLoading(true);
 
-    const forceInstruction = `O usuário confirmou. Crie agora o projeto com base em tudo que discutimos. Responda SOMENTE com o JSON no formato:\n[CRIAR_PROJETO]\n{"action":"create_project","project":{...}}\n[/CRIAR_PROJETO]\nNada mais além do JSON.`;
+    // Instrução como USER (não system) — OpenAI prioriza mensagens user no final do histórico
+    const forceInstruction = `Confirmado. Crie o projeto agora com base em tudo que discutimos. Responda EXCLUSIVAMENTE com o JSON no formato exato abaixo, sem nenhum texto antes ou depois:\n\n[CRIAR_PROJETO]\n{"action":"create_project","project":{"name":"...","description":"...","project_type":"...","budget":0,"phases":[{"name":"...","tasks":[{"title":"...","category":"...","priority":"...","description":"..."}]}]}}\n[/CRIAR_PROJETO]`;
 
-    conversationHistory.current.push({ role: 'user', content: 'Sim, pode criar o projeto agora.' });
-    setMessages(prev => [...prev, { role: 'user', content: 'Sim, pode criar o projeto agora.' }]);
+    conversationHistory.current.push({ role: 'user', content: forceInstruction });
+    setMessages(prev => [...prev, { role: 'user', content: 'Confirmar e Criar o projeto.' }]);
 
     try {
       const aiResponse = await callAIWithContext(
-        [...conversationHistory.current, { role: 'system', content: forceInstruction }],
+        conversationHistory.current.slice(-14),
         platformContext
       );
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
