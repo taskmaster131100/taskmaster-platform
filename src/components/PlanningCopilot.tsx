@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { localDatabase } from '../services/localDatabase';
+import { useAuth } from './auth/AuthProvider';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -176,6 +177,13 @@ ${platformContext.artists.length > 0
   ? `- Artistas cadastrados: ${platformContext.artists.map((a: any) => `"${a.name || a.stage_name}"`).join(', ')}`
   : '- Nenhum artista cadastrado ainda.'}
 - Se o artista não estiver na lista, ofereça: "Quer que eu crie um novo artista para esse projeto?"
+- Quando o usuário confirmar criar o artista, pergunte o nome artístico e o gênero musical (apenas essas duas informações)
+- Após ter nome e gênero, responda EXCLUSIVAMENTE com o JSON abaixo e nada mais:
+
+[CRIAR_ARTISTA]
+{"name":"Nome do Artista","genre":"Gênero"}
+[/CRIAR_ARTISTA]
+
 - Só avance para o fluxo de criação do projeto DEPOIS de confirmar o artista
 
 ANÁLISE DE LACUNAS (ao receber documento ou ideia):
@@ -313,6 +321,7 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
 }
 
 export default function PlanningCopilot() {
+  const { organizationId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -505,8 +514,71 @@ export default function PlanningCopilot() {
     }
   };
 
+  // Criar artista real no Supabase
+  const createArtistInSupabase = async (name: string, genre: string): Promise<boolean> => {
+    try {
+      if (!organizationId) {
+        // Fallback: buscar organizationId direto
+        const { data: orgData } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .maybeSingle();
+        if (!orgData?.organization_id) {
+          toast.error('Organização não encontrada. Crie uma organização primeiro.');
+          return false;
+        }
+        const { error } = await supabase.from('artists').insert({
+          name,
+          genre: genre || null,
+          organization_id: orgData.organization_id,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('artists').insert({
+          name,
+          genre: genre || null,
+          organization_id: organizationId,
+        });
+        if (error) throw error;
+      }
+      return true;
+    } catch (err) {
+      console.error('Erro ao criar artista:', err);
+      return false;
+    }
+  };
+
   // Função central para processar resposta da IA e detectar/criar projetos
   const processAIResponse = (aiResponse: string): Message => {
+    // Detectar criação de artista [CRIAR_ARTISTA]...[/CRIAR_ARTISTA]
+    const artistTagMatch = aiResponse.match(/\[CRIAR_ARTISTA\]([\s\S]*?)\[\/CRIAR_ARTISTA\]/);
+    if (artistTagMatch) {
+      try {
+        const artistData = JSON.parse(artistTagMatch[1].trim());
+        const artistName = artistData.name || artistData.artist_name;
+        const artistGenre = artistData.genre || '';
+
+        if (artistName) {
+          createArtistInSupabase(artistName, artistGenre).then(success => {
+            if (success) {
+              toast.success(`Artista "${artistName}" criado com sucesso!`);
+              // Recarregar contexto para que o novo artista apareça nas próximas mensagens
+              loadPlatformContext().then(ctx => setPlatformContext(ctx));
+            } else {
+              toast.error(`Não foi possível criar o artista "${artistName}". Tente pelo menu Artistas.`);
+            }
+          });
+
+          return {
+            role: 'assistant' as const,
+            content: `✅ Criando o artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} na plataforma...\n\nAssim que confirmar, podemos criar o projeto vinculado a ele. Qual é o nome do projeto que você quer estruturar?`
+          };
+        }
+      } catch (e) {
+        console.error('Erro ao parsear [CRIAR_ARTISTA]:', e);
+      }
+    }
+
     // Tentar detectar JSON de criação de projeto - com tags ou sem tags
     let projectData: any = null;
     let cleanText = aiResponse;

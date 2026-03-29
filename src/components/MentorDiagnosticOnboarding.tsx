@@ -120,7 +120,7 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
               </div>
 
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h3 className="font-bold text-purple-900 mb-2">Abordagem do Marcos Menezes</h3>
+                <h3 className="font-bold text-purple-900 mb-2">Como o Assistente vai te orientar</h3>
                 <p className="text-sm text-purple-800">{profile.mentorApproach}</p>
               </div>
             </div>
@@ -194,12 +194,12 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
               onClick={() => navigate('/mentor-chat')}
               className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
             >
-              Conversar com Marcos <ArrowRight className="w-4 h-4" />
+              Falar com o Assistente <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
           <p className="text-center text-white/80 text-sm">
-            💡 Marcos Menezes está pronto para ajudar você a executar este plano!
+            💡 O Assistente TaskMaster está pronto para ajudar você a executar este plano!
           </p>
         </div>
       </div>
@@ -216,7 +216,7 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
             <BrainCircuit className="w-8 h-8" />
           </div>
           <h1 className="text-3xl font-bold mb-2">Bem-vindo, Artista! 🎵</h1>
-          <p className="text-white/80">Marcos Menezes aqui! Vou fazer algumas perguntas para entender seu perfil e ajudar você da melhor forma.</p>
+          <p className="text-white/80">Vou fazer algumas perguntas rápidas para entender seu perfil e calibrar as orientações para o seu momento.</p>
         </div>
 
         {/* Progress */}
@@ -255,7 +255,7 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
         </div>
 
         <p className="text-center text-white/80 text-sm">
-          💬 Suas respostas ajudam Marcos Menezes a entender melhor como ajudá-lo
+          💬 Suas respostas calibram as orientações do Assistente para o seu perfil
         </p>
       </div>
     </div>
