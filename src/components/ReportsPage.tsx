@@ -274,6 +274,28 @@ const ReportsPage: React.FC = () => {
     },
   ];
 
+  // Filtrar KPI cards e seções por template
+  const getVisibleKpiIndices = (t: string) => {
+    switch(t) {
+      case 'financeiro': return [3];
+      case 'shows': return [1, 5, 3];
+      case 'lancamentos': return [4, 0];
+      case 'artista': return [0, 2, 4];
+      default: return [0, 1, 2, 3, 4, 5];
+    }
+  };
+
+  const showSection = (section: 'financeiro' | 'shows' | 'tarefas' | 'lancamentos') => {
+    if (activeTemplate === 'operacao') return true;
+    if (activeTemplate === 'financeiro') return section === 'financeiro';
+    if (activeTemplate === 'shows') return section === 'shows' || section === 'financeiro';
+    if (activeTemplate === 'lancamentos') return section === 'lancamentos';
+    if (activeTemplate === 'artista') return section === 'tarefas';
+    return true;
+  };
+
+  const visibleKpiCards = kpiCards.filter((_, i) => getVisibleKpiIndices(activeTemplate).includes(i));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -341,7 +363,7 @@ const ReportsPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {kpiCards.map((card, i) => {
+        {visibleKpiCards.map((card, i) => {
           const Icon = card.icon;
           return (
             <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -357,169 +379,183 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Receita vs Despesa por mês */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Receita vs Despesa (6 meses)</h3>
-          {revenueByMonth.some(m => m.receita > 0 || m.despesa > 0) ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={revenueByMonth} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="despesa" name="Despesa" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[220px] text-gray-400">
-              <DollarSign className="w-8 h-8 mb-2" />
-              <p className="text-sm">Nenhuma transação registrada</p>
+      {(showSection('financeiro') || showSection('tarefas')) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Receita vs Despesa por mês */}
+          {showSection('financeiro') && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Receita vs Despesa (6 meses)</h3>
+              {revenueByMonth.some(m => m.receita > 0 || m.despesa > 0) ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={revenueByMonth} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="despesa" name="Despesa" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[220px] text-gray-400">
+                  <DollarSign className="w-8 h-8 mb-2" />
+                  <p className="text-sm">Nenhuma transação registrada</p>
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        {/* Tarefas por status */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Distribuição de Tarefas</h3>
-          {tasksByStatus.length > 0 ? (
-            <div className="flex items-center gap-6">
-              <ResponsiveContainer width="50%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={tasksByStatus}
-                    cx="50%" cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {tasksByStatus.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
+          {/* Tarefas por status */}
+          {showSection('tarefas') && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Distribuição de Tarefas</h3>
+              {tasksByStatus.length > 0 ? (
+                <div className="flex items-center gap-6">
+                  <ResponsiveContainer width="50%" height={180}>
+                    <PieChart>
+                      <Pie
+                        data={tasksByStatus}
+                        cx="50%" cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {tasksByStatus.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-3">
+                    {tasksByStatus.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ background: s.color }} />
+                          <span className="text-sm text-gray-600">{s.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">{s.value}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-3">
-                {tasksByStatus.map((s, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ background: s.color }} />
-                      <span className="text-sm text-gray-600">{s.name}</span>
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Conclusão</span>
+                        <span className="text-sm font-bold text-green-600">{taskCompletionRate}%</span>
+                      </div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{s.value}</span>
-                  </div>
-                ))}
-                <div className="pt-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Conclusão</span>
-                    <span className="text-sm font-bold text-green-600">{taskCompletionRate}%</span>
                   </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[180px] text-gray-400">
-              <FileText className="w-8 h-8 mb-2" />
-              <p className="text-sm">Nenhuma tarefa registrada</p>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[180px] text-gray-400">
+                  <FileText className="w-8 h-8 mb-2" />
+                  <p className="text-sm">Nenhuma tarefa registrada</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Shows por status */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Shows por Status</h3>
-          {showsByStatus.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={showsByStatus} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
-                <Tooltip />
-                <Bar dataKey="value" name="Shows" radius={[0, 4, 4, 0]}>
-                  {showsByStatus.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
-              <Mic2 className="w-8 h-8 mb-2" />
-              <p className="text-sm">Nenhum show cadastrado</p>
+      {(showSection('shows') || showSection('financeiro')) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Shows por status */}
+          {showSection('shows') && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Shows por Status</h3>
+              {showsByStatus.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={showsByStatus} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Shows" radius={[0, 4, 4, 0]}>
+                      {showsByStatus.map((_, index) => (
+                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
+                  <Mic2 className="w-8 h-8 mb-2" />
+                  <p className="text-sm">Nenhum show cadastrado</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Resumo Financeiro */}
+          {showSection('financeiro') && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-gray-700">Total de Receitas</span>
+                  </div>
+                  <span className="font-bold text-green-700">{formatCurrency(metrics.totalRevenue)}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-red-500" />
+                    <span className="text-sm text-gray-700">Total de Despesas</span>
+                  </div>
+                  <span className="font-bold text-red-600">{formatCurrency(metrics.totalExpenses)}</span>
+                </div>
+                <div className={`flex items-center justify-between p-3 rounded-lg ${netBalance >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className={`w-5 h-5 ${netBalance >= 0 ? 'text-blue-600' : 'text-orange-500'}`} />
+                    <span className="text-sm text-gray-700">Saldo Líquido</span>
+                  </div>
+                  <span className={`font-bold text-lg ${netBalance >= 0 ? 'text-blue-700' : 'text-orange-600'}`}>
+                    {formatCurrency(netBalance)}
+                  </span>
+                </div>
+                {metrics.totalRevenue === 0 && metrics.totalExpenses === 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg text-gray-500">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-xs">Registre transações em Financeiro para ver dados aqui</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
+      )}
 
-        {/* Resumo Financeiro */}
+      {/* Resumo Executivo — só visível na visão geral */}
+      {activeTemplate === 'operacao' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                <span className="text-sm text-gray-700">Total de Receitas</span>
-              </div>
-              <span className="font-bold text-green-700">{formatCurrency(metrics.totalRevenue)}</span>
+          <h3 className="text-base font-semibold text-gray-900 mb-4">Resumo Executivo</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="border-l-4 border-[#FFAD85] pl-4">
+              <p className="text-xs text-gray-500 mb-1">Produtividade</p>
+              <p className="text-xl font-bold text-gray-900">{taskCompletionRate}%</p>
+              <p className="text-xs text-gray-400">taxa de conclusão</p>
             </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-500" />
-                <span className="text-sm text-gray-700">Total de Despesas</span>
-              </div>
-              <span className="font-bold text-red-600">{formatCurrency(metrics.totalExpenses)}</span>
+            <div className="border-l-4 border-purple-500 pl-4">
+              <p className="text-xs text-gray-500 mb-1">Shows Fechados</p>
+              <p className="text-xl font-bold text-gray-900">{metrics.closedShows}</p>
+              <p className="text-xs text-gray-400">de {metrics.totalShows} total</p>
             </div>
-            <div className={`flex items-center justify-between p-3 rounded-lg ${netBalance >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-              <div className="flex items-center gap-2">
-                <DollarSign className={`w-5 h-5 ${netBalance >= 0 ? 'text-blue-600' : 'text-orange-500'}`} />
-                <span className="text-sm text-gray-700">Saldo Líquido</span>
-              </div>
-              <span className={`font-bold text-lg ${netBalance >= 0 ? 'text-blue-700' : 'text-orange-600'}`}>
-                {formatCurrency(netBalance)}
-              </span>
+            <div className="border-l-4 border-indigo-500 pl-4">
+              <p className="text-xs text-gray-500 mb-1">Planejamentos</p>
+              <p className="text-xl font-bold text-gray-900">{metrics.activePlannings}</p>
+              <p className="text-xs text-gray-400">ativos de {metrics.totalPlannings}</p>
             </div>
-            {metrics.totalRevenue === 0 && metrics.totalExpenses === 0 && (
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg text-gray-500">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-xs">Registre transações em Financeiro para ver dados aqui</span>
-              </div>
-            )}
+            <div className="border-l-4 border-orange-500 pl-4">
+              <p className="text-xs text-gray-500 mb-1">Releases</p>
+              <p className="text-xl font-bold text-gray-900">{metrics.activeReleases}</p>
+              <p className="text-xs text-gray-400">em andamento</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Resumo Executivo */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h3 className="text-base font-semibold text-gray-900 mb-4">Resumo Executivo</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="border-l-4 border-[#FFAD85] pl-4">
-            <p className="text-xs text-gray-500 mb-1">Produtividade</p>
-            <p className="text-xl font-bold text-gray-900">{taskCompletionRate}%</p>
-            <p className="text-xs text-gray-400">taxa de conclusão</p>
-          </div>
-          <div className="border-l-4 border-purple-500 pl-4">
-            <p className="text-xs text-gray-500 mb-1">Shows Fechados</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.closedShows}</p>
-            <p className="text-xs text-gray-400">de {metrics.totalShows} total</p>
-          </div>
-          <div className="border-l-4 border-indigo-500 pl-4">
-            <p className="text-xs text-gray-500 mb-1">Planejamentos</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.activePlannings}</p>
-            <p className="text-xs text-gray-400">ativos de {metrics.totalPlannings}</p>
-          </div>
-          <div className="border-l-4 border-orange-500 pl-4">
-            <p className="text-xs text-gray-500 mb-1">Releases</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.activeReleases}</p>
-            <p className="text-xs text-gray-400">em andamento</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

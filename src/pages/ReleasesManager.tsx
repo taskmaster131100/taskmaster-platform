@@ -639,6 +639,41 @@ export default function ReleasesManager() {
                 </div>
               </div>
 
+              {/* Checklist de Materiais */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Checklist de Materiais
+                </h3>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                  {[
+                    { label: 'Áudio master finalizado', detail: 'WAV 24bit/44.1kHz ou superior', required: true },
+                    { label: 'Capa do lançamento', detail: '3000x3000px JPG/PNG, sem texto de terceiros', required: true },
+                    { label: 'ISRC registrado', detail: selectedRelease.isrc ? `✓ ${selectedRelease.isrc}` : 'Ainda não informado', required: true, done: !!selectedRelease.isrc },
+                    { label: 'UPC / EAN', detail: selectedRelease.upc ? `✓ ${selectedRelease.upc}` : 'Ainda não informado', required: true, done: !!selectedRelease.upc },
+                    { label: 'Distribuidora definida', detail: selectedRelease.distributor ? `✓ ${selectedRelease.distributor}` : 'Ainda não informada', required: true, done: !!selectedRelease.distributor },
+                    { label: 'Press release / bio atualizada', detail: 'Texto para assessoria de imprensa e plataformas', required: false },
+                    { label: 'Autorizações de imagem / participações', detail: 'Para clipes, features e colabs', required: false },
+                    { label: 'Letras cadastradas (ECAD/distribuição)', detail: 'Para garantir royalties', required: false },
+                    { label: 'Pré-save configurado', detail: 'Link de pré-save para campanha de lançamento', required: false },
+                    { label: 'Pitch para playlists editoriais', detail: 'Enviar com 7+ dias de antecedência via distribuição', required: false },
+                  ].map((item, idx) => (
+                    <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${item.done ? 'bg-green-50' : ''}`}>
+                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500' : item.required ? 'border-orange-400' : 'border-gray-300'}`}>
+                        {item.done && <span className="text-white text-xs">✓</span>}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${item.done ? 'text-green-800' : 'text-gray-900'}`}>
+                          {item.label}
+                          {item.required && !item.done && <span className="ml-1 text-xs text-orange-500 font-normal">obrigatório</span>}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Upload className="w-5 h-5" />

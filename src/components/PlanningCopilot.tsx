@@ -321,6 +321,7 @@ export default function PlanningCopilot() {
   const [contextLoading, setContextLoading] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [readyToCreate, setReadyToCreate] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -639,11 +640,43 @@ Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
       }
     }
 
+    // Detectar se a IA está oferecendo criar o projeto (mas ainda não criou)
+    const offersCreation = /fluxo de trabalho|quer que eu (crie|transforme|organize)|posso (criar|transformar)|criar (o projeto|um projeto)/i.test(cleanText || aiResponse);
+    if (offersCreation) {
+      setReadyToCreate(true);
+    }
+
     // Se não é criação de projeto, retornar resposta normal
     return {
       role: 'assistant' as const,
       content: cleanText || aiResponse
     };
+  };
+
+  // Confirmação explícita de criação — envia instrução forçada para o modelo criar o JSON
+  const handleConfirmCreate = async () => {
+    if (!platformContext) return;
+    setReadyToCreate(false);
+    setIsLoading(true);
+
+    const forceInstruction = `O usuário confirmou. Crie agora o projeto com base em tudo que discutimos. Responda SOMENTE com o JSON no formato:\n[CRIAR_PROJETO]\n{"action":"create_project","project":{...}}\n[/CRIAR_PROJETO]\nNada mais além do JSON.`;
+
+    conversationHistory.current.push({ role: 'user', content: 'Sim, pode criar o projeto agora.' });
+    setMessages(prev => [...prev, { role: 'user', content: 'Sim, pode criar o projeto agora.' }]);
+
+    try {
+      const aiResponse = await callAIWithContext(
+        [...conversationHistory.current, { role: 'system', content: forceInstruction }],
+        platformContext
+      );
+      conversationHistory.current.push({ role: 'assistant', content: aiResponse });
+      const processedMessage = processAIResponse(aiResponse);
+      setMessages(prev => [...prev, processedMessage]);
+    } catch (err) {
+      toast.error('Erro ao criar projeto. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -736,6 +769,21 @@ Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-100">
+        {readyToCreate && (
+          <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-sm font-medium text-green-800">Projeto pronto para ser criado</span>
+            </div>
+            <button
+              onClick={handleConfirmCreate}
+              disabled={isLoading}
+              className="px-4 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              Confirmar e Criar
+            </button>
+          </div>
+        )}
         {isRecording && (
           <div className="mb-3 flex items-center gap-2 p-2 bg-red-50 border border-red-100 rounded-lg">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />

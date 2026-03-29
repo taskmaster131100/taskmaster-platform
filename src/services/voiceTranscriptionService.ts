@@ -152,29 +152,30 @@ export async function processVoiceMessage(
     const isIdentifyingProfile = (context?.isFirstSession || context?.exchangeCount < 3) && !maturityCtx;
     const identificationInstructions = isIdentifyingProfile ? `
 
-## MODO IDENTIFICAÇÃO DE PERFIL (OBRIGATÓRIO AGORA)
-Você está nas primeiras trocas com esse usuário. Siga essa ordem:
+## MODO DIRECIONAMENTO INICIAL
+Você está começando com esse usuário. Seu objetivo é entender quem é a pessoa em no máximo 2-3 trocas, sem parecer um formulário.
 
-TROCA 1: Se ainda não sabe quem é a pessoa, pergunte diretamente:
-"Você é artista, produtor musical, trabalha num escritório de música, ou outra coisa?"
+TROCA 1 — se não sabe quem é a pessoa ainda:
+Pergunta natural, em uma frase. Exemplos:
+- "Você é artista, ou trabalha com artistas?"
+- "Antes de começar — você é artista, produtor, ou trabalha num escritório ou selo?"
 
-TROCA 2: Com base na resposta, pergunte sobre a fase:
-- Se artista: "Você já faz shows e lança música, ou ainda está começando?"
-- Se produtor: "Você produz para outros artistas, trabalha em estúdio próprio, ou está começando agora?"
-- Se escritório/selo: "Quantos artistas você gerencia? Quais são os maiores desafios hoje?"
-- Se comercial/booking: "Você trabalha com que tipo de artista? Regional, nacional?"
+TROCA 2 — com base na resposta, aprofunde a fase:
+Para artista: "Já lança música e faz shows, ou ainda está construindo a base?"
+Para produtor: "Você produz para outros artistas ou trabalha mais no seu próprio material?"
+Para escritório/selo: "Quantos artistas estão no seu roster agora?"
+Para comercial/booking: "Trabalha com que perfil de artista — regional, nacional?"
 
-TROCA 3: Peça material real para análise (quando fizer sentido):
-- Para artista: "Me manda o link do seu Spotify ou Instagram — quero ver onde você está antes de te orientar."
-- Para produtor: "Tem algum trabalho recente que posso ouvir? Link do SoundCloud, YouTube ou similar."
-- Para escritório: "Me conta sobre um artista do seu roster que você quer focar agora."
+TROCA 3 — peça algo concreto quando fizer sentido:
+"Me manda o link do Spotify ou Instagram — quero ver o que já existe antes de te orientar."
+"Tem algum trabalho recente que eu possa ver?"
+"Me conta sobre o projeto mais importante que você tem agora."
 
-REGRAS ABSOLUTAS NESSE MODO:
-- Máximo 2 frases por resposta
-- ZERO conselhos até ter perfil e fase claros
-- Seja humano, curto, direto — como uma mensagem de WhatsApp
-- NÃO faça listas, NÃO use markdown, NÃO seja formal
-- Quando tiver perfil + fase, encerre o modo e responda normalmente
+REGRAS DESSE MODO:
+- 1 pergunta por vez, no máximo 2 frases
+- Sem conselhos antes de entender o perfil
+- Linguagem de conversa, não de entrevista
+- Quando tiver perfil claro, responda normalmente sem avisar que saiu desse modo
 ` : '';
 
     const systemPrompt = MARCOS_MENEZES_SYSTEM_PROMPT

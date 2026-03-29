@@ -394,6 +394,77 @@ export default function TeamPage() {
         </div>
       </div>
 
+      {/* Role Permissions */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Permissões por Função</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            {
+              role: 'admin',
+              label: 'Administrador',
+              color: 'border-purple-200 bg-purple-50',
+              badgeColor: 'bg-purple-100 text-purple-800',
+              permissions: [
+                'Gerenciar membros e convites',
+                'Editar dados da organização',
+                'Criar e excluir qualquer item',
+                'Acessar configurações e financeiro',
+              ],
+            },
+            {
+              role: 'manager',
+              label: 'Gerente',
+              color: 'border-blue-200 bg-blue-50',
+              badgeColor: 'bg-blue-100 text-blue-800',
+              permissions: [
+                'Criar e editar artistas e shows',
+                'Gerenciar tarefas e releases',
+                'Visualizar financeiro',
+                'Sem acesso a configurações de org',
+              ],
+            },
+            {
+              role: 'member',
+              label: 'Membro',
+              color: 'border-green-200 bg-green-50',
+              badgeColor: 'bg-green-100 text-green-800',
+              permissions: [
+                'Criar e editar tarefas',
+                'Editar shows e releases atribuídos',
+                'Visualizar artistas e agenda',
+                'Sem acesso a financeiro',
+              ],
+            },
+            {
+              role: 'viewer',
+              label: 'Visualizador',
+              color: 'border-gray-200 bg-gray-50',
+              badgeColor: 'bg-gray-100 text-gray-800',
+              permissions: [
+                'Visualizar artistas e shows',
+                'Visualizar tarefas e agenda',
+                'Sem permissão para editar',
+                'Sem acesso a financeiro',
+              ],
+            },
+          ].map((r) => (
+            <div key={r.role} className={`rounded-xl border p-4 ${r.color}`}>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${r.badgeColor}`}>
+                {r.label}
+              </span>
+              <ul className="mt-3 space-y-1.5">
+                {r.permissions.map((p, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
+                    <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Members - Mobile Cards / Desktop Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6 sm:mb-8">
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
