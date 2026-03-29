@@ -115,6 +115,7 @@ export default function MainLayout({
       title: 'AJUDA',
       items: [
         { id: 'faq', label: 'Guia de Uso', icon: BookOpen, link: '/docs/manual-usuario' },
+        { id: 'faq-perguntas', label: 'Perguntas Frequentes', icon: BookOpen, link: '/docs/faq' },
         { id: 'profile', label: 'Perfil', icon: User },
       ]
     }

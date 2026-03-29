@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Calendar, Edit2, Save, X, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Edit2, Save, X, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+
+const ROLE_OPTIONS = [
+  'Artista',
+  'Produtor Musical',
+  'Gestor de Artistas',
+  'Booking Agent',
+  'Assessor de Imprensa',
+  'Diretor de Escritório',
+  'Fundador de Selo',
+  'Sócio / Co-fundador',
+  'Outro',
+];
 
 const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -14,10 +26,10 @@ const UserProfilePage: React.FC = () => {
     email: '',
     phone: '',
     role: '',
-    department: '',
     bio: ''
   });
   const [originalData, setOriginalData] = useState(profileData);
+  const [sendingReset, setSendingReset] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -41,8 +53,7 @@ const UserProfilePage: React.FC = () => {
           name: data.display_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
           email: user.email || '',
           phone: data.phone || '',
-          role: data.role || 'Gerente de Projetos',
-          department: data.department || 'Gestão',
+          role: data.role || '',
           bio: data.bio || ''
         };
         setProfileData(profile);
@@ -53,8 +64,7 @@ const UserProfilePage: React.FC = () => {
           name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
           email: user.email || '',
           phone: '',
-          role: 'Gerente de Projetos',
-          department: 'Gestão',
+          role: '',
           bio: ''
         };
         setProfileData(profile);
@@ -65,21 +75,18 @@ const UserProfilePage: React.FC = () => {
           user_id: user.id,
           display_name: profile.name,
           phone: '',
-          role: profile.role,
-          department: profile.department,
+          role: '',
           bio: '',
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
       }
     } catch (err) {
       console.error('Erro ao carregar perfil:', err);
-      // Fallback para dados do auth
       setProfileData({
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário',
         email: user?.email || '',
         phone: '',
-        role: 'Gerente de Projetos',
-        department: 'Gestão',
+        role: '',
         bio: ''
       });
     } finally {
@@ -98,7 +105,6 @@ const UserProfilePage: React.FC = () => {
           display_name: profileData.name,
           phone: profileData.phone,
           role: profileData.role,
-          department: profileData.department,
           bio: profileData.bio,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -124,6 +130,22 @@ const UserProfilePage: React.FC = () => {
   const handleCancel = () => {
     setProfileData(originalData);
     setIsEditing(false);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!profileData.email) return;
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profileData.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      if (error) throw error;
+      toast.success('E-mail de redefinição enviado! Verifique sua caixa de entrada.');
+    } catch (err) {
+      toast.error('Erro ao enviar e-mail. Tente novamente.');
+    } finally {
+      setSendingReset(false);
+    }
   };
 
   const getInitials = () => {
@@ -215,19 +237,8 @@ const UserProfilePage: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  E-mail
-                </div>
-              </label>
-              <p className="text-gray-900 px-4 py-2 bg-gray-50 rounded-lg">{profileData.email}</p>
-              <p className="text-xs text-gray-500 mt-1">E-mail não pode ser alterado</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4" />
-                  Telefone
+                  Telefone / WhatsApp
                 </div>
               </label>
               {isEditing ? (
@@ -243,24 +254,28 @@ const UserProfilePage: React.FC = () => {
               )}
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cargo
+                Função na plataforma
               </label>
               {isEditing ? (
-                <input
-                  type="text"
+                <select
                   value={profileData.role}
                   onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                />
+                >
+                  <option value="">Selecione sua função</option>
+                  {ROLE_OPTIONS.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
               ) : (
-                <p className="text-gray-900 px-4 py-2">{profileData.role}</p>
+                <p className="text-gray-900 px-4 py-2">{profileData.role || 'Não informado'}</p>
               )}
             </div>
           </div>
 
-          <div>
+          <div className="mb-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sobre
             </label>
@@ -268,12 +283,12 @@ const UserProfilePage: React.FC = () => {
               <textarea
                 value={profileData.bio}
                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                rows={4}
-                placeholder="Conte um pouco sobre você..."
+                rows={3}
+                placeholder="Conte um pouco sobre você e seu trabalho..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900 px-4 py-2 bg-gray-50 rounded-lg">
+              <p className="text-gray-900 px-4 py-2 bg-gray-50 rounded-lg min-h-[60px]">
                 {profileData.bio || 'Nenhuma informação adicional'}
               </p>
             )}
@@ -281,10 +296,13 @@ const UserProfilePage: React.FC = () => {
         </div>
 
         <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Informações da Conta</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Conta</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-gray-600">E-mail</span>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Mail className="w-4 h-4" />
+                <span>E-mail</span>
+              </div>
               <span className="text-gray-900 font-medium">{profileData.email}</span>
             </div>
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
@@ -293,12 +311,26 @@ const UserProfilePage: React.FC = () => {
                 {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
               </span>
             </div>
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <span className="text-gray-600">Status</span>
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 Ativo
               </span>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Senha</p>
+                <p className="text-xs text-gray-500">Receba um link de redefinição por e-mail</p>
+              </div>
+              <button
+                onClick={handlePasswordReset}
+                disabled={sendingReset}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+              >
+                {sendingReset ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                {sendingReset ? 'Enviando...' : 'Alterar Senha'}
+              </button>
             </div>
           </div>
         </div>
