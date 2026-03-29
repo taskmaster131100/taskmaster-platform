@@ -63,7 +63,7 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4">
               <BrainCircuit className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Marcos Menezes Analisou Seu Perfil!</h1>
+            <h1 className="text-3xl font-bold mb-2">TaskMaster Analisou Seu Perfil!</h1>
             <p className="text-white/80">Aqui está seu diagnóstico e plano de ação</p>
           </div>
 

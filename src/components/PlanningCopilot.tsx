@@ -145,7 +145,7 @@ async function callAIWithContext(
   const contextStr = formatContextForAI(platformContext);
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const systemPrompt = `Você é o Assistente Copiloto da plataforma TaskMaster, criada por Marcos Menezes.
+  const systemPrompt = `Você é o Assistente Copiloto da plataforma TaskMaster.
 Você é proativo, inteligente e conhece TUDO sobre a plataforma e os projetos do usuário.
 
 HOJE É: ${today}

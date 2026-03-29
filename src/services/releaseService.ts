@@ -64,12 +64,48 @@ export const RELEASE_STATUSES: { value: ReleaseStatus; label: string; color: str
 ];
 
 const DEFAULT_PHASES = [
-  { name: 'Pré-produção', description: 'Composição, arranjos e planejamento', color: '#6B7280', weeks_before: 12 },
-  { name: 'Produção', description: 'Gravação de instrumentos e vocais', color: '#3B82F6', weeks_before: 8 },
-  { name: 'Mixagem', description: 'Balanceamento e efeitos', color: '#EAB308', weeks_before: 6 },
-  { name: 'Masterização', description: 'Finalização e ajustes finais', color: '#F97316', weeks_before: 4 },
-  { name: 'Distribuição', description: 'Envio para plataformas digitais', color: '#10B981', weeks_before: 2 },
-  { name: 'Divulgação', description: 'Marketing e promoção', color: '#8B5CF6', weeks_before: 1 }
+  {
+    name: 'Pré-produção',
+    description: 'Composição, arranjos, planejamento geral, definição de equipe e orçamento',
+    color: '#6B7280',
+    weeks_before: 12
+  },
+  {
+    name: 'Produção',
+    description: 'Gravação de instrumentos e vocais, sessões de estúdio, acompanhamento técnico',
+    color: '#3B82F6',
+    weeks_before: 8
+  },
+  {
+    name: 'Mixagem & Masterização',
+    description: 'Balanceamento, efeitos, finalização sonora e aprovação do artista',
+    color: '#EAB308',
+    weeks_before: 6
+  },
+  {
+    name: 'Kit de Lançamento',
+    description: 'Capa (3000x3000px), press release, bio atualizada, fotos promo, ISRC/UPC, autorização de imagem e releases de colaboradores',
+    color: '#F97316',
+    weeks_before: 4
+  },
+  {
+    name: 'Distribuição',
+    description: 'Envio para distribuidora digital (Distrokid, TuneCore, ONErpm etc.), verificação em todas as plataformas, pré-save',
+    color: '#10B981',
+    weeks_before: 2
+  },
+  {
+    name: 'Pré-lançamento',
+    description: 'Campanha de pré-save, teasers, conteúdo de bastidores, contatos de imprensa, pitching para playlists editoriais',
+    color: '#8B5CF6',
+    weeks_before: 1
+  },
+  {
+    name: 'Semana do Lançamento',
+    description: 'Publicação nas plataformas, conteúdo de lançamento nas redes, live/stories de estreia, engajamento ativo e monitoramento',
+    color: '#EC4899',
+    weeks_before: 0
+  }
 ];
 
 export async function createRelease(releaseData: Partial<Release>): Promise<Release> {

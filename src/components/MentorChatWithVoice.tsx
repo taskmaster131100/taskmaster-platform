@@ -32,7 +32,7 @@ function getOpeningMessage(isFirst: boolean): string {
   if (!isFirst) return 'E aí! Tô aqui. O que você quer resolver hoje?';
   const stage = typeof localStorage !== 'undefined' ? localStorage.getItem('mentor_maturity_stage') : null;
   if (stage === 'dreamer') {
-    return 'Oi! Sou o Marcos Menezes. Antes de começar, me conta rapidinho: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
+    return 'Oi! Sou o Assistente TaskMaster. Antes de começar, me conta rapidinho: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
   }
   if (stage === 'band_manager') {
     return 'E aí! Já vi que você tem alguma operação rodando. Me conta: o que tá te travando mais agora — shows, lançamentos, financeiro, ou outra coisa?';
@@ -41,7 +41,7 @@ function getOpeningMessage(isFirst: boolean): string {
     return 'E aí! Com uma operação mais estruturada, o foco muda. Qual é o maior gargalo da sua operação agora?';
   }
   // Sem diagnóstico: identificação via chat
-  return 'Oi! Sou o Marcos Menezes. Antes de começar, me conta: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
+  return 'Oi! Sou o Assistente TaskMaster. Antes de começar, me conta: você é artista, produtor, trabalha em escritório de música, ou outra coisa?';
 }
 
 export default function MentorChatWithVoice({
@@ -234,8 +234,8 @@ export default function MentorChatWithVoice({
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Conversa com Marcos Menezes</h2>
-          <p className="text-white/80 text-sm">Chat com suporte a voz e texto</p>
+          <h2 className="text-xl font-bold">Assistente IA TaskMaster</h2>
+          <p className="text-white/80 text-sm">Orientação especializada por voz e texto</p>
         </div>
         <div className="text-3xl">🎤</div>
       </div>

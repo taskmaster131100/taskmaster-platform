@@ -46,8 +46,48 @@ interface TaskByStatus {
   color: string;
 }
 
+// Templates de análise disponíveis
+const ANALYSIS_TEMPLATES = [
+  {
+    id: 'operacao',
+    label: 'Operação Geral',
+    description: 'Visão consolidada: tarefas, projetos, artistas e saúde da operação',
+    icon: Target,
+    color: 'bg-blue-50 border-blue-200 text-blue-700'
+  },
+  {
+    id: 'financeiro',
+    label: 'Financeiro',
+    description: 'Receitas, despesas, fluxo de caixa e saúde financeira do período',
+    icon: DollarSign,
+    color: 'bg-green-50 border-green-200 text-green-700'
+  },
+  {
+    id: 'shows',
+    label: 'Shows',
+    description: 'Pipeline de shows, fechamentos, receita e comparativo de períodos',
+    icon: Mic2,
+    color: 'bg-orange-50 border-orange-200 text-orange-700'
+  },
+  {
+    id: 'lancamentos',
+    label: 'Lançamentos',
+    description: 'Status dos lançamentos, fases, prazos e materiais pendentes',
+    icon: Music,
+    color: 'bg-purple-50 border-purple-200 text-purple-700'
+  },
+  {
+    id: 'artista',
+    label: 'Artista',
+    description: 'Análise individual por artista: projetos, shows, finanças e operação',
+    icon: Users,
+    color: 'bg-pink-50 border-pink-200 text-pink-700'
+  },
+];
+
 const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [activeTemplate, setActiveTemplate] = useState<string>('operacao');
   const [metrics, setMetrics] = useState<Metrics>({
     totalTasks: 0,
     completedTasks: 0,
@@ -247,8 +287,8 @@ const ReportsPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Relatórios</h2>
-          <p className="text-gray-500 text-sm">Visão geral da operação</p>
+          <h2 className="text-2xl font-bold text-gray-900">Análise & Relatórios</h2>
+          <p className="text-gray-500 text-sm">Escolha o tipo de análise e o período</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -264,9 +304,39 @@ const ReportsPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Download className="w-4 h-4" />
-            Exportar PDF
+            Exportar
           </button>
         </div>
+      </div>
+
+      {/* Templates de Análise */}
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Tipo de análise</p>
+        <div className="flex flex-wrap gap-2">
+          {ANALYSIS_TEMPLATES.map((t) => {
+            const TIcon = t.icon;
+            const isActive = activeTemplate === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTemplate(t.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  isActive
+                    ? t.color + ' shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <TIcon className="w-4 h-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        {activeTemplate && (
+          <p className="text-xs text-gray-400 mt-2">
+            {ANALYSIS_TEMPLATES.find(t => t.id === activeTemplate)?.description}
+          </p>
+        )}
       </div>
 
       {/* KPI Cards */}
