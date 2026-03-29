@@ -42,24 +42,24 @@ const UserProfilePage: React.FC = () => {
     setLoading(true);
     try {
       // Tentar carregar do user_profiles no Supabase
+      // id em user_profiles É o auth user id (PK = id, não user_id)
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (data && !error) {
         const profile = {
-          name: data.display_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+          name: data.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
           email: user.email || '',
           phone: data.phone || '',
-          role: data.role || '',
+          role: data.job_title || '',
           bio: data.bio || ''
         };
         setProfileData(profile);
         setOriginalData(profile);
       } else {
-        // Fallback: usar dados do auth e criar perfil
         const profile = {
           name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
           email: user.email || '',
@@ -70,15 +70,14 @@ const UserProfilePage: React.FC = () => {
         setProfileData(profile);
         setOriginalData(profile);
 
-        // Tentar criar o perfil no Supabase
         await supabase.from('user_profiles').upsert({
-          user_id: user.id,
-          display_name: profile.name,
+          id: user.id,
+          full_name: profile.name,
           phone: '',
-          role: '',
+          job_title: '',
           bio: '',
           updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        }, { onConflict: 'id' });
       }
     } catch (err) {
       console.error('Erro ao carregar perfil:', err);
@@ -101,13 +100,13 @@ const UserProfilePage: React.FC = () => {
       const { error } = await supabase
         .from('user_profiles')
         .upsert({
-          user_id: user.id,
-          display_name: profileData.name,
+          id: user.id,
+          full_name: profileData.name,
           phone: profileData.phone,
-          role: profileData.role,
+          job_title: profileData.role,
           bio: profileData.bio,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        }, { onConflict: 'id' });
 
       if (error) throw error;
 
