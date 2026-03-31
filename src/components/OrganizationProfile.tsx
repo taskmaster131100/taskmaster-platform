@@ -144,26 +144,29 @@ export default function OrganizationProfile() {
     try {
       setSaving(true);
 
+      const payload: Record<string, any> = {
+        name: formData.name,
+        phone: formData.phone,
+        description: formData.description,
+        website: formData.website,
+        address: formData.address,
+        logo_url: formData.logo_url,
+        social_media: formData.social_media,
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('organizations')
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          description: formData.description,
-          website: formData.website,
-          address: formData.address,
-          logo_url: formData.logo_url,
-          social_media: formData.social_media,
-          updated_at: new Date().toISOString()
-        })
+        .update(payload)
         .eq('id', orgId);
 
       if (error) throw error;
 
       toast.success('Organização atualizada com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar dados da organização');
+      const msg = error?.message || error?.details || 'Tente novamente';
+      toast.error(`Erro ao salvar: ${msg}`);
     } finally {
       setSaving(false);
     }

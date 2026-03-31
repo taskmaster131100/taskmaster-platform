@@ -321,7 +321,7 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
 }
 
 export default function PlanningCopilot() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -423,7 +423,7 @@ export default function PlanningCopilot() {
       conversationHistory.current.push({ role: 'user', content: text });
       const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext!);
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
-      const processedMessage = processAIResponse(aiResponse);
+      const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao processar áudio.');
@@ -500,7 +500,7 @@ export default function PlanningCopilot() {
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
 
       // Função para processar resposta da IA e detectar criação de projeto
-      const processedMessage = processAIResponse(aiResponse);
+      const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
     } catch (error) {
       console.error('Erro ao chamar IA:', error);
@@ -549,7 +549,7 @@ export default function PlanningCopilot() {
   };
 
   // Função central para processar resposta da IA e detectar/criar projetos
-  const processAIResponse = (aiResponse: string): Message => {
+  const processAIResponse = async (aiResponse: string): Promise<Message> => {
     // Detectar criação de artista [CRIAR_ARTISTA]...[/CRIAR_ARTISTA]
     const artistTagMatch = aiResponse.match(/\[CRIAR_ARTISTA\]([\s\S]*?)\[\/CRIAR_ARTISTA\]/);
     if (artistTagMatch) {
@@ -646,40 +646,40 @@ export default function PlanningCopilot() {
           });
         }
 
-        // Criar o projeto via localDatabase
-        const newProject = localDatabase.createProject({
-          name: projectData.name || 'Novo Projeto',
-          description: projectData.description || '',
-          project_type: projectData.project_type || 'artist_management',
-          status: 'active',
-          startDate: new Date().toISOString(),
-          budget: Number(projectData.budget) || 0,
-          totalCost: 0,
-          ownerId: 'user_1',
-          members: [],
-          phases: projectData.phases || [],
-          whatsappGroup: '',
-          tasks: []
-        });
+        // Criar o projeto no Supabase
+        const { data: newProject, error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            name: projectData.name || 'Novo Projeto',
+            description: projectData.description || '',
+            status: 'active',
+            organization_id: organizationId,
+            created_by: user?.id,
+            budget: Number(projectData.budget) || 0,
+          })
+          .select('id')
+          .single();
+
+        if (projectError) throw projectError;
 
         // Criar tarefas para cada fase
         if (projectData.phases && newProject) {
-          projectData.phases.forEach((phase: any, phaseIndex: number) => {
+          for (const phase of projectData.phases) {
             if (phase.tasks) {
-              phase.tasks.forEach((task: any, taskIndex: number) => {
-                localDatabase.createTask({
-                  title: task.title,
-                  description: task.description || '',
-                  status: 'pending',
-                  priority: task.priority || 'medium',
-                  category: task.category || 'conteudo',
-                  projectId: newProject.id,
-                  phase: phase.name,
-                  order: taskIndex
-                });
-              });
+              const taskRows = phase.tasks.map((task: any, taskIndex: number) => ({
+                title: task.title,
+                description: task.description || '',
+                status: 'todo',
+                priority: task.priority || 'medium',
+                project_id: newProject.id,
+                organization_id: organizationId,
+                reporter_id: user?.id,
+                order_index: taskIndex,
+                labels: phase.name ? [phase.name] : [],
+              }));
+              await supabase.from('tasks').insert(taskRows);
             }
-          });
+          }
         }
 
         toast.success(`Projeto criado com sucesso!`);
@@ -744,7 +744,7 @@ Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
         platformContext
       );
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
-      const processedMessage = processAIResponse(aiResponse);
+      const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
     } catch (err) {
       toast.error('Erro ao criar projeto. Tente novamente.');
