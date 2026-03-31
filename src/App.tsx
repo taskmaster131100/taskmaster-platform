@@ -214,37 +214,46 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   }, [location]);
 
   const loadData = async () => {
-    // Don't initialize example data for real users
-    // Each user starts with clean slate
-
-    // Load projects, tasks, departments, teamMembers from local
-    const projectsData = localDatabase.getCollection<Project>('projects');
-    const tasksData = localDatabase.getCollection<Task>('tasks');
+    // Departments e teamMembers ainda sem tabela própria no Supabase — manter local
     const departmentsData = localDatabase.getCollection<Department>('departments');
     const teamMembersData = localDatabase.getCollection<TeamMember>('teamMembers');
-
-    setProjects(Array.isArray(projectsData) ? projectsData : []);
-    setTasks(Array.isArray(tasksData) ? tasksData : []);
     setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     setTeamMembers(Array.isArray(teamMembersData) ? teamMembersData : []);
 
-    // Load artists from Supabase (source of truth), scoped to current organization
+    // Projetos e tarefas: carregar do Supabase (source of truth)
     try {
-      let query = supabase.from('artists').select('*').order('name');
-      if (organizationId) {
-        query = query.eq('organization_id', organizationId);
-      }
-      const { data: supabaseArtists, error: artistsError } = await query;
-      if (!artistsError) {
-        setArtists((supabaseArtists || []) as Artist[]);
+      const projectsQuery = organizationId
+        ? supabase.from('projects').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
+        : supabase.from('projects').select('*').order('created_at', { ascending: false });
+      const { data: supabaseProjects } = await projectsQuery;
+      const projectsList = (supabaseProjects || []) as Project[];
+      setProjects(projectsList);
+      if (!selectedProjectId && projectsList.length > 0) {
+        setSelectedProjectId(projectsList[0].id);
       }
     } catch {
-      // Falha de rede: manter estado atual sem sobrescrever
+      // Falha de rede: manter estado atual
     }
 
-    // Select first project if none selected
-    if (!selectedProjectId && Array.isArray(projectsData) && projectsData.length > 0) {
-      setSelectedProjectId(projectsData[0].id);
+    try {
+      const tasksQuery = organizationId
+        ? supabase.from('tasks').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
+        : supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      const { data: supabaseTasks } = await tasksQuery;
+      setTasks((supabaseTasks || []) as Task[]);
+    } catch {
+      // Falha de rede: manter estado atual
+    }
+
+    // Artistas: Supabase, filtrado por organização
+    try {
+      const artistsQuery = organizationId
+        ? supabase.from('artists').select('*').eq('organization_id', organizationId).order('name')
+        : supabase.from('artists').select('*').order('name');
+      const { data: supabaseArtists } = await artistsQuery;
+      setArtists((supabaseArtists || []) as Artist[]);
+    } catch {
+      // Falha de rede: manter estado atual
     }
   };
 
@@ -257,37 +266,34 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     setShowCreateProject(true);
   };
 
-  const handleProjectSubmit = (projectData: any) => {
+  const handleProjectSubmit = async (projectData: any) => {
     try {
-      // Garantir que todos os campos obrigatórios estão presentes
-      const safeProjectData = {
-        name: projectData.name || 'Novo Projeto',
-        description: projectData.description || 'Descrição do projeto',
-        project_type: projectData.project_type || 'artist_management',
-        status: projectData.status || 'active',
-        startDate: projectData.startDate || new Date().toISOString(),
-        budget: Number(projectData.budget) || 0,
-        totalCost: 0,
-        ownerId: 'user_1',
-        members: [],
-        phases: projectData.phases || [],
-        whatsappGroup: projectData.whatsappGroup || '',
-        artistId: projectData.artistId,
-        tasks: []
-      };
+      const { data: newProject, error } = await supabase
+        .from('projects')
+        .insert({
+          name: projectData.name || 'Novo Projeto',
+          description: projectData.description || '',
+          status: projectData.status || 'active',
+          organization_id: organizationId,
+          created_by: user?.id,
+          budget: Number(projectData.budget) || 0,
+        })
+        .select('*')
+        .single();
 
-      const newProject = localDatabase.createProject(safeProjectData);
+      if (error) throw error;
+
       if (newProject) {
-        setProjects(prev => [...prev, newProject]);
+        setProjects(prev => [newProject as Project, ...prev]);
         setSelectedProjectId(newProject.id);
         setActiveTab('dashboard');
-        // Recarregar dados após criar projeto
+        toast.success('Projeto criado com sucesso!');
         loadData();
       }
       setShowCreateProject(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar projeto:', error);
-      toast.error('Erro ao criar projeto. Tente novamente.');
+      toast.error(`Erro ao criar projeto: ${error?.message || 'Tente novamente'}`);
     }
   };
 
@@ -416,7 +422,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
-  const projectTasks = tasks.filter(t => t.projectId === selectedProjectId);
+  // Supabase retorna project_id; tipo local usa projectId — suportar ambos
+  const projectTasks = tasks.filter(t => (t as any).project_id === selectedProjectId || t.projectId === selectedProjectId);
 
   // Check if accessing preview routes - bypass auth
   const isPreviewRoute = ENABLE_CLASSIC_ROUTES &&
