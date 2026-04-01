@@ -202,8 +202,10 @@ Quando o usuário conversar sobre uma ideia, projeto ou anexar um documento:
 3. TERCEIRO: Quando o usuário aceitar (sim, ok, pode criar, bora, etc.), responda com um JSON estruturado no formato abaixo:
 
 [CRIAR_PROJETO]
-{"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes"},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes"}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
+{"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","artist_name":"Nome Exato do Artista Confirmado","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes"},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes"}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
 [/CRIAR_PROJETO]
+
+IMPORTANTE: o campo "artist_name" deve conter exatamente o nome do artista confirmado na conversa. Use o nome da lista de artistas cadastrados. Se nenhum artista foi confirmado, omita o campo.
 
 CATEGORIAS DE TAREFAS (use nos campos category):
 - conteudo: Gravação, mixagem, masterização, produção musical
@@ -645,6 +647,15 @@ export default function PlanningCopilot() {
           });
         }
 
+        // Resolver artist_id a partir do nome confirmado na conversa
+        let resolvedArtistId: string | null = null;
+        if (projectData.artist_name && platformContext?.artists) {
+          const matched = platformContext.artists.find((a: any) =>
+            (a.name || a.stage_name || '').toLowerCase().trim() === projectData.artist_name.toLowerCase().trim()
+          );
+          if (matched) resolvedArtistId = matched.id;
+        }
+
         // Criar o projeto no Supabase
         const { data: newProject, error: projectError } = await supabase
           .from('projects')
@@ -655,6 +666,7 @@ export default function PlanningCopilot() {
             organization_id: organizationId,
             created_by: user?.id,
             budget: Number(projectData.budget) || 0,
+            ...(resolvedArtistId ? { artist_id: resolvedArtistId } : {}),
           })
           .select('id')
           .single();
