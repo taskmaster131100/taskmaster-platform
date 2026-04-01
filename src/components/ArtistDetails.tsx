@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -30,6 +30,8 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
   const [artistShows, setArtistShows] = useState<any[]>([]);
   const [artistReleases, setArtistReleases] = useState<any[]>([]);
   const [artistTasks, setArtistTasks] = useState<any[]>([]);
+  const [artistProjects, setArtistProjects] = useState<any[]>([]);
+  const [artistProjectTasks, setArtistProjectTasks] = useState<any[]>([]);
   const [loadingOps, setLoadingOps] = useState(false);
 
   useEffect(() => {
@@ -56,6 +58,35 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
     if (artistId) {
       loadArtist();
     }
+  }, [artistId]);
+
+  // Carrega projetos vinculados ao artista pelo artist_id (FK real)
+  useEffect(() => {
+    if (!artistId) return;
+    const loadProjects = async () => {
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name, status, description, created_at')
+        .eq('artist_id', artistId)
+        .neq('status', 'archived')
+        .order('created_at', { ascending: false })
+        .limit(6);
+      const list = projects || [];
+      setArtistProjects(list);
+
+      if (list.length > 0) {
+        const projectIds = list.map((p: any) => p.id);
+        const { data: ptasks } = await supabase
+          .from('tasks')
+          .select('id, title, status, priority, project_id, due_date, labels')
+          .in('project_id', projectIds)
+          .neq('status', 'done')
+          .order('due_date', { ascending: true })
+          .limit(10);
+        setArtistProjectTasks(ptasks || []);
+      }
+    };
+    loadProjects();
   }, [artistId]);
 
   // Carrega dados operacionais 360 após o artista estar disponível
@@ -224,25 +255,32 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
       </div>
 
       <div className="max-w-5xl mx-auto">
-        {/* Ações 360 do Artista */}
-        {!isEditing && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Ações 360 do Artista — contexto viaja junto */}
+        {!isEditing && artist && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <button
-              onClick={() => navigate('/planejamento')}
+              onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
               className="flex items-center gap-2 p-3 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-bold"
             >
               <Sparkles className="w-4 h-4 flex-shrink-0" />
               <span>Novo Projeto</span>
             </button>
             <button
-              onClick={() => navigate('/releases')}
+              onClick={() => navigate('/releases', { state: { artist: { name: artist.stage_name || artist.name } } })}
               className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-bold"
             >
               <Radio className="w-4 h-4 flex-shrink-0" />
               <span>Novo Lançamento</span>
             </button>
             <button
-              onClick={() => navigate('/music')}
+              onClick={() => navigate('/shows', { state: { artist: { name: artist.stage_name || artist.name } } })}
+              className="flex items-center gap-2 p-3 bg-white border border-gray-200 text-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-yellow-300 transition-all text-sm font-bold"
+            >
+              <Mic2 className="w-4 h-4 flex-shrink-0 text-yellow-600" />
+              <span>Novo Show</span>
+            </button>
+            <button
+              onClick={() => navigate('/music', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
               className="flex items-center gap-2 p-3 bg-white border border-gray-200 text-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-purple-300 transition-all text-sm font-bold"
             >
               <Music className="w-4 h-4 flex-shrink-0 text-purple-600" />
@@ -580,6 +618,112 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                 </ul>
               )}
             </div>
+
+            {/* Projetos Ativos */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-orange-500" />
+                  Projetos Ativos
+                  {artistProjects.length > 0 && (
+                    <span className="text-xs font-bold bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
+                      {artistProjects.length}
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Novo projeto
+                </button>
+              </div>
+              {artistProjects.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
+                  <Briefcase className="w-6 h-6 text-gray-300 mx-auto mb-1" />
+                  <p className="text-gray-400 text-sm">Nenhum projeto ativo</p>
+                  <button
+                    onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                    className="mt-2 text-xs text-purple-600 font-semibold hover:underline"
+                  >
+                    Criar com IA
+                  </button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {artistProjects.map(proj => (
+                    <li
+                      key={proj.id}
+                      onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600">{proj.name}</p>
+                        {proj.description && (
+                          <p className="text-xs text-gray-400 truncate mt-0.5">{proj.description}</p>
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                        proj.status === 'active' ? 'bg-green-100 text-green-700' :
+                        proj.status === 'planning' ? 'bg-blue-100 text-blue-700' :
+                        proj.status === 'completed' ? 'bg-gray-100 text-gray-500' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {proj.status === 'active' ? 'Ativo' :
+                         proj.status === 'planning' ? 'Planejamento' :
+                         proj.status === 'completed' ? 'Concluído' : proj.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Tarefas dos Projetos */}
+            {artistProjectTasks.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 text-purple-500" />
+                    Próximas Tarefas
+                    <span className="text-xs font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                      {artistProjectTasks.length}
+                    </span>
+                  </h3>
+                  <button
+                    onClick={() => navigate('/tarefas')}
+                    className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
+                  >
+                    Ver todas <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <ul className="space-y-2">
+                  {artistProjectTasks.map(task => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const isOverdue = task.due_date && task.due_date < today;
+                    const priorityColor = task.priority === 'high' || task.priority === 'urgent'
+                      ? 'bg-red-500' : task.priority === 'medium' ? 'bg-yellow-500' : 'bg-gray-400';
+                    return (
+                      <li key={task.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${priorityColor}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium truncate ${isOverdue ? 'text-red-700' : 'text-gray-800'}`}>
+                            {task.title}
+                          </p>
+                          {task.due_date && (
+                            <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                              {isOverdue ? 'Atrasada · ' : 'Prazo: '}
+                              {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </p>
+                          )}
+                        </div>
+                        {isOverdue && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             {/* Tarefas Abertas */}
             <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">

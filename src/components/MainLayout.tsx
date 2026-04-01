@@ -6,7 +6,7 @@ import {
   Sparkles, TrendingUp, CheckSquare,
   Shield, User, Mic2,
   BookOpen, MapPin, Disc3,
-  DollarSign, UsersRound, Bell, Search, Bot, Brain, PhoneCall
+  DollarSign, UsersRound, Bell, Search, Bot, Brain, PhoneCall, Megaphone
 } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 
@@ -65,8 +65,13 @@ export default function MainLayout({
         { id: 'calendar', label: 'Agenda', icon: Calendar },
       ]
     },
-    // PLANEJAMENTO: oculto até módulo estar pronto
-    // { title: 'PLANEJAMENTO', items: [{ id: 'planejamento', label: 'Planejamento', icon: Sparkles, link: '/planejamento' }, { id: 'biblioteca', label: 'Biblioteca', icon: FolderArchive, link: '/biblioteca' }] },
+    {
+      title: 'COPILOTO IA',
+      items: [
+        { id: 'planejamento', label: 'Planejamento IA', icon: Sparkles, link: '/planejamento' },
+        { id: 'marketing', label: 'Marketing', icon: Megaphone, link: '/marketing' },
+      ]
+    },
     {
       title: 'PRODUÇÃO MUSICAL',
       items: [

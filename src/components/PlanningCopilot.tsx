@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   Sparkles, Send, Bot, User, Loader2, CheckCircle2,
   Calendar, Music, Megaphone, Truck, DollarSign,
   Target, Zap, Paperclip, FileText, X, Users, Bell, Mic, MicOff
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './auth/AuthProvider';
 
@@ -203,8 +204,10 @@ Quando o usuário conversar sobre uma ideia, projeto ou anexar um documento:
 3. TERCEIRO: Quando o usuário aceitar (sim, ok, pode criar, bora, etc.), responda com um JSON estruturado no formato abaixo:
 
 [CRIAR_PROJETO]
-{"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","artist_name":"Nome Exato do Artista Confirmado","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes"},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes"}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
+{"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","artist_name":"Nome Exato do Artista Confirmado","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes","days_from_start":3},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes","days_from_start":7}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
 [/CRIAR_PROJETO]
+
+O campo "days_from_start" indica em quantos dias a partir de hoje essa tarefa deve estar concluída. Use valores realistas por fase (ex: tarefas da fase 1 entre 3-14 dias, fase 2 entre 15-30 dias, etc.).
 
 IMPORTANTE: o campo "artist_name" deve conter exatamente o nome do artista confirmado na conversa. Use o nome da lista de artistas cadastrados. Se nenhum artista foi confirmado, omita o campo.
 
@@ -324,6 +327,8 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
 
 export default function PlanningCopilot() {
   const { organizationId, user } = useAuth();
+  const location = useLocation();
+  const artistFromNav = (location.state as any)?.artist as { id?: string; name?: string } | undefined;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -350,13 +355,16 @@ export default function PlanningCopilot() {
 
       // Gerar mensagem inicial proativa baseada no contexto real
       try {
+        const greetingPrompt = artistFromNav?.name
+          ? `Estou abrindo o Copiloto a partir do artista "${artistFromNav.name}". Quero criar um projeto para esse artista. Me ajude a estruturar isso. Confirme que entendeu o artista e pergunte qual projeto eu quero criar.`
+          : 'Me dê um resumo rápido do que preciso fazer hoje e esta semana. Seja proativo e direto.';
         const greeting = await callAIWithContext(
-          [{ role: 'user', content: 'Me dê um resumo rápido do que preciso fazer hoje e esta semana. Seja proativo e direto.' }],
+          [{ role: 'user', content: greetingPrompt }],
           ctx
         );
         setMessages([{ role: 'assistant', content: greeting }]);
         conversationHistory.current = [
-          { role: 'user', content: 'Me dê um resumo rápido do que preciso fazer hoje e esta semana.' },
+          { role: 'user', content: greetingPrompt },
           { role: 'assistant', content: greeting }
         ];
       } catch (error) {
@@ -678,17 +686,29 @@ export default function PlanningCopilot() {
         if (projectData.phases && newProject) {
           for (const phase of projectData.phases) {
             if (phase.tasks) {
-              const taskRows = phase.tasks.map((task: any, taskIndex: number) => ({
-                title: task.title,
-                description: task.description || '',
-                status: 'todo',
-                priority: task.priority || 'medium',
-                project_id: newProject.id,
-                organization_id: organizationId,
-                reporter_id: user?.id,
-                order_index: taskIndex,
-                labels: phase.name ? [phase.name] : [],
-              }));
+              const today = new Date();
+              const taskRows = phase.tasks.map((task: any, taskIndex: number) => {
+                let dueDate: string | null = null;
+                if (task.days_from_start != null && Number.isFinite(task.days_from_start)) {
+                  const d = new Date(today);
+                  d.setDate(d.getDate() + Number(task.days_from_start));
+                  dueDate = d.toISOString().split('T')[0];
+                } else if (task.due_date) {
+                  dueDate = task.due_date;
+                }
+                return {
+                  title: task.title,
+                  description: task.description || '',
+                  status: 'todo',
+                  priority: task.priority || 'medium',
+                  project_id: newProject.id,
+                  organization_id: organizationId,
+                  reporter_id: user?.id,
+                  order_index: taskIndex,
+                  labels: phase.name ? [phase.name] : [],
+                  ...(dueDate ? { due_date: dueDate } : {}),
+                };
+              });
               await supabase.from('tasks').insert(taskRows);
             }
           }

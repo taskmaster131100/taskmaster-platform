@@ -60,41 +60,31 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   useEffect(() => {
     loadTasks();
 
-    // Subscribe to real-time changes
     const channel = supabase
       .channel('tasks-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks'
-        },
-        () => {
-          loadTasks();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadTasks();
+      })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    return () => { supabase.removeChannel(channel); };
+  }, [project?.id]);
 
   async function loadTasks() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('tasks').select('*').order('created_at', { ascending: false });
 
+      // Se há projeto em foco, mostrar apenas as tarefas desse projeto
+      if (project?.id) {
+        query = query.eq('project_id', project.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       setTasks(data || []);
-      if (onTasksChange) {
-        onTasksChange(data || []);
-      }
+      if (onTasksChange) onTasksChange(data || []);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -249,10 +239,18 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {!project?.id && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          Nenhum projeto selecionado — exibindo todas as tarefas. Selecione um projeto no menu lateral para ver as tarefas do projeto.
+        </div>
+      )}
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Tarefas</h2>
-          <p className="text-gray-600">{tasks.length} tarefas no total</p>
+          <p className="text-gray-600">
+            {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}{tasks.length} tarefas
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <select
