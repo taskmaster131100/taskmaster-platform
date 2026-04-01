@@ -49,6 +49,7 @@ async function loadPlatformContext(): Promise<PlatformContext> {
     const { data: projects } = await supabase
       .from('projects')
       .select('*')
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(10);
     context.projects = projects || [];

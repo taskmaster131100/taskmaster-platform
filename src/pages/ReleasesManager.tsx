@@ -22,6 +22,25 @@ import {
   getStatusColor
 } from '../services/releaseService';
 
+// Mapeamento de fases para o fluxo real de lançamento
+const PHASE_TABS = [
+  { id: 'all', label: 'Todos' },
+  { id: 'pre_launch', label: 'Pré-Lançamento' },
+  { id: 'launch', label: 'Em Lançamento' },
+  { id: 'divulgacao', label: 'Divulgação' },
+];
+
+const PRE_LAUNCH_STATUSES: ReleaseStatus[] = ['pre_production', 'production', 'mixing', 'mastering'];
+const LAUNCH_STATUSES: ReleaseStatus[] = ['distribution'];
+const DIVULGACAO_STATUSES: ReleaseStatus[] = ['released'];
+
+function getPhaseForRelease(status: ReleaseStatus): string {
+  if (PRE_LAUNCH_STATUSES.includes(status)) return 'pre_launch';
+  if (LAUNCH_STATUSES.includes(status)) return 'launch';
+  if (DIVULGACAO_STATUSES.includes(status)) return 'divulgacao';
+  return 'pre_launch';
+}
+
 export default function ReleasesManager() {
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +50,8 @@ export default function ReleasesManager() {
   const [phases, setPhases] = useState<ReleasePhase[]>([]);
   const [attachments, setAttachments] = useState<ReleaseAttachment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ReleaseStatus | ''>('');
+  const [phaseTab, setPhaseTab] = useState<string>('all');
+  const [artistFilter, setArtistFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | ''>('');
   const [uploading, setUploading] = useState(false);
 
@@ -49,15 +69,13 @@ export default function ReleasesManager() {
 
   useEffect(() => {
     loadReleases();
-  }, [statusFilter, typeFilter]);
+  }, [typeFilter]);
 
   const loadReleases = async () => {
     try {
       setLoading(true);
       const filters: any = {};
-      if (statusFilter) filters.status = statusFilter;
       if (typeFilter) filters.type = typeFilter;
-
       const data = await listReleases(filters);
       setReleases(data);
     } catch (error) {
@@ -177,10 +195,16 @@ export default function ReleasesManager() {
     setSelectedRelease(null);
   };
 
-  const filteredReleases = releases.filter(release =>
-    release.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    release.artist_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReleases = releases.filter(release => {
+    const matchesSearch = release.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      release.artist_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPhase = phaseTab === 'all' || getPhaseForRelease(release.status) === phaseTab;
+    const matchesArtist = !artistFilter || release.artist_name.toLowerCase().includes(artistFilter.toLowerCase());
+    return matchesSearch && matchesPhase && matchesArtist;
+  });
+
+  // Artistas únicos para o filtro
+  const uniqueArtists = Array.from(new Set(releases.map(r => r.artist_name))).sort();
 
   const getStatusBadge = (status: ReleaseStatus) => {
     const statusInfo = RELEASE_STATUSES.find(s => s.value === status);
@@ -246,8 +270,31 @@ export default function ReleasesManager() {
         </button>
       </div>
 
-      <div className="mb-6 flex gap-4">
-        <div className="flex-1 relative">
+      {/* Tabs de fase */}
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-xl w-fit">
+        {PHASE_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setPhaseTab(tab.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              phaseTab === tab.id
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+            {tab.id !== 'all' && (
+              <span className="ml-1.5 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+                {releases.filter(r => getPhaseForRelease(r.status) === tab.id).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtros */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
@@ -259,13 +306,13 @@ export default function ReleasesManager() {
         </div>
 
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ReleaseStatus | '')}
+          value={artistFilter}
+          onChange={(e) => setArtistFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
-          <option value="">Todos os Status</option>
-          {RELEASE_STATUSES.map(status => (
-            <option key={status.value} value={status.value}>{status.label}</option>
+          <option value="">Todos os Artistas</option>
+          {uniqueArtists.map(artist => (
+            <option key={artist} value={artist}>{artist}</option>
           ))}
         </select>
 

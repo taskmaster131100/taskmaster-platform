@@ -81,14 +81,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   async function loadEvents() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .order('event_date', { ascending: true });
+      const [calendarResult, tasksResult] = await Promise.all([
+        supabase.from('calendar_events').select('*').order('event_date', { ascending: true }),
+        supabase.from('tasks').select('id, title, due_date, status, priority, labels').not('due_date', 'is', null).neq('status', 'done')
+      ]);
 
-      if (error) throw error;
+      const calendarEvents: CalendarEvent[] = calendarResult.data || [];
 
-      setEvents(data || []);
+      // Converter tasks com due_date em eventos do calendário
+      const taskEvents: CalendarEvent[] = (tasksResult.data || [])
+        .filter(t => t.due_date)
+        .map(t => ({
+          id: `task-${t.id}`,
+          title: t.title,
+          event_date: t.due_date.split('T')[0],
+          event_type: 'deadline' as const,
+          color: t.priority === 'high' ? 'red' : t.priority === 'medium' ? 'yellow' : 'blue',
+          created_by: '',
+          created_at: '',
+          updated_at: '',
+          metadata: { source: 'task', task_id: t.id, labels: t.labels }
+        }));
+
+      setEvents([...calendarEvents, ...taskEvents]);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {

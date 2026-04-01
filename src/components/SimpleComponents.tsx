@@ -336,7 +336,7 @@ export const MarketingManager = () => {
         const { data, error } = await supabase.from('artists').select('*').order('name');
         if (error) throw error;
         setArtists(data || []);
-        if (data && data.length > 0) setSelectedArtist(data[0]);
+        // Não pre-selecionar artista: usuário escolhe explicitamente
       } catch (error) {
         console.error('Erro ao carregar artistas:', error);
       } finally {
@@ -360,7 +360,12 @@ export const MarketingManager = () => {
           {artists.length > 0 && (
             <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
               <span className="text-xs font-bold text-gray-400 uppercase ml-2">Artista:</span>
-              <select value={selectedArtist?.id || ''} onChange={(e) => setSelectedArtist(artists.find(a => a.id === e.target.value))} className="bg-transparent text-sm font-bold text-gray-900 focus:outline-none pr-8">
+              <select
+                value={selectedArtist?.id || ''}
+                onChange={(e) => setSelectedArtist(artists.find(a => a.id === e.target.value) || null)}
+                className="bg-transparent text-sm font-bold text-gray-900 focus:outline-none pr-8"
+              >
+                <option value="">Selecione o artista</option>
                 {artists.map(artist => (<option key={artist.id} value={artist.id}>{artist.name}</option>))}
               </select>
             </div>
@@ -368,14 +373,20 @@ export const MarketingManager = () => {
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-12 h-12 animate-spin text-pink-600" /></div>
-        ) : selectedArtist ? (
-          <AIMarketingAssistant artistName={selectedArtist.name} genre={selectedArtist.genre || 'Pop'} />
-        ) : (
+        ) : !selectedArtist ? (
           <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 text-center">
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum artista encontrado</h3>
-            <p className="text-gray-600">Cadastre um artista para usar o assistente de marketing.</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {artists.length === 0 ? 'Nenhum artista cadastrado' : 'Selecione um artista'}
+            </h3>
+            <p className="text-gray-600">
+              {artists.length === 0
+                ? 'Cadastre um artista para usar o assistente de marketing.'
+                : 'Escolha o artista no seletor acima para gerar conteúdo de marketing.'}
+            </p>
           </div>
+        ) : (
+          <AIMarketingAssistant artistName={selectedArtist.name} genre={selectedArtist.genre || 'Pop'} />
         )}
       </div>
     </div>

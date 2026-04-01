@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -224,6 +224,33 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
       </div>
 
       <div className="max-w-5xl mx-auto">
+        {/* Ações 360 do Artista */}
+        {!isEditing && (
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <button
+              onClick={() => navigate('/planejamento')}
+              className="flex items-center gap-2 p-3 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-bold"
+            >
+              <Sparkles className="w-4 h-4 flex-shrink-0" />
+              <span>Novo Projeto</span>
+            </button>
+            <button
+              onClick={() => navigate('/releases')}
+              className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-bold"
+            >
+              <Radio className="w-4 h-4 flex-shrink-0" />
+              <span>Novo Lançamento</span>
+            </button>
+            <button
+              onClick={() => navigate('/music')}
+              className="flex items-center gap-2 p-3 bg-white border border-gray-200 text-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-purple-300 transition-all text-sm font-bold"
+            >
+              <Music className="w-4 h-4 flex-shrink-0 text-purple-600" />
+              <span>Nova Música</span>
+            </button>
+          </div>
+        )}
+
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-100">
           <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
