@@ -37,11 +37,13 @@ export default function SetlistManager({ showId, artistId }: SetlistManagerProps
   async function loadSetlist() {
     try {
       setLoading(true);
-      // Simulação de carregamento - em um cenário real buscaria de uma tabela 'show_setlists'
-      // Por enquanto vamos usar um estado local para demonstração da funcionalidade 360
-      const savedSetlist = localStorage.getItem(`setlist_${showId}`);
-      if (savedSetlist) {
-        setItems(JSON.parse(savedSetlist));
+      const { data, error } = await supabase
+        .from('setlists')
+        .select('items')
+        .eq('show_id', showId)
+        .single();
+      if (data?.items) {
+        setItems(data.items as SetlistItem[]);
       }
     } catch (error) {
       console.error('Erro ao carregar setlist:', error);
@@ -70,7 +72,14 @@ export default function SetlistManager({ showId, artistId }: SetlistManagerProps
     }
   }
 
-  const addSongToSetlist = (song: any) => {
+  const saveSetlist = async (newItems: SetlistItem[]) => {
+    await supabase.from('setlists').upsert(
+      { show_id: showId, items: newItems, updated_at: new Date().toISOString() },
+      { onConflict: 'show_id' }
+    );
+  };
+
+  const addSongToSetlist = async (song: any) => {
     const newItem: SetlistItem = {
       id: Math.random().toString(36).substr(2, 9),
       song_id: song.id,
@@ -81,14 +90,14 @@ export default function SetlistManager({ showId, artistId }: SetlistManagerProps
     };
     const newItems = [...items, newItem];
     setItems(newItems);
-    localStorage.setItem(`setlist_${showId}`, JSON.stringify(newItems));
+    await saveSetlist(newItems);
     toast.success(`${song.title} adicionada ao setlist`);
   };
 
-  const removeItem = (id: string) => {
+  const removeItem = async (id: string) => {
     const newItems = items.filter(item => item.id !== id);
     setItems(newItems);
-    localStorage.setItem(`setlist_${showId}`, JSON.stringify(newItems));
+    await saveSetlist(newItems);
   };
 
   const calculateTotalTime = () => {

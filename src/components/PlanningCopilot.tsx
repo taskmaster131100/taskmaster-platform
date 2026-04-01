@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
-import { localDatabase } from '../services/localDatabase';
 import { useAuth } from './auth/AuthProvider';
 
 interface Message {

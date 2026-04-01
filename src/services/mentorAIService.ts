@@ -13,14 +13,27 @@ import { supabase } from '../lib/supabase';
  * São 3 queries paralelas — custo mínimo, impacto máximo.
  */
 /**
- * Lê o perfil de maturidade salvo no localStorage (gravado pelo MentorDiagnosticOnboarding).
+ * Lê o perfil de maturidade do Supabase (fonte primária) ou localStorage (fallback).
  * Retorna instruções extras para o system prompt do Mentor.
  */
-export function buildMaturityContext(): string {
+export async function buildMaturityContext(): Promise<string> {
+  let stage: string | null = null;
   try {
-    const stage = localStorage.getItem('mentor_maturity_stage');
-    const profile = localStorage.getItem('mentor_maturity_profile');
-    if (!stage) return '';
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('maturity_stage, maturity_profile')
+        .eq('id', user.id)
+        .single();
+      if (data?.maturity_stage) stage = data.maturity_stage;
+    }
+  } catch { /* fallback to localStorage */ }
+
+  if (!stage) {
+    try { stage = localStorage.getItem('mentor_maturity_stage'); } catch { }
+  }
+  if (!stage) return '';
 
     const stageLabels: Record<string, string> = {
       dreamer: 'Iniciante / Sonhador — ainda sem estrutura, começando do zero',
@@ -60,12 +73,9 @@ export function buildMaturityContext(): string {
 - Pergunte sobre equipe, estrutura e metas do negócio`,
     };
 
-    const label = stageLabels[stage] || stage;
-    const instructions = stageInstructions[stage] || '';
-    return `\n## CONTEXTO DO PERFIL DO USUÁRIO\nNível de maturidade: ${label}${instructions}\n`;
-  } catch {
-    return '';
-  }
+  const label = stageLabels[stage] || stage;
+  const instructions = stageInstructions[stage] || '';
+  return `\n## CONTEXTO DO PERFIL DO USUÁRIO\nNível de maturidade: ${label}${instructions}\n`;
 }
 
 export async function buildUserContext(): Promise<string> {
@@ -380,7 +390,7 @@ export async function generateMentorResponse(
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + buildMaturityContext() + contextInfo },
+          { role: 'system', content: MARCOS_MENEZES_SYSTEM_PROMPT + await buildMaturityContext() + contextInfo },
           ...historyMessages,
           { role: 'user', content: userQuestion }
         ],

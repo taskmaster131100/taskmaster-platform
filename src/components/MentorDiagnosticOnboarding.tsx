@@ -10,6 +10,8 @@ import {
   ActionPlan
 } from '../services/maturityDiagnosisService';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './auth/AuthProvider';
 
 interface MentorDiagnosticOnboardingProps {
   onComplete?: (stage: MaturityStage, profile: UserProfile) => void;
@@ -22,6 +24,7 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const currentQuestion = DIAGNOSTIC_QUESTIONS[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / DIAGNOSTIC_QUESTIONS.length) * 100;
@@ -41,7 +44,16 @@ export default function MentorDiagnosticOnboarding({ onComplete }: MentorDiagnos
       const userProfile = getUserProfile(calculatedStage);
       const plan = generateActionPlan(calculatedStage);
 
-      // Persistir perfil para o Mentor AI usar nas próximas conversas
+      // Persistir perfil no Supabase e localStorage (fallback)
+      if (user?.id) {
+        supabase.from('user_profiles').upsert({
+          id: user.id,
+          maturity_stage: calculatedStage,
+          maturity_profile: userProfile.stageLabel,
+        }, { onConflict: 'id' }).then(({ error }) => {
+          if (error) console.error('Erro ao salvar perfil de maturidade:', error);
+        });
+      }
       try {
         localStorage.setItem('mentor_maturity_stage', calculatedStage);
         localStorage.setItem('mentor_maturity_profile', userProfile.stageLabel);

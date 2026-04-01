@@ -123,7 +123,7 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
 async function getMaturityContext(): Promise<string> {
   try {
     const { buildMaturityContext } = await import('./mentorAIService');
-    return buildMaturityContext();
+    return await buildMaturityContext();
   } catch { return ''; }
 }
 

@@ -23,22 +23,42 @@ interface InputListItem {
   stand: string;
 }
 
+const DEFAULT_INPUT_LIST: InputListItem[] = [
+  { id: '1', channel: '01', instrument: 'Bumbo', mic_line: 'Beta 52', insert: 'Comp/Gate', stand: 'Small' },
+  { id: '2', channel: '02', instrument: 'Caixa', mic_line: 'SM57', insert: 'Comp', stand: 'Small' },
+  { id: '3', channel: '03', instrument: 'Voz Principal', mic_line: 'KSM9 / Wireless', insert: 'Comp/Verb', stand: 'Tall' },
+];
+
+const DEFAULT_LIGHTING = {
+  moving_heads: 8,
+  par_leds: 12,
+  smoke_machine: true,
+  notes: 'Preferência por cores quentes no início do show.'
+};
+
 export default function TechnicalRider({ showId, artistId, showData }: TechnicalRiderProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'audio' | 'lighting' | 'stage'>('audio');
-  
-  const [inputList, setInputList] = useState<InputListItem[]>([
-    { id: '1', channel: '01', instrument: 'Bumbo', mic_line: 'Beta 52', insert: 'Comp/Gate', stand: 'Small' },
-    { id: '2', channel: '02', instrument: 'Caixa', mic_line: 'SM57', insert: 'Comp', stand: 'Small' },
-    { id: '3', channel: '03', instrument: 'Voz Principal', mic_line: 'KSM9 / Wireless', insert: 'Comp/Verb', stand: 'Tall' },
-  ]);
 
-  const [lightingNeeds, setLightingNeeds] = useState({
-    moving_heads: 8,
-    par_leds: 12,
-    smoke_machine: true,
-    notes: 'Preferência por cores quentes no início do show.'
-  });
+  const [inputList, setInputList] = useState<InputListItem[]>(DEFAULT_INPUT_LIST);
+  const [lightingNeeds, setLightingNeeds] = useState(DEFAULT_LIGHTING);
+
+  useEffect(() => {
+    async function loadRider() {
+      const { data } = await supabase
+        .from('technical_riders')
+        .select('input_list, lighting_needs')
+        .eq('show_id', showId)
+        .single();
+      if (data) {
+        if (data.input_list && Array.isArray(data.input_list) && data.input_list.length > 0)
+          setInputList(data.input_list as InputListItem[]);
+        if (data.lighting_needs && Object.keys(data.lighting_needs).length > 0)
+          setLightingNeeds(data.lighting_needs as typeof DEFAULT_LIGHTING);
+      }
+    }
+    loadRider();
+  }, [showId]);
 
   const addInputRow = () => {
     const newChannel = (inputList.length + 1).toString().padStart(2, '0');
@@ -59,8 +79,11 @@ export default function TechnicalRider({ showId, artistId, showData }: Technical
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulação de salvamento
-      localStorage.setItem(`rider_${showId}`, JSON.stringify({ inputList, lightingNeeds }));
+      const { error } = await supabase.from('technical_riders').upsert(
+        { show_id: showId, input_list: inputList, lighting_needs: lightingNeeds, updated_at: new Date().toISOString() },
+        { onConflict: 'show_id' }
+      );
+      if (error) throw error;
       toast.success('Rider técnico salvo com sucesso!');
     } catch (error) {
       toast.error('Erro ao salvar rider');
