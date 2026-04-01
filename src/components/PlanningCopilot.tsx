@@ -684,20 +684,22 @@ export default function PlanningCopilot() {
 
         toast.success(`Projeto criado com sucesso!`);
 
-        // Notificar App.tsx para recarregar a lista de projetos
-        window.dispatchEvent(new CustomEvent('taskmaster:project-created'));
+        // Notificar App.tsx para recarregar a lista de projetos e selecionar o novo
+        window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
+          detail: { projectId: newProject.id, projectName: projectData.name }
+        }));
 
         // Montar mensagem amigável (SEM código, SEM JSON)
-        const friendlyMessage = `✅ **Pronto! Seu projeto "${projectData.name}" foi transformado em um fluxo de trabalho completo dentro da plataforma!**
+        const friendlyMessage = `✅ **Pronto! Seu projeto "${projectData.name}" foi transformado em um fluxo de trabalho completo!**
 
-📊 **Resumo do que foi criado:**
-• **${totalPhases} fases** de trabalho organizadas
+📊 **O que foi criado:**
+• **${totalPhases} fases** organizadas
 • **${totalTasks} tarefas** distribuídas por categoria
 ${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}
 
-Todas as tarefas já estão no seu Dashboard, organizadas por fase e prioridade.
+O projeto já está disponível no **Dashboard** — clique em "Projetos" para ver todas as tarefas organizadas.
 
-📅 **A partir de que dia você quer começar a trabalhar nesse projeto?** Assim eu configuro as notificações e lembretes para você receber os avisos das atividades que precisam ser feitas em cada etapa.`;
+Agora me conta: quem é o responsável pela produção musical? Tem alguém na equipe que precisa saber desse projeto?`;
 
         return {
           role: 'assistant' as const,

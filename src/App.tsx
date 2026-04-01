@@ -127,9 +127,15 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     };
   }, []);
 
-  // Recarregar projetos quando o Planning Copilot criar um novo
+  // Recarregar projetos quando o Planning Copilot criar um novo e selecionar o projeto criado
   useEffect(() => {
-    const handleProjectCreated = () => loadData();
+    const handleProjectCreated = async (e: Event) => {
+      await loadData();
+      const detail = (e as CustomEvent).detail;
+      if (detail?.projectId) {
+        setSelectedProjectId(detail.projectId);
+      }
+    };
     window.addEventListener('taskmaster:project-created', handleProjectCreated);
     return () => window.removeEventListener('taskmaster:project-created', handleProjectCreated);
   }, []);
@@ -415,6 +421,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const handleSelectArtist = (artistId: string) => {
     setShowArtistDetails(artistId);
+    setActiveTab('artists');
+    navigate('/artists');
   };
 
   const handleCreateArtist = () => {

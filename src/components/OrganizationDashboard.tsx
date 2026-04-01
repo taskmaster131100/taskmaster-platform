@@ -102,13 +102,13 @@ export default function OrganizationDashboard({
       const artistsList = artistsData || [];
       setArtists(artistsList);
 
-      // 2. Carregar Projetos/Planejamentos
-      const { data: planningsData } = await supabase
-        .from('plannings')
-        .select('*');
-      
-      const planningsList = planningsData || [];
-      setProjects(planningsList);
+      // 2. Carregar Projetos: tabela projects (Copilot/wizard) + plannings (PlanningDashboard)
+      const [{ data: projectsData }, { data: planningsData }] = await Promise.all([
+        supabase.from('projects').select('id, name, status, created_at'),
+        supabase.from('plannings').select('id, name, status, created_at')
+      ]);
+      const combinedProjects = [...(projectsData || []), ...(planningsData || [])];
+      setProjects(combinedProjects);
 
       // 3. Carregar Shows
       const { data: showsData } = await supabase
@@ -182,8 +182,8 @@ export default function OrganizationDashboard({
         {
           icon: Rocket,
           label: 'Projetos',
-          value: planningsList.length.toString(),
-          subtitle: `${planningsList.length} planejamentos`,
+          value: combinedProjects.length.toString(),
+          subtitle: `${combinedProjects.length} projeto${combinedProjects.length !== 1 ? 's' : ''} ativo${combinedProjects.length !== 1 ? 's' : ''}`,
           color: 'from-orange-500 to-orange-600',
           iconColor: 'text-orange-600',
           onClick: () => navigate('/planejamento')
@@ -566,14 +566,14 @@ export default function OrganizationDashboard({
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Ações Rápidas</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
-            onClick={onCreateProject}
+            onClick={() => navigate('/planejamento')}
             className="bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] text-white p-5 rounded-xl shadow-sm hover:shadow-lg transition-all text-left group"
           >
             <div className="flex items-center gap-3 mb-2">
               <Sparkles className="w-6 h-6" />
               <span className="font-bold text-sm">Criar Projeto com IA</span>
             </div>
-            <p className="text-xs text-white/80">Converse com o Marcos e crie seu projeto automaticamente</p>
+            <p className="text-xs text-white/80">Converse com a IA e transforme sua ideia em fluxo de trabalho</p>
           </button>
           <button
             onClick={onCreateArtist}
