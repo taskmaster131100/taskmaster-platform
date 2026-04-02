@@ -218,6 +218,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('mentor-consulting');
     } else if (path === '/planejamento' || path.startsWith('/planejamento/')) {
       setActiveTab('planejamento');
+      // Limpa o overlay de ArtistDetails — sem isso, o showArtistDetails sobrepõe o renderContent
+      setShowArtistDetails(null);
     }
   }, [location]);
 

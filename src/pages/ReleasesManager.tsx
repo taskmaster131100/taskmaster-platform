@@ -304,6 +304,23 @@ export default function ReleasesManager() {
         ))}
       </div>
 
+      {/* Chip de artista ativo (quando navegação veio de um artista) */}
+      {artistFilter && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-gray-500">Filtrando por artista:</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
+            {artistFilter}
+            <button
+              onClick={() => setArtistFilter('')}
+              className="ml-1 text-purple-500 hover:text-purple-800 transition-colors"
+              aria-label="Limpar filtro de artista"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </span>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="mb-6 flex flex-wrap gap-3">
         <div className="flex-1 min-w-[200px] relative">
@@ -318,7 +335,7 @@ export default function ReleasesManager() {
         </div>
 
         <select
-          value={artistFilter}
+          value={uniqueArtists.includes(artistFilter) ? artistFilter : ''}
           onChange={(e) => setArtistFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
         >
@@ -343,8 +360,16 @@ export default function ReleasesManager() {
       {filteredReleases.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum lançamento encontrado</h3>
-          <p className="text-gray-600 mb-4">Crie seu primeiro lançamento para começar</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {artistFilter
+              ? `Nenhum lançamento encontrado para "${artistFilter}"`
+              : 'Nenhum lançamento encontrado'}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {artistFilter
+              ? 'Clique em "Novo Lançamento" para criar o primeiro lançamento deste artista.'
+              : 'Crie seu primeiro lançamento para começar'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

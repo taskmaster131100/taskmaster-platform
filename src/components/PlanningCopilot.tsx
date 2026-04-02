@@ -325,11 +325,21 @@ async function extractPDFText(typedArray: Uint8Array): Promise<string> {
   return fullText;
 }
 
+// Greeting estático exibido imediatamente — sem esperar API
+function buildStaticGreeting(artistName?: string): string {
+  if (artistName) {
+    return `Entendido! Estou com o contexto do artista **${artistName}** carregado.\n\nQual projeto você quer criar para ${artistName}? Me descreva a ideia — pode ser um lançamento, turnê, clipe, EP ou qualquer outro projeto — e eu estruturo tudo em fases e tarefas.`;
+  }
+  return `Olá! Sou o **Copiloto TaskMaster** — sua IA de planejamento musical.\n\nPosso te ajudar a:\n• 📁 Criar projetos completos com fases, tarefas e prazos\n• 📎 Analisar documentos e transformar em fluxo de trabalho\n• 🎤 Vincular projetos aos seus artistas, shows e lançamentos\n• 📅 Organizar entregáveis por fase com datas automáticas\n\n**Me conta: o que você quer estruturar hoje?** Pode descrever a ideia ou anexar um documento.`;
+}
+
 export default function PlanningCopilot() {
   const { organizationId, user } = useAuth();
   const location = useLocation();
   const artistFromNav = (location.state as any)?.artist as { id?: string; name?: string } | undefined;
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: buildStaticGreeting(artistFromNav?.name) }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -345,35 +355,16 @@ export default function PlanningCopilot() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conversationHistory = useRef<{ role: string; content: string }[]>([]);
 
-  // Carregar contexto da plataforma ao montar
+  // Carregar contexto da plataforma ao montar — sem bloquear o UI com chamada de IA
   useEffect(() => {
     const init = async () => {
       setContextLoading(true);
       const ctx = await loadPlatformContext();
       setPlatformContext(ctx);
       setContextLoading(false);
-
-      // Gerar mensagem inicial proativa baseada no contexto real
-      try {
-        const greetingPrompt = artistFromNav?.name
-          ? `Estou abrindo o Copiloto a partir do artista "${artistFromNav.name}". Quero criar um projeto para esse artista. Me ajude a estruturar isso. Confirme que entendeu o artista e pergunte qual projeto eu quero criar.`
-          : 'Me dê um resumo rápido do que preciso fazer hoje e esta semana. Seja proativo e direto.';
-        const greeting = await callAIWithContext(
-          [{ role: 'user', content: greetingPrompt }],
-          ctx
-        );
-        setMessages([{ role: 'assistant', content: greeting }]);
-        conversationHistory.current = [
-          { role: 'user', content: greetingPrompt },
-          { role: 'assistant', content: greeting }
-        ];
-      } catch (error) {
-        console.error('Erro ao gerar saudação:', error);
-        setMessages([{
-          role: 'assistant',
-          content: 'Olá! Sou seu Copiloto TaskMaster. Estou aqui para te ajudar com seus projetos, shows, tarefas e equipe. Me pergunte qualquer coisa ou anexe um documento para eu analisar!'
-        }]);
-      }
+      // Greeting já exibido estaticamente — não faz chamada de API no mount
+      // O histórico de conversa começa com o greeting estático como assistente
+      conversationHistory.current = [];
     };
     init();
   }, []);
