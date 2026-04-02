@@ -61,8 +61,10 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
   }, [artistId]);
 
   // Carrega projetos vinculados ao artista pelo artist_id (FK real)
+  // Recarrega também quando o Copilot cria um projeto via evento customizado
   useEffect(() => {
     if (!artistId) return;
+
     const loadProjects = async () => {
       const { data: projects } = await supabase
         .from('projects')
@@ -84,9 +86,17 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
           .order('due_date', { ascending: true })
           .limit(10);
         setArtistProjectTasks(ptasks || []);
+      } else {
+        setArtistProjectTasks([]);
       }
     };
+
     loadProjects();
+
+    // Recarrega quando o Copilot cria um projeto (sem precisar sair e voltar do artista)
+    const handleProjectCreated = () => loadProjects();
+    window.addEventListener('taskmaster:project-created', handleProjectCreated);
+    return () => window.removeEventListener('taskmaster:project-created', handleProjectCreated);
   }, [artistId]);
 
   // Carrega dados operacionais 360 após o artista estar disponível

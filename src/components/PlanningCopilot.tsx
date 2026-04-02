@@ -643,6 +643,14 @@ export default function PlanningCopilot() {
 
     // Se detectou projeto, criar silenciosamente e mostrar mensagem amigável
     if (projectData && projectData.name) {
+      // Guard: organizationId precisa estar carregado
+      if (!organizationId) {
+        toast.error('Organização ainda carregando. Aguarde um momento e tente novamente.');
+        return {
+          role: 'assistant' as const,
+          content: 'Ainda estou carregando os dados da sua organização. Por favor, aguarde alguns segundos e me peça para criar o projeto novamente.'
+        };
+      }
       try {
         // Contar total de tarefas
         let totalTasks = 0;

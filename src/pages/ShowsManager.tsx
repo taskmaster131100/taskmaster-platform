@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -19,6 +20,7 @@ import TechnicalRider from '../components/TechnicalRider';
 import FinancialSplit from '../components/FinancialSplit';
 
 export default function ShowsManager() {
+  const location = useLocation();
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<ShowStatus | ''>('');
@@ -28,6 +30,14 @@ export default function ShowsManager() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeView, setActiveView] = useState<'details' | 'roadmap' | 'setlist' | 'rider' | 'finance'>('details');
+
+  // Pré-filtrar pelo artista se a navegação veio do contexto do artista
+  useEffect(() => {
+    const artistFromNav = (location.state as any)?.artist;
+    if (artistFromNav?.name) {
+      setSearchTerm(artistFromNav.name);
+    }
+  }, []);
 
   useEffect(() => {
     loadShows();

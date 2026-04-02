@@ -216,6 +216,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('mentor-dashboard');
     } else if (path === '/mentor-consulting') {
       setActiveTab('mentor-consulting');
+    } else if (path === '/planejamento' || path.startsWith('/planejamento/')) {
+      setActiveTab('planejamento');
     }
   }, [location]);
 
@@ -402,6 +404,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       navigate('/meetings');
     } else if (tab === 'marketing') {
       navigate('/marketing');
+    } else if (tab === 'planejamento') {
+      navigate('/planejamento');
     } else if (tab === 'production') {
       navigate('/production');
     } else if (tab === 'ai') {
@@ -723,6 +727,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         );
       }
     }
+    if (activeTab === 'planejamento') return <PlanejamentoPage />;
     if (activeTab === 'presentation') return <Presentation />;
     if (activeTab === 'profile') return <UserProfile />;
     if (activeTab === 'preferences') return <UserPreferences />;
@@ -831,21 +836,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             <Templates />
           </React.Suspense>
         } />
-        <Route path="/planejamento" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <PlanejamentoPage />
-          </React.Suspense>
-        } />
-        <Route path="/planejamento/dashboard" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <PlanningDashboard />
-          </React.Suspense>
-        } />
-        <Route path="/planejamento/aprovacoes" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <ApprovalsPage />
-          </React.Suspense>
-        } />
+        {/* /planejamento agora é renderizado dentro do MainLayout via activeTab='planejamento' */}
         <Route path="/validator" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <FunctionalityValidator />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, Music, Search, Filter, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle } from 'lucide-react';
 import {
   Release,
@@ -42,6 +43,7 @@ function getPhaseForRelease(status: ReleaseStatus): string {
 }
 
 export default function ReleasesManager() {
+  const location = useLocation();
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -66,6 +68,16 @@ export default function ReleasesManager() {
     status: 'pre_production' as ReleaseStatus,
     notes: ''
   });
+
+  // Pré-filtrar pelo artista se a navegação veio do contexto do artista
+  useEffect(() => {
+    const artistFromNav = (location.state as any)?.artist;
+    if (artistFromNav?.name) {
+      setArtistFilter(artistFromNav.name);
+      // Pré-preencher o form de novo lançamento com o artista
+      setFormData(prev => ({ ...prev, artist_name: artistFromNav.name }));
+    }
+  }, []);
 
   useEffect(() => {
     loadReleases();
