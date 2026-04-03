@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown, Upload, File, Image, Headphones, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -104,11 +105,18 @@ const SECTIONS_TEMPLATES = [
 ];
 
 export default function MusicHub() {
+  const location = useLocation();
+  const [artistContext, setArtistContext] = useState<{ id?: string; name?: string } | null>(null);
   const [activeTab, setActiveTab] = useState('repertoire');
   const [songs, setSongs] = useState<Song[]>([]);
   const [arrangements, setArrangements] = useState<Arrangement[]>([]);
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
+
+  useEffect(() => {
+    const artistFromNav = (location.state as any)?.artist;
+    if (artistFromNav?.name) setArtistContext(artistFromNav);
+  }, []);
 
   const [showSongModal, setShowSongModal] = useState(false);
   const [showArrangementModal, setShowArrangementModal] = useState(false);
@@ -279,6 +287,23 @@ export default function MusicHub() {
           <h1 className="text-3xl font-bold text-gray-900">Produção Musical</h1>
           <p className="text-gray-600 mt-1">Gerencie repertório, arranjos, ensaios e setlists</p>
         </div>
+
+        {/* Banner de contexto do artista quando navegação vier do artista */}
+        {artistContext?.name && (
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-purple-50 border border-purple-200 rounded-xl">
+            <div className="flex items-center gap-2 text-sm text-purple-800 font-semibold">
+              <Music className="w-4 h-4" />
+              Contexto do artista: <span className="font-bold">{artistContext.name}</span>
+            </div>
+            <button
+              onClick={() => setArtistContext(null)}
+              className="text-purple-400 hover:text-purple-700 transition-colors"
+              aria-label="Limpar contexto do artista"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

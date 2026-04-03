@@ -5,7 +5,7 @@ import {
   Target, Zap, Paperclip, FileText, X, Users, Bell, Mic, MicOff
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './auth/AuthProvider';
 
@@ -336,6 +336,7 @@ function buildStaticGreeting(artistName?: string): string {
 export default function PlanningCopilot() {
   const { organizationId, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const artistFromNav = (location.state as any)?.artist as { id?: string; name?: string } | undefined;
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: buildStaticGreeting(artistFromNav?.name) }
@@ -713,7 +714,11 @@ export default function PlanningCopilot() {
           }
         }
 
-        toast.success(`Projeto criado com sucesso!`);
+        // Toast com ação de navegação direta para as tarefas
+        toast.success(`Projeto "${projectData.name}" criado!`, {
+          action: { label: 'Ver Tarefas →', onClick: () => navigate('/tasks') },
+          duration: 8000,
+        });
 
         // Notificar App.tsx para recarregar a lista de projetos e selecionar o novo
         window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
@@ -721,16 +726,16 @@ export default function PlanningCopilot() {
         }));
 
         // Montar mensagem amigável (SEM código, SEM JSON)
-        const friendlyMessage = `✅ **Pronto! Seu projeto "${projectData.name}" foi transformado em um fluxo de trabalho completo!**
+        const friendlyMessage = `✅ **Pronto! Projeto "${projectData.name}" criado com sucesso!**
 
 📊 **O que foi criado:**
 • **${totalPhases} fases** organizadas
-• **${totalTasks} tarefas** distribuídas por categoria
+• **${totalTasks} tarefas** com prazos automáticos
 ${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}
 
-O projeto já está disponível no **Dashboard** — clique em "Projetos" para ver todas as tarefas organizadas.
+➡️ **Clique em "Tarefas" no menu lateral** para ver e gerenciar todas as tarefas do projeto.
 
-Agora me conta: quem é o responsável pela produção musical? Tem alguém na equipe que precisa saber desse projeto?`;
+Quer continuar? Posso ajudar a definir responsáveis, prioridades ou identificar o que precisa de atenção primeiro.`;
 
         return {
           role: 'assistant' as const,

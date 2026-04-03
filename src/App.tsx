@@ -190,6 +190,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('artists');
     } else if (path === '/shows') {
       setActiveTab('shows');
+      setShowArtistDetails(null);
+    } else if (path === '/releases') {
+      setActiveTab('releases');
+      setShowArtistDetails(null);
+    } else if (path === '/music' || path.startsWith('/music/')) {
+      setActiveTab('music');
+      setShowArtistDetails(null);
     } else if (path === '/whatsapp') {
       setActiveTab('whatsapp');
     } else if (path === '/google') {
@@ -396,6 +403,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       navigate('/artists');
     } else if (tab === 'shows') {
       navigate('/shows');
+    } else if (tab === 'releases') {
+      navigate('/releases');
+    } else if (tab === 'music') {
+      navigate('/music');
     } else if (tab === 'producao-musical') {
       navigate('/producao-musical');
     } else if (tab === 'whatsapp') {
@@ -742,16 +753,9 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'reports') {
       return <ReportsPage />;
     }
-    if (activeTab === 'shows') {
-      return (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">🎤 Shows</h2>
-          <p className="text-gray-600">
-            Gerencie apresentações, turnês e eventos dos artistas.
-          </p>
-        </div>
-      );
-    }
+    if (activeTab === 'shows') return <ShowsManager />;
+    if (activeTab === 'releases') return <ReleasesManager />;
+    if (activeTab === 'music') return <MusicHub />;
 
     return null;
   };
@@ -861,16 +865,6 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           </React.Suspense>
         } />
 
-        <Route path="/music" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <MusicHub />
-          </React.Suspense>
-        } />
-        <Route path="/music/:artistId" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <MusicHub />
-          </React.Suspense>
-        } />
 
         <Route path="/biblioteca" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
@@ -890,11 +884,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           </React.Suspense>
         } />
 
-        <Route path="/shows" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <ShowsManager />
-          </React.Suspense>
-        } />
+        {/* /shows, /releases, /music agora dentro do MainLayout via activeTab */}
 
         <Route path="/docs/manual-usuario" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
@@ -944,11 +934,6 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           </React.Suspense>
         } />
 
-        <Route path="/releases" element={
-          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <ReleasesManager />
-          </React.Suspense>
-        } />
 
         <Route path="/team" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
