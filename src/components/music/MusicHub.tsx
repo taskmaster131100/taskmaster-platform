@@ -180,10 +180,11 @@ export default function MusicHub() {
   const [songFiles, setSongFiles] = useState<UploadedFile[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
 
-  const handleFileUpload = (files: FileList | null, target: 'arrangement' | 'song') => {
+  const handleFileUpload = async (files: FileList | null, target: 'arrangement' | 'song') => {
     if (!files || files.length === 0) return;
     const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/aac', 'audio/mp4', 'audio/x-m4a'];
     const maxSize = 50 * 1024 * 1024; // 50MB
+    setUploadingFile(true);
     const newFiles: UploadedFile[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -195,15 +196,23 @@ export default function MusicHub() {
         toast.error(`Arquivo muito grande: ${file.name}. Máximo 50MB.`);
         continue;
       }
-      // Criar URL local para preview (em produção usaria Supabase Storage)
-      const url = URL.createObjectURL(file);
-      newFiles.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url
-      });
+      try {
+        // Upload para Supabase Storage (bucket 'files', público)
+        const { data: { user } } = await supabase.auth.getUser();
+        const ext = file.name.split('.').pop();
+        const path = `music/${user?.id || 'anon'}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: uploadError } = await supabase.storage.from('files').upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('files').getPublicUrl(path);
+        newFiles.push({ name: file.name, type: file.type, size: file.size, url: publicUrl });
+      } catch {
+        // Fallback para URL local se upload falhar (só funciona na sessão atual)
+        const url = URL.createObjectURL(file);
+        newFiles.push({ name: file.name, type: file.type, size: file.size, url });
+        toast.error(`Erro ao fazer upload de "${file.name}" — salvo localmente (temporário)`);
+      }
     }
+    setUploadingFile(false);
     if (target === 'arrangement') {
       setArrangementFiles(prev => [...prev, ...newFiles]);
     } else {

@@ -65,11 +65,11 @@ async function loadPlatformContext(): Promise<PlatformContext> {
       .limit(10);
     context.shows = shows || [];
 
-    // Tarefas pendentes
+    // Tarefas pendentes (tabela real: tasks, não show_tasks)
     const { data: tasks } = await supabase
-      .from('show_tasks')
-      .select('*')
-      .neq('status', 'completed')
+      .from('tasks')
+      .select('id, title, status, priority, due_date, project_id, workstream')
+      .not('status', 'eq', 'done')
       .order('due_date', { ascending: true })
       .limit(20);
     context.tasks = tasks || [];
@@ -701,6 +701,7 @@ export default function PlanningCopilot() {
                   description: task.description || '',
                   status: 'todo',
                   priority: task.priority || 'medium',
+                  workstream: task.category || 'geral',
                   project_id: newProject.id,
                   organization_id: organizationId,
                   reporter_id: user?.id,

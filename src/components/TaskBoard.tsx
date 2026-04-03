@@ -10,13 +10,14 @@ interface Task {
   title: string;
   description?: string;
   status: string;
+  priority?: string;
   workstream?: string;
-  task_type?: string;
-  requires_approval: boolean;
-  deadline?: string;
-  created_by: string;
-  assigned_to?: string;
-  metadata?: any;
+  project_id?: string;
+  due_date?: string;
+  reporter_id?: string;
+  assignee_id?: string;
+  labels?: string[];
+  order_index?: number;
   created_at: string;
   updated_at: string;
 }
@@ -145,15 +146,12 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           title: taskData.title.trim(),
           description: taskData.description?.trim() || null,
           status: 'todo',
-          workstream: taskData.workstream,
-          requires_approval: false,
-          deadline: taskData.deadline || null,
-          created_by: user.user.id,
-          assigned_to: taskData.assigned_to || null,
-          metadata: {
-            source: 'taskboard',
-            createdAt: new Date().toISOString()
-          }
+          priority: taskData.priority || 'medium',
+          workstream: taskData.workstream || 'geral',
+          due_date: taskData.deadline || null,
+          reporter_id: user.user.id,
+          assignee_id: taskData.assigned_to || null,
+          ...(project?.id ? { project_id: project.id } : {}),
         });
 
       if (error) throw error;
@@ -169,9 +167,21 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
   async function handleUpdateTask(taskId: string, updates: Partial<Task>) {
     try {
+      // Enviar apenas colunas que existem no banco real
+      const safeUpdates: any = {};
+      if (updates.title !== undefined) safeUpdates.title = updates.title;
+      if (updates.description !== undefined) safeUpdates.description = updates.description;
+      if (updates.status !== undefined) safeUpdates.status = updates.status;
+      if (updates.priority !== undefined) safeUpdates.priority = updates.priority;
+      if (updates.workstream !== undefined) safeUpdates.workstream = updates.workstream;
+      if ((updates as any).due_date !== undefined) safeUpdates.due_date = (updates as any).due_date;
+      if ((updates as any).deadline !== undefined) safeUpdates.due_date = (updates as any).deadline;
+      if ((updates as any).assignee_id !== undefined) safeUpdates.assignee_id = (updates as any).assignee_id;
+      if ((updates as any).assigned_to !== undefined) safeUpdates.assignee_id = (updates as any).assigned_to;
+
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update(safeUpdates)
         .eq('id', taskId);
 
       if (error) throw error;
@@ -210,23 +220,18 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
     handleUpdateTask(draggableId, { status: newStatus });
   }
 
-  const getPriorityColor = (metadata: any) => {
-    const priority = metadata?.priority || 'medium';
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-700';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'low':
-        return 'bg-green-100 text-green-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+  const getPriorityColor = (task: Task) => {
+    switch (task.priority || 'medium') {
+      case 'high':   return 'bg-red-100 text-red-700';
+      case 'medium': return 'bg-yellow-100 text-yellow-700';
+      case 'low':    return 'bg-green-100 text-green-700';
+      default:       return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const getPriorityLabel = (metadata: any) => {
-    const priority = metadata?.priority || 'medium';
-    return priority === 'high' ? 'Alta' : priority === 'medium' ? 'Média' : 'Baixa';
+  const getPriorityLabel = (task: Task) => {
+    const p = task.priority || 'medium';
+    return p === 'high' ? 'Alta' : p === 'medium' ? 'Média' : 'Baixa';
   };
 
   if (loading) {
@@ -337,25 +342,20 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                   </p>
                                 )}
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task.metadata)}`}>
-                                    {getPriorityLabel(task.metadata)}
+                                  <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task)}`}>
+                                    {getPriorityLabel(task)}
                                   </span>
-                                  {task.workstream && (
+                                  {task.workstream && task.workstream !== 'geral' && (
                                     <span className="text-xs px-2 py-1 rounded bg-blue-100 text-[#FF9B6A]">
-                                      {workstreams.find(w => w.id === task.workstream)?.label}
+                                      {workstreams.find(w => w.id === task.workstream)?.label || task.workstream}
                                     </span>
                                   )}
-                                  {task.deadline && (
+                                  {(task as any).due_date && (
                                     <span className="text-xs text-gray-500">
-                                      {new Date(task.deadline).toLocaleDateString('pt-BR')}
+                                      {new Date((task as any).due_date).toLocaleDateString('pt-BR')}
                                     </span>
                                   )}
                                 </div>
-                                {task.metadata?.source === 'planning' && (
-                                  <div className="mt-2 text-xs text-purple-600 flex items-center gap-1">
-                                    📋 Criada pelo Planejamento
-                                  </div>
-                                )}
                               </div>
                             )}
                           </Draggable>
