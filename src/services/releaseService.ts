@@ -1,22 +1,37 @@
 import { supabase } from '../lib/supabase';
 
+// ── Tipos alinhados ao schema real do banco ───────────────────────────────────
+export type ReleaseType = 'single' | 'ep' | 'album' | 'remix' | 'live';
+export type ReleaseStatus = 'pre_production' | 'production' | 'mixing' | 'mastering' | 'distribution' | 'released';
+export type PhaseStatus = 'pending' | 'in_progress' | 'completed';
+export type FileType = 'cover' | 'press_kit' | 'track' | 'document';
+
 export interface Release {
   id: string;
   title: string;
-  artist_name: string;
+  // artist
+  artist_id?: string;
+  artist_name: string;  // derivado do join
+  // release
   release_type: ReleaseType;
   release_date: string;
-  isrc?: string;
+  // campos do banco real
   upc?: string;
-  distributor?: string;
-  cover_url?: string;
+  label?: string;       // distribuidora
+  distributor?: string; // alias de label
+  catalog_number?: string;
+  cover_art_url?: string;
+  cover_url?: string;   // alias
+  release_notes?: string;
+  notes?: string;       // alias de release_notes
   status: ReleaseStatus;
-  notes?: string;
-  created_by: string;
+  organization_id?: string;
+  org_id?: string;
   created_at: string;
   updated_at: string;
 }
 
+// ReleasePhase ainda não existe no banco — mantemos interface para compatibilidade
 export interface ReleasePhase {
   id: string;
   release_id: string;
@@ -41,308 +56,258 @@ export interface ReleaseAttachment {
   uploaded_at: string;
 }
 
-export type ReleaseType = 'single' | 'ep' | 'album' | 'remix' | 'live';
-export type ReleaseStatus = 'pre_production' | 'production' | 'mixing' | 'mastering' | 'distribution' | 'released';
-export type PhaseStatus = 'pending' | 'in_progress' | 'completed';
-export type FileType = 'cover' | 'press_kit' | 'track' | 'document';
-
 export const RELEASE_TYPES: { value: ReleaseType; label: string }[] = [
   { value: 'single', label: 'Single' },
-  { value: 'ep', label: 'EP' },
-  { value: 'album', label: 'Álbum' },
-  { value: 'remix', label: 'Remix' },
-  { value: 'live', label: 'Ao Vivo' }
+  { value: 'ep',     label: 'EP' },
+  { value: 'album',  label: 'Álbum' },
+  { value: 'remix',  label: 'Remix' },
+  { value: 'live',   label: 'Ao Vivo' },
 ];
 
 export const RELEASE_STATUSES: { value: ReleaseStatus; label: string; color: string }[] = [
-  { value: 'pre_production', label: 'Pré-produção', color: 'gray' },
-  { value: 'production', label: 'Produção', color: 'blue' },
-  { value: 'mixing', label: 'Mixagem', color: 'yellow' },
-  { value: 'mastering', label: 'Masterização', color: 'orange' },
-  { value: 'distribution', label: 'Distribuição', color: 'green' },
-  { value: 'released', label: 'Lançado', color: 'purple' }
+  { value: 'pre_production', label: 'Pré-produção',  color: 'gray' },
+  { value: 'production',     label: 'Produção',      color: 'blue' },
+  { value: 'mixing',         label: 'Mixagem',       color: 'yellow' },
+  { value: 'mastering',      label: 'Masterização',  color: 'orange' },
+  { value: 'distribution',   label: 'Distribuição',  color: 'green' },
+  { value: 'released',       label: 'Lançado',       color: 'purple' },
 ];
 
-const DEFAULT_PHASES = [
-  {
-    name: 'Pré-produção',
-    description: 'Composição, arranjos, planejamento geral, definição de equipe e orçamento',
-    color: '#6B7280',
-    weeks_before: 12
-  },
-  {
-    name: 'Produção',
-    description: 'Gravação de instrumentos e vocais, sessões de estúdio, acompanhamento técnico',
-    color: '#3B82F6',
-    weeks_before: 8
-  },
-  {
-    name: 'Mixagem & Masterização',
-    description: 'Balanceamento, efeitos, finalização sonora e aprovação do artista',
-    color: '#EAB308',
-    weeks_before: 6
-  },
-  {
-    name: 'Kit de Lançamento',
-    description: 'Capa (3000x3000px), press release, bio atualizada, fotos promo, ISRC/UPC, autorização de imagem e releases de colaboradores',
-    color: '#F97316',
-    weeks_before: 4
-  },
-  {
-    name: 'Distribuição',
-    description: 'Envio para distribuidora digital (Distrokid, TuneCore, ONErpm etc.), verificação em todas as plataformas, pré-save',
-    color: '#10B981',
-    weeks_before: 2
-  },
-  {
-    name: 'Pré-lançamento',
-    description: 'Campanha de pré-save, teasers, conteúdo de bastidores, contatos de imprensa, pitching para playlists editoriais',
-    color: '#8B5CF6',
-    weeks_before: 1
-  },
-  {
-    name: 'Semana do Lançamento',
-    description: 'Publicação nas plataformas, conteúdo de lançamento nas redes, live/stories de estreia, engajamento ativo e monitoramento',
-    color: '#EC4899',
-    weeks_before: 0
-  }
-];
+// ── Helpers internos ──────────────────────────────────────────────────────────
 
-export async function createRelease(releaseData: Partial<Release>): Promise<Release> {
+async function getUserOrgId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
+  const { data } = await supabase
+    .from('user_organizations')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .single();
+  if (!data?.organization_id) throw new Error('Organização não encontrada');
+  return data.organization_id;
+}
+
+async function resolveArtistId(artistName?: string, artistId?: string): Promise<string | null> {
+  if (artistId) return artistId;
+  if (!artistName) return null;
+  const { data } = await supabase
+    .from('artists')
+    .select('id')
+    .ilike('name', artistName.trim())
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+function normalizeRelease(row: any): Release {
+  const artistName = row.artists?.stage_name || row.artists?.name || '';
+  return {
+    id: row.id,
+    title: row.title || '',
+    artist_id: row.artist_id,
+    artist_name: artistName,
+    release_type: row.release_type as ReleaseType,
+    release_date: row.release_date ? String(row.release_date).substring(0, 10) : '',
+    upc: row.upc || row.upc_ean || '',
+    label: row.label || '',
+    distributor: row.label || '',
+    catalog_number: row.catalog_number || '',
+    cover_art_url: row.cover_art_url || '',
+    cover_url: row.cover_art_url || '',
+    release_notes: row.release_notes || '',
+    notes: row.release_notes || '',
+    status: row.status as ReleaseStatus,
+    organization_id: row.organization_id || row.org_id,
+    org_id: row.org_id || row.organization_id,
+    created_at: row.created_at || '',
+    updated_at: row.updated_at || '',
+  };
+}
+
+// ── CRUD ─────────────────────────────────────────────────────────────────────
+
+export async function createRelease(
+  releaseData: Partial<Release> & { artist_name?: string; distributor?: string; notes?: string }
+): Promise<Release> {
+  const orgId = await getUserOrgId();
+  const artistId = await resolveArtistId(releaseData.artist_name, releaseData.artist_id);
+
+  const dbRecord: any = {
+    organization_id: orgId,
+    org_id: orgId,
+    artist_id: artistId,
+    title: releaseData.title,
+    release_type: releaseData.release_type || 'single',
+    release_date: releaseData.release_date || null,
+    upc: releaseData.upc || null,
+    label: releaseData.label || releaseData.distributor || null,
+    catalog_number: releaseData.catalog_number || null,
+    cover_art_url: releaseData.cover_art_url || releaseData.cover_url || null,
+    release_notes: releaseData.release_notes || releaseData.notes || null,
+    status: releaseData.status || 'pre_production',
+  };
 
   const { data, error } = await supabase
     .from('releases')
-    .insert({
-      ...releaseData,
-      created_by: user.id
-    })
-    .select()
+    .insert(dbRecord)
+    .select('*, artists(name, stage_name)')
     .single();
 
   if (error) throw error;
 
-  await createDefaultPhases(data.id, data.release_date);
-  await createCalendarEvent(data);
+  // Evento no calendário (não bloqueia se falhar)
+  createCalendarEvent(data).catch(() => {});
 
-  return data;
+  return normalizeRelease(data);
 }
 
-async function createDefaultPhases(releaseId: string, releaseDate: string): Promise<void> {
-  const releaseDateObj = new Date(releaseDate);
-
-  const phases = DEFAULT_PHASES.map((phase, index) => {
-    const endDate = new Date(releaseDateObj);
-    endDate.setDate(endDate.getDate() - (phase.weeks_before * 7));
-
-    const startDate = new Date(endDate);
-    if (index < DEFAULT_PHASES.length - 1) {
-      const nextPhase = DEFAULT_PHASES[index + 1];
-      startDate.setDate(startDate.getDate() - ((phase.weeks_before - nextPhase.weeks_before) * 7));
-    } else {
-      startDate.setDate(startDate.getDate() - 7);
-    }
-
-    return {
-      release_id: releaseId,
-      name: phase.name,
-      description: phase.description,
-      order_index: index,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
-      status: 'pending' as PhaseStatus,
-      color: phase.color
-    };
-  });
-
-  await supabase.from('release_phases').insert(phases);
-}
-
-async function createCalendarEvent(release: Release): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('calendar_events').insert({
-    title: `Lançamento: ${release.title}`,
-    description: `${release.artist_name} - ${RELEASE_TYPES.find(t => t.value === release.release_type)?.label}`,
-    event_date: release.release_date,
-    event_type: 'deadline',
-    color: 'purple',
-    created_by: user.id,
-    metadata: {
-      release_id: release.id,
-      artist_name: release.artist_name,
-      release_type: release.release_type
-    }
-  });
-}
-
-export async function updateRelease(id: string, updates: Partial<Release>): Promise<Release> {
-  const { data, error } = await supabase
-    .from('releases')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Sincronizar evento no calendário se data ou título mudaram
-  if (updates.release_date || updates.title) {
-    await supabase
-      .from('calendar_events')
-      .update({
-        title: `Lançamento: ${data.title}`,
-        description: `${data.artist_name} - ${RELEASE_TYPES.find(t => t.value === data.release_type)?.label || data.release_type}`,
-        event_date: data.release_date,
-        metadata: {
-          release_id: data.id,
-          artist_name: data.artist_name,
-          release_type: data.release_type
-        }
-      })
-      .eq('metadata->>release_id', id);
+export async function updateRelease(id: string, updates: Partial<Release> & { artist_name?: string; distributor?: string; notes?: string }): Promise<Release> {
+  const dbUpdates: any = {};
+  if (updates.title !== undefined)        dbUpdates.title = updates.title;
+  if (updates.release_type !== undefined) dbUpdates.release_type = updates.release_type;
+  if (updates.release_date !== undefined) dbUpdates.release_date = updates.release_date;
+  if (updates.status !== undefined)       dbUpdates.status = updates.status;
+  if (updates.upc !== undefined)          dbUpdates.upc = updates.upc;
+  if (updates.label !== undefined || updates.distributor !== undefined) {
+    dbUpdates.label = updates.label || updates.distributor;
+  }
+  if (updates.release_notes !== undefined || updates.notes !== undefined) {
+    dbUpdates.release_notes = updates.release_notes || updates.notes;
+  }
+  if (updates.cover_art_url !== undefined || updates.cover_url !== undefined) {
+    dbUpdates.cover_art_url = updates.cover_art_url || updates.cover_url;
+  }
+  if (updates.artist_name) {
+    const aid = await resolveArtistId(updates.artist_name, updates.artist_id);
+    if (aid) dbUpdates.artist_id = aid;
   }
 
-  return data;
+  const { data, error } = await supabase
+    .from('releases')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select('*, artists(name, stage_name)')
+    .single();
+
+  if (error) throw error;
+  return normalizeRelease(data);
 }
 
 export async function deleteRelease(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('releases')
-    .delete()
-    .eq('id', id);
-
+  const { error } = await supabase.from('releases').delete().eq('id', id);
   if (error) throw error;
-
-  await supabase
-    .from('calendar_events')
-    .delete()
-    .eq('metadata->>release_id', id);
+  await supabase.from('calendar_events').delete().eq('metadata->>release_id', id).catch(() => {});
 }
 
 export async function listReleases(filters?: {
-  status?: ReleaseStatus;
   type?: ReleaseType;
+  status?: ReleaseStatus;
+  artist?: string;
+  artist_id?: string;
 }): Promise<Release[]> {
   let query = supabase
     .from('releases')
-    .select('*')
-    .order('release_date', { ascending: false });
+    .select('*, artists(name, stage_name)')
+    .order('release_date', { ascending: true });
 
-  if (filters?.status) {
-    query = query.eq('status', filters.status);
-  }
+  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.type)   query = query.eq('release_type', filters.type);
 
-  if (filters?.type) {
-    query = query.eq('release_type', filters.type);
+  if (filters?.artist_id) {
+    query = query.eq('artist_id', filters.artist_id);
+  } else if (filters?.artist) {
+    const { data: artistData } = await supabase
+      .from('artists')
+      .select('id')
+      .ilike('name', `%${filters.artist}%`)
+      .limit(1)
+      .maybeSingle();
+    if (artistData?.id) query = query.eq('artist_id', artistData.id);
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
-  return data || [];
+  return (data || []).map(normalizeRelease);
 }
 
 export async function getReleaseById(id: string): Promise<Release | null> {
   const { data, error } = await supabase
     .from('releases')
-    .select('*')
+    .select('*, artists(name, stage_name)')
     .eq('id', id)
     .maybeSingle();
-
   if (error) throw error;
-  return data;
+  return data ? normalizeRelease(data) : null;
 }
 
+// ── Fases (tabela não existe no banco ainda — stubs seguros) ──────────────────
 export async function listPhases(releaseId: string): Promise<ReleasePhase[]> {
-  const { data, error } = await supabase
-    .from('release_phases')
-    .select('*')
-    .eq('release_id', releaseId)
-    .order('order_index', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return [];
 }
 
 export async function updatePhase(id: string, updates: Partial<ReleasePhase>): Promise<ReleasePhase> {
-  const { data, error } = await supabase
-    .from('release_phases')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  throw new Error('Tabela release_phases não disponível neste ambiente');
 }
 
-export async function uploadAttachment(
-  releaseId: string,
-  file: File,
-  fileType: FileType
-): Promise<ReleaseAttachment> {
+// ── Anexos ────────────────────────────────────────────────────────────────────
+export async function uploadAttachment(releaseId: string, file: File, fileType: FileType): Promise<ReleaseAttachment> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-  const filePath = `releases/${releaseId}/${fileType}/${fileName}`;
+  const ext = file.name.split('.').pop();
+  const path = `releases/${releaseId}/${fileType}_${Date.now()}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('files')
-    .upload(filePath, file);
-
+  const { error: uploadError } = await supabase.storage.from('files').upload(path, file);
   if (uploadError) throw uploadError;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('files')
-    .getPublicUrl(filePath);
+  const { data: { publicUrl } } = supabase.storage.from('files').getPublicUrl(path);
 
-  const { data, error } = await supabase
-    .from('release_attachments')
-    .insert({
-      release_id: releaseId,
-      file_type: fileType,
-      file_url: publicUrl,
-      file_name: file.name,
-      file_size: file.size,
-      uploaded_by: user.id
-    })
-    .select()
-    .single();
-
-  if (error) {
-    await supabase.storage.from('files').remove([filePath]);
-    throw error;
+  // Se for capa, atualiza cover_art_url na release
+  if (fileType === 'cover') {
+    await supabase.from('releases').update({ cover_art_url: publicUrl }).eq('id', releaseId);
   }
 
-  return data;
+  return {
+    id: crypto.randomUUID(),
+    release_id: releaseId,
+    file_type: fileType,
+    file_url: publicUrl,
+    file_name: file.name,
+    file_size: file.size,
+    uploaded_by: user.id,
+    uploaded_at: new Date().toISOString(),
+  };
 }
 
 export async function listAttachments(releaseId: string): Promise<ReleaseAttachment[]> {
-  const { data, error } = await supabase
-    .from('release_attachments')
-    .select('*')
-    .eq('release_id', releaseId)
-    .order('uploaded_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return [];
 }
 
+// ── Calendário ────────────────────────────────────────────────────────────────
+async function createCalendarEvent(row: any): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const orgId = row.organization_id || row.org_id;
+  if (!orgId) return;
+  const artistName = row.artists?.stage_name || row.artists?.name || '';
+  await supabase.from('calendar_events').insert({
+    organization_id: orgId,
+    artist_id: row.artist_id || null,
+    created_by: user.id,
+    title: `Lançamento: ${row.title}`,
+    description: `${artistName} — ${row.release_type?.toUpperCase()}`,
+    event_date: row.release_date || null,
+    event_type: 'release',
+    color: 'pink',
+    metadata: { release_id: row.id, artist_name: artistName, status: row.status },
+  });
+}
+
+// ── Utilitários ───────────────────────────────────────────────────────────────
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  }).format(date);
+  const d = new Date(dateString + (dateString.length === 10 ? 'T00:00:00' : ''));
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(d);
 }
 
 export function getStatusColor(status: ReleaseStatus): string {
-  const statusInfo = RELEASE_STATUSES.find(s => s.value === status);
-  return statusInfo?.color || 'gray';
+  return RELEASE_STATUSES.find(s => s.value === status)?.color || 'gray';
 }

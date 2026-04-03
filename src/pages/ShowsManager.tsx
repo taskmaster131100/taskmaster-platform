@@ -122,12 +122,16 @@ export default function ShowsManager() {
     loadShows();
   };
 
-  const filteredShows = shows.filter(show =>
-    searchTerm === '' ||
-    show.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    show.artist_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    show.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredShows = shows.filter(show => {
+    if (searchTerm === '') return true;
+    const s = searchTerm.toLowerCase();
+    return (
+      show.title.toLowerCase().includes(s) ||
+      (show.artist_name || '').toLowerCase().includes(s) ||
+      (show.city || show.venue_address || '').toLowerCase().includes(s) ||
+      (show.venue || '').toLowerCase().includes(s)
+    );
+  });
 
   const getStatusBadgeColor = (status: ShowStatus) => {
     const colors = {

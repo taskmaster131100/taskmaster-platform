@@ -183,26 +183,26 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
         const [showsResult, releasesResult, totalShowsResult, totalReleasesResult] = await Promise.all([
           supabase
             .from('shows')
-            .select('id, title, show_date, city, status, value')
-            .eq('artist_name', artist.name)
+            .select('id, title, show_date, venue, venue_address, status, deal_value')
+            .eq('artist_id', artistId)
             .gte('show_date', today)
             .order('show_date', { ascending: true })
             .limit(5),
           supabase
             .from('releases')
             .select('id, title, release_date, status, release_type')
-            .eq('artist_name', artist.name)
+            .eq('artist_id', artistId)
             .neq('status', 'released')
             .order('release_date', { ascending: true })
             .limit(5),
           supabase
             .from('shows')
             .select('id', { count: 'exact', head: true })
-            .eq('artist_name', artist.name),
+            .eq('artist_id', artistId),
           supabase
             .from('releases')
             .select('id', { count: 'exact', head: true })
-            .eq('artist_name', artist.name),
+            .eq('artist_id', artistId),
         ]);
 
         const shows = showsResult.data || [];
@@ -684,7 +684,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                         }`} />
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600">{show.title}</p>
-                          <p className="text-xs text-gray-500">{show.city} · {new Date(show.show_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-xs text-gray-500">{show.venue || show.venue_address || '—'} · {new Date(show.show_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                         </div>
                       </div>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${

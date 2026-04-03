@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Calendar, MapPin, DollarSign, User, Phone, FileText, Sparkles } from 'lucide-react';
+import { X, Save, DollarSign, Sparkles } from 'lucide-react';
 import { Show, createShow, updateShow, SHOW_STATUSES } from '../services/showService';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -13,33 +13,35 @@ interface ShowFormProps {
 
 export default function ShowForm({ show, onClose, onSave, initialArtistName }: ShowFormProps) {
   const [loading, setLoading] = useState(false);
-  const [artists, setArtists] = useState<any[]>([]);
+  const [artists, setArtists] = useState<{ id: string; name: string; stage_name?: string }[]>([]);
 
+  // formData usa os campos que o usuário conhece (nomes amigáveis)
+  // o service mapeia para o schema real do banco
   const [formData, setFormData] = useState({
-    title: show?.title || '',
     artist_name: show?.artist_name || initialArtistName || '',
+    title: show?.title || '',
     show_date: show?.show_date || '',
     show_time: show?.show_time || '',
     venue: show?.venue || '',
-    city: show?.city || '',
-    state: show?.state || '',
-    country: show?.country || 'Brasil',
-    contractor_name: show?.contractor_name || '',
-    contractor_contact: show?.contractor_contact || '',
-    value: show?.value || 0,
-    currency: show?.currency || 'BRL',
-    commission_rate: show?.commission_rate || 20,
-    artist_split: show?.artist_split || 80,
+    city: show?.city || (show?.venue_address?.split(',')?.[0]?.trim()) || '',
+    state: '',
+    country: 'Brasil',
+    contractor_name: show?.venue_contact_name || '',
+    contractor_contact: show?.venue_contact_phone || '',
+    value: show?.deal_value ?? show?.value ?? 0,
+    currency: 'BRL',
+    commission_rate: show?.commission_rate ?? 20,
+    artist_split: show?.artist_split ?? 80,
     status: show?.status || 'consultado',
-    notes: show?.notes || ''
+    notes: show?.notes || '',
   });
 
   useEffect(() => {
-    const loadArtists = async () => {
-      const { data } = await supabase.from('artists').select('name').order('name');
-      setArtists(data || []);
-    };
-    loadArtists();
+    supabase
+      .from('artists')
+      .select('id, name, stage_name')
+      .order('name')
+      .then(({ data }) => setArtists(data || []));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,50 +53,45 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
     setLoading(true);
     try {
       if (show?.id) {
-        await updateShow(show.id, formData, show.status);
-        toast.success('Show atualizado com sucesso!');
+        await updateShow(show.id, formData as any, show.status);
+        toast.success('Show atualizado!');
       } else {
-        await createShow(formData);
-        toast.success('Show criado com sucesso!');
+        await createShow(formData as any);
+        toast.success('Show criado!');
       }
       onSave();
       onClose();
-    } catch (error) {
-      console.error('Erro ao salvar show:', error);
-      toast.error('Erro ao salvar show');
+    } catch (err: any) {
+      console.error('Erro ao salvar show:', err);
+      toast.error(err?.message || 'Erro ao salvar show');
     } finally {
       setLoading(false);
     }
   };
 
-  const getContextualTip = () => {
-    if (!formData.title) return "Dica: Comece com um título marcante para o evento!";
-    if (formData.value > 5000 && formData.artist_split > 90) return "Atenção: Com essa porcentagem, a margem da produtora fica bem apertada. Já considerou os custos fixos?";
-    if (formData.city && formData.city.toLowerCase() !== 'rio de janeiro' && formData.city.toLowerCase() !== 'são paulo') return "Viagem longa? Lembre-se de detalhar bem o RoadMap para o conforto da equipe.";
-    return "O Agente Virtual está analisando seu show em tempo real...";
-  };
+  const displayName = (a: { name: string; stage_name?: string }) =>
+    a.stage_name ? `${a.stage_name} (${a.name})` : a.name;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-8">
-        {/* Contextual Agent Tip */}
         <div className="bg-purple-600 px-6 py-2 flex items-center gap-2 text-white text-xs font-medium">
           <Sparkles className="w-3 h-3 animate-pulse" />
-          <span>{getContextualTip()}</span>
+          <span>{formData.title ? `Criando: ${formData.title}` : 'Preencha os dados do show'}</span>
         </div>
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-          <h3 className="text-xl font-bold text-gray-900">
-            {show ? 'Editar Show' : 'Novo Show'}
-          </h3>
+          <h3 className="text-xl font-bold text-gray-900">{show ? 'Editar Show' : 'Novo Show'}</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Título */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-gray-700 mb-1">Título do Evento</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Título do Evento *</label>
               <input
                 type="text"
                 required
@@ -105,8 +102,9 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               />
             </div>
 
+            {/* Artista */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Artista</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Artista *</label>
               <select
                 required
                 value={formData.artist_name}
@@ -115,11 +113,12 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               >
                 <option value="">Selecione um artista</option>
                 {artists.map((a) => (
-                  <option key={a.name} value={a.name}>{a.name}</option>
+                  <option key={a.id} value={a.name}>{displayName(a)}</option>
                 ))}
               </select>
             </div>
 
+            {/* Status */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
               <select
@@ -133,8 +132,9 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               </select>
             </div>
 
+            {/* Data */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Data</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Data *</label>
               <input
                 type="date"
                 required
@@ -144,6 +144,7 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               />
             </div>
 
+            {/* Horário */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Horário</label>
               <input
@@ -154,6 +155,7 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               />
             </div>
 
+            {/* Venue */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Local/Venue</label>
               <input
@@ -165,27 +167,55 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               />
             </div>
 
+            {/* Cidade */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Cidade</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Cidade *</label>
               <input
                 type="text"
                 required
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                placeholder="Ex: Rio de Janeiro"
               />
             </div>
 
+            {/* Contratante */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Contratante</label>
+              <input
+                type="text"
+                value={formData.contractor_name}
+                onChange={(e) => setFormData({ ...formData, contractor_name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                placeholder="Nome do contratante"
+              />
+            </div>
+
+            {/* Contato */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Contato</label>
+              <input
+                type="text"
+                value={formData.contractor_contact}
+                onChange={(e) => setFormData({ ...formData, contractor_contact: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                placeholder="Telefone ou email"
+              />
+            </div>
+
+            {/* Financeiro */}
             <div className="md:col-span-2 border-t border-gray-100 pt-4">
-              <h4 className="text-sm font-bold text-purple-600 mb-4 flex items-center gap-2">
+              <h4 className="text-sm font-bold text-purple-600 mb-3 flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
                 Financeiro & Split
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Cachê Bruto</label>
                   <input
                     type="number"
+                    min="0"
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: Number(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
@@ -198,22 +228,12 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
                     min="0"
                     max="100"
                     value={formData.artist_split}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setFormData({ ...formData, artist_split: v });
-                    }}
-                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none ${
-                      formData.artist_split > 100 || formData.artist_split < 0
-                        ? 'border-red-400 bg-red-50'
-                        : 'border-gray-300'
-                    }`}
+                    onChange={(e) => setFormData({ ...formData, artist_split: Number(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
                   />
-                  {(formData.artist_split > 100 || formData.artist_split < 0) && (
-                    <p className="text-xs text-red-600 mt-1">Deve ser entre 0% e 100%</p>
-                  )}
-                  {formData.value > 0 && formData.artist_split >= 0 && formData.artist_split <= 100 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Artista: R$ {((formData.value * formData.artist_split) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formData.value > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Artista recebe: R$ {((formData.value * formData.artist_split) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   )}
                 </div>
@@ -231,9 +251,21 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
                 </div>
               </div>
             </div>
+
+            {/* Observações */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-1">Observações</label>
+              <textarea
+                rows={3}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                placeholder="Informações adicionais sobre o show..."
+              />
+            </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -246,7 +278,9 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
               disabled={loading}
               className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-100 flex items-center justify-center gap-2"
             >
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
+              {loading
+                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <Save className="w-5 h-5" />}
               {show ? 'Salvar Alterações' : 'Criar Show'}
             </button>
           </div>

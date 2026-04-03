@@ -1,380 +1,223 @@
 import { supabase } from '../lib/supabase';
 
+// ── Tipos alinhados ao schema real do banco ───────────────────────────────────
+export type ShowStatus = 'consultado' | 'proposto' | 'fechado' | 'pago';
+
 export interface Show {
   id: string;
   title: string;
-  artist_name: string;
+  // artist
+  artist_id?: string;
+  artist_name: string; // derivado do join com artists
+  // venue
+  venue?: string;
+  venue_address?: string;
+  city?: string;       // parsed de venue_address para exibição
+  venue_contact_name?: string;
+  venue_contact_phone?: string;
+  // datas/horários
   show_date: string;
   show_time?: string;
-  venue?: string;
-  city: string;
-  state?: string;
-  country: string;
-  contractor_name?: string;
-  contractor_contact?: string;
-  value?: number;
-  currency: string;
-  commission_rate?: number; // % para a produtora
-  artist_split?: number; // % para o artista
-  production_split?: number; // % para a produtora (calculado ou fixo)
+  // financeiro
+  deal_value?: number;
+  value?: number;      // alias de deal_value
+  currency?: string;
+  commission_rate?: number;
+  artist_split?: number;
+  production_split?: number;
+  // outros
   status: ShowStatus;
   notes?: string;
-  created_by: string;
+  org_id?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface ShowContract {
-  id: string;
-  show_id: string;
-  file_url: string;
-  file_name: string;
-  file_size: number;
-  signed_at?: string;
-  uploaded_by?: string;
-  uploaded_at: string;
-}
-
-export interface ShowTask {
-  id: string;
-  show_id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  status: TaskStatus;
-  due_date?: string;
-  assigned_to?: string;
-  created_by: string;
-  created_at: string;
-  completed_at?: string;
-}
-
-export type ShowStatus = 'consultado' | 'proposto' | 'fechado' | 'pago';
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
-
 export const SHOW_STATUSES: { value: ShowStatus; label: string; color: string }[] = [
   { value: 'consultado', label: 'Consultado', color: 'gray' },
-  { value: 'proposto', label: 'Proposto', color: 'blue' },
-  { value: 'fechado', label: 'Fechado', color: 'green' },
-  { value: 'pago', label: 'Pago', color: 'purple' }
+  { value: 'proposto',   label: 'Proposto',   color: 'blue' },
+  { value: 'fechado',    label: 'Fechado',     color: 'green' },
+  { value: 'pago',       label: 'Pago',        color: 'purple' },
 ];
 
-// Checklist completo para shows - organizado por fase
-const SHOW_CHECKLIST = {
-  // Tarefas ANTES do show
-  before: [
-    { title: 'Contrato assinado', days_before: 30, category: 'legal' },
-    { title: 'Rider tecnico enviado', days_before: 21, category: 'production' },
-    { title: 'Rider de camarim enviado', days_before: 21, category: 'production' },
-    { title: 'Entrada (50%) recebida', days_before: 14, category: 'financial' },
-    { title: 'Transporte confirmado', days_before: 7, category: 'logistics' },
-    { title: 'Hospedagem confirmada', days_before: 7, category: 'logistics' },
-    { title: 'Passagem de som agendada', days_before: 3, category: 'production' },
-    { title: 'Setlist definido', days_before: 3, category: 'production' },
-    { title: 'Equipe tecnica confirmada', days_before: 3, category: 'team' },
-    { title: 'Materiais de divulgacao enviados', days_before: 7, category: 'marketing' },
-  ],
-  // Tarefas NO DIA do show
-  day: [
-    { title: 'Check-in no local', days_before: 0, category: 'logistics' },
-    { title: 'Passagem de som realizada', days_before: 0, category: 'production' },
-    { title: 'Camarim OK', days_before: 0, category: 'production' },
-    { title: 'Show realizado', days_before: 0, category: 'production' },
-  ],
-  // Tarefas APOS o show
-  after: [
-    { title: 'Saldo (50%) recebido', days_after: 7, category: 'financial' },
-    { title: 'Fotos/videos coletados', days_after: 3, category: 'marketing' },
-    { title: 'Feedback do contratante', days_after: 7, category: 'marketing' },
-    { title: 'Relatorio do show', days_after: 7, category: 'admin' },
-  ]
-};
+// ── Helpers internos ──────────────────────────────────────────────────────────
 
-// Tarefas basicas para shows consultados/propostos
-const DEFAULT_SHOW_TASKS = [
-  { title: 'Enviar rider tecnico', days_before: 30 },
-  { title: 'Confirmar horarios de soundcheck', days_before: 7 },
-  { title: 'Confirmar camarim e alimentacao', days_before: 7 },
-  { title: 'Preparar setlist', days_before: 3 },
-  { title: 'Conferir equipamento', days_before: 1 }
-];
-
-export async function createShow(showData: Partial<Show>): Promise<Show> {
+async function getUserOrgId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuario nao autenticado');
-
-  const { data, error } = await supabase
-    .from('shows')
-    .insert({
-      ...showData,
-      created_by: user.id
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Se ja esta criando como fechado, criar checklist completo
-  if (data.status === 'fechado') {
-    await createCompleteChecklist(data.id, data.show_date, user.id);
-    await createFinancialEntry(data);
-    await createShowTasksInTaskBoard(data, user.id);
-  } else {
-    await createDefaultTasks(data.id, data.show_date);
-  }
-
-  await createCalendarEvent(data);
-
-  return data;
-}
-
-async function createDefaultTasks(showId: string, showDate: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const showDateObj = new Date(showDate);
-
-  const tasks = DEFAULT_SHOW_TASKS.map(task => {
-    const dueDate = new Date(showDateObj);
-    dueDate.setDate(dueDate.getDate() - task.days_before);
-
-    return {
-      show_id: showId,
-      title: task.title,
-      status: 'pending' as TaskStatus,
-      due_date: dueDate.toISOString().split('T')[0],
-      created_by: user.id
-    };
-  });
-
-  await supabase.from('show_tasks').insert(tasks);
-}
-
-async function createCompleteChecklist(showId: string, showDate: string, userId: string): Promise<void> {
-  const showDateObj = new Date(showDate);
-  const tasks: any[] = [];
-
-  // Tarefas ANTES do show
-  for (const item of SHOW_CHECKLIST.before) {
-    const dueDate = new Date(showDateObj);
-    dueDate.setDate(dueDate.getDate() - item.days_before);
-    
-    tasks.push({
-      show_id: showId,
-      title: item.title,
-      category: item.category,
-      status: 'pending',
-      due_date: dueDate.toISOString().split('T')[0],
-      created_by: userId
-    });
-  }
-
-  // Tarefas NO DIA do show
-  for (const item of SHOW_CHECKLIST.day) {
-    tasks.push({
-      show_id: showId,
-      title: item.title,
-      category: item.category,
-      status: 'pending',
-      due_date: showDate,
-      created_by: userId
-    });
-  }
-
-  // Tarefas APOS o show
-  for (const item of SHOW_CHECKLIST.after) {
-    const dueDate = new Date(showDateObj);
-    dueDate.setDate(dueDate.getDate() + (item.days_after || 0));
-    
-    tasks.push({
-      show_id: showId,
-      title: item.title,
-      category: item.category,
-      status: 'pending',
-      due_date: dueDate.toISOString().split('T')[0],
-      created_by: userId
-    });
-  }
-
-  await supabase.from('show_tasks').insert(tasks);
-}
-
-async function createFinancialEntry(show: Show): Promise<void> {
-  if (!show.value || show.value <= 0) return;
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  // Criar transacao de receita no financeiro
-  await supabase.from('financial_transactions').insert({
-    type: 'revenue',
-    category: 'shows',
-    description: `Cache: ${show.title} - ${show.artist_name}`,
-    amount: show.value,
-    currency: show.currency || 'BRL',
-    status: 'pending',
-    due_date: show.show_date,
-    reference_type: 'show',
-    reference_id: show.id,
-    notes: `Local: ${show.venue || ''}, ${show.city}`,
-    created_by: user.id
-  });
-}
-
-/**
- * Cria tarefas-chave do show na tabela geral `tasks` (TaskBoard).
- * O checklist completo vai para `show_tasks` (visão interna do show).
- * As tarefas principais vão para `tasks` para aparecer no Kanban diário.
- */
-async function createShowTasksInTaskBoard(show: Show, userId: string): Promise<void> {
-  const { data: orgData } = await supabase
+  if (!user) throw new Error('Usuário não autenticado');
+  const { data } = await supabase
     .from('user_organizations')
     .select('organization_id')
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .single();
-
-  if (!orgData?.organization_id) return;
-
-  const showDateObj = new Date(show.show_date + 'T00:00:00');
-
-  const keyTasks = [
-    { title: `Confirmar contrato assinado — ${show.title}`, workstream: 'shows', daysOffset: -30 },
-    { title: `Confirmar rider técnico — ${show.title}`, workstream: 'shows', daysOffset: -21 },
-    { title: `Confirmar entrada (50%) — ${show.title}`, workstream: 'shows', daysOffset: -14 },
-    { title: `Confirmar transporte e hospedagem — ${show.title}`, workstream: 'logistica', daysOffset: -7 },
-    { title: `Preparar setlist — ${show.title}`, workstream: 'shows', daysOffset: -3 },
-    { title: `Divulgação: posts para o show — ${show.title}`, workstream: 'conteudo', daysOffset: -7 },
-  ];
-
-  const tasks = keyTasks.map(t => {
-    const deadline = new Date(showDateObj);
-    deadline.setDate(deadline.getDate() + t.daysOffset);
-    return {
-      organization_id: orgData.organization_id,
-      title: t.title,
-      status: 'todo',
-      workstream: t.workstream,
-      requires_approval: false,
-      deadline: deadline.toISOString().split('T')[0],
-      created_by: userId,
-      metadata: {
-        source: 'show',
-        show_id: show.id,
-        show_title: show.title
-      }
-    };
-  });
-
-  await supabase.from('tasks').insert(tasks);
+  if (!data?.organization_id) throw new Error('Organização não encontrada');
+  return data.organization_id;
 }
 
-async function createCalendarEvent(show: Show): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('calendar_events').insert({
-    title: `Show: ${show.title}`,
-    description: `${show.artist_name} em ${show.venue || show.city}`,
-    event_date: show.show_date,
-    start_time: show.show_time,
-    event_type: 'show',
-    color: 'purple',
-    location: `${show.venue || ''}, ${show.city}`,
-    created_by: user.id,
-    metadata: {
-      show_id: show.id,
-      artist_name: show.artist_name,
-      status: show.status
-    }
-  });
+async function resolveArtistId(artistName?: string, artistId?: string): Promise<string | null> {
+  if (artistId) return artistId;
+  if (!artistName) return null;
+  const { data } = await supabase
+    .from('artists')
+    .select('id')
+    .ilike('name', artistName.trim())
+    .maybeSingle();
+  return data?.id ?? null;
 }
 
-export async function updateShow(id: string, updates: Partial<Show>, previousStatus?: ShowStatus): Promise<Show> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
+// Normaliza row do banco → Show (para exibição)
+function normalizeShow(row: any): Show {
+  const venueAddress = row.venue_address || '';
+  const parts = venueAddress.split(',').map((s: string) => s.trim());
+  // venue_contact pode ser jsonb {name, phone} ou texto
+  const vc = row.venue_contact;
+  const contactName = typeof vc === 'object' && vc ? vc.name : (typeof vc === 'string' ? vc : '');
+  const contactPhone = typeof vc === 'object' && vc ? (vc.phone || vc.contact || '') : '';
+  const artistName = row.artists?.stage_name || row.artists?.name || row.artist_name_cached || '';
+
+  return {
+    id: row.id,
+    title: row.title || '',
+    artist_id: row.artist_id,
+    artist_name: artistName,
+    venue: row.venue || '',
+    venue_address: venueAddress,
+    city: parts[0] || '',
+    venue_contact_name: contactName,
+    venue_contact_phone: contactPhone,
+    show_date: row.show_date ? String(row.show_date).substring(0, 10) : '',
+    show_time: row.show_time ? String(row.show_time).substring(11, 16) : undefined,
+    deal_value: row.deal_value ? Number(row.deal_value) : undefined,
+    value: row.deal_value ? Number(row.deal_value) : undefined,
+    currency: 'BRL',
+    commission_rate: row.commission_rate ? Number(row.commission_rate) : undefined,
+    artist_split: row.artist_split ? Number(row.artist_split) : undefined,
+    production_split: row.production_split ? Number(row.production_split) : undefined,
+    status: (row.status as ShowStatus) || 'consultado',
+    notes: row.notes || '',
+    org_id: row.org_id,
+    created_at: row.created_at || '',
+    updated_at: row.updated_at || '',
+  };
+}
+
+// ── CRUD ─────────────────────────────────────────────────────────────────────
+
+export async function createShow(showData: Partial<Show> & { artist_name?: string; city?: string; state?: string; country?: string; value?: number; contractor_name?: string; contractor_contact?: string }): Promise<Show> {
+  const orgId = await getUserOrgId();
+  const artistId = await resolveArtistId(showData.artist_name, showData.artist_id);
+
+  // Monta venue_address a partir de city/state/country ou venue_address direto
+  const venueAddress =
+    showData.venue_address ||
+    [showData.city, showData.state, showData.country].filter(Boolean).join(', ') ||
+    null;
+
+  // venue_contact como jsonb
+  const venueContact =
+    showData.venue_contact_name || (showData as any).contractor_name
+      ? { name: showData.venue_contact_name || (showData as any).contractor_name || '', phone: showData.venue_contact_phone || (showData as any).contractor_contact || '' }
+      : null;
+
+  const dbRecord: any = {
+    org_id: orgId,
+    artist_id: artistId,
+    title: showData.title,
+    venue: showData.venue || null,
+    venue_address: venueAddress,
+    venue_contact: venueContact,
+    show_date: showData.show_date || null,
+    show_time: showData.show_time
+      ? `1970-01-01T${showData.show_time}:00Z`
+      : null,
+    deal_value: showData.deal_value ?? showData.value ?? null,
+    status: showData.status || 'consultado',
+    notes: showData.notes || null,
+    commission_rate: showData.commission_rate ?? null,
+    artist_split: showData.artist_split ?? null,
+    production_split: showData.production_split ?? null,
+  };
+
   const { data, error } = await supabase
     .from('shows')
-    .update(updates)
-    .eq('id', id)
-    .select()
+    .insert(dbRecord)
+    .select('*, artists(name, stage_name)')
     .single();
 
   if (error) throw error;
 
-  // Atualizar evento no calendario se dados relevantes mudaram
+  // Evento no calendário
+  await createCalendarEvent(data, showData.artist_name);
+
+  return normalizeShow(data);
+}
+
+export async function updateShow(id: string, updates: Partial<Show> & { city?: string; state?: string; country?: string; value?: number; contractor_name?: string; contractor_contact?: string }, previousStatus?: ShowStatus): Promise<Show> {
+  const dbUpdates: any = {};
+
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.venue !== undefined) dbUpdates.venue = updates.venue;
+  if (updates.show_date !== undefined) dbUpdates.show_date = updates.show_date;
+  if (updates.show_time !== undefined) dbUpdates.show_time = updates.show_time ? `1970-01-01T${updates.show_time}:00Z` : null;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+  if (updates.commission_rate !== undefined) dbUpdates.commission_rate = updates.commission_rate;
+  if (updates.artist_split !== undefined) dbUpdates.artist_split = updates.artist_split;
+  if ((updates as any).value !== undefined || updates.deal_value !== undefined) {
+    dbUpdates.deal_value = updates.deal_value ?? (updates as any).value;
+  }
+
+  const city = (updates as any).city;
+  const state = (updates as any).state;
+  const country = (updates as any).country;
+  if (city || state || country) {
+    dbUpdates.venue_address = [city, state, country].filter(Boolean).join(', ');
+  }
+
+  const cName = (updates as any).contractor_name || updates.venue_contact_name;
+  const cPhone = (updates as any).contractor_contact || updates.venue_contact_phone;
+  if (cName || cPhone) {
+    dbUpdates.venue_contact = { name: cName || '', phone: cPhone || '' };
+  }
+
+  // Atualiza artist_id se veio artist_name novo
+  if ((updates as any).artist_name) {
+    const artistId = await resolveArtistId((updates as any).artist_name, updates.artist_id);
+    if (artistId) dbUpdates.artist_id = artistId;
+  }
+
+  const { data, error } = await supabase
+    .from('shows')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select('*, artists(name, stage_name)')
+    .single();
+
+  if (error) throw error;
+
   if (updates.show_date || updates.show_time || updates.title || updates.venue) {
     await updateCalendarEvent(data);
   }
 
-  // Se o status mudou para 'fechado', criar checklist completo e entrada financeira
   if (updates.status === 'fechado' && previousStatus && previousStatus !== 'fechado') {
-    // Remover tarefas basicas existentes
-    await supabase.from('show_tasks').delete().eq('show_id', id);
-
-    // Criar checklist completo
-    if (user) {
-      await createCompleteChecklist(id, data.show_date, user.id);
-      // Criar tarefas-chave no TaskBoard geral
-      await createShowTasksInTaskBoard(data, user.id);
-    }
-
-    // Criar entrada no financeiro
-    await createFinancialEntry(data);
+    await createFinancialEntry(normalizeShow(data));
   }
-
-  // Se o status mudou para 'pago', atualizar entrada no financeiro
   if (updates.status === 'pago' && previousStatus !== 'pago') {
     await supabase
       .from('financial_transactions')
-      .update({
-        status: 'paid',
-        paid_date: new Date().toISOString().split('T')[0]
-      })
+      .update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] })
       .eq('reference_type', 'show')
       .eq('reference_id', id);
   }
 
-  return data;
-}
-
-async function updateCalendarEvent(show: Show): Promise<void> {
-  await supabase
-    .from('calendar_events')
-    .update({
-      title: `Show: ${show.title}`,
-      description: `${show.artist_name} em ${show.venue || show.city}`,
-      event_date: show.show_date,
-      start_time: show.show_time,
-      location: `${show.venue || ''}, ${show.city}`,
-      metadata: {
-        show_id: show.id,
-        artist_name: show.artist_name,
-        status: show.status
-      }
-    })
-    .eq('metadata->>show_id', show.id);
+  return normalizeShow(data);
 }
 
 export async function deleteShow(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('shows')
-    .delete()
-    .eq('id', id);
-
+  const { error } = await supabase.from('shows').delete().eq('id', id);
   if (error) throw error;
-
-  // Deletar evento do calendario
-  await supabase
-    .from('calendar_events')
-    .delete()
-    .eq('metadata->>show_id', id);
-
-  // Deletar transacoes financeiras relacionadas
-  await supabase
-    .from('financial_transactions')
-    .delete()
-    .eq('reference_type', 'show')
-    .eq('reference_id', id);
+  await supabase.from('calendar_events').delete().eq('metadata->>show_id', id);
+  await supabase.from('financial_transactions').delete().eq('reference_type', 'show').eq('reference_id', id);
 }
 
 export async function listShows(filters?: {
@@ -382,217 +225,120 @@ export async function listShows(filters?: {
   month?: number;
   year?: number;
   artist?: string;
+  artist_id?: string;
 }): Promise<Show[]> {
   let query = supabase
     .from('shows')
-    .select('*')
+    .select('*, artists(name, stage_name)')
     .order('show_date', { ascending: true });
 
-  if (filters?.status) {
-    query = query.eq('status', filters.status);
+  if (filters?.status) query = query.eq('status', filters.status);
+
+  if (filters?.artist_id) {
+    query = query.eq('artist_id', filters.artist_id);
+  } else if (filters?.artist) {
+    // busca artist_id pelo nome e filtra
+    const { data: artistData } = await supabase
+      .from('artists')
+      .select('id')
+      .ilike('name', `%${filters.artist}%`)
+      .limit(1)
+      .maybeSingle();
+    if (artistData?.id) query = query.eq('artist_id', artistData.id);
   }
 
   if (filters?.month && filters?.year) {
-    const startDate = new Date(filters.year, filters.month - 1, 1).toISOString().split('T')[0];
-    const endDate = new Date(filters.year, filters.month, 0).toISOString().split('T')[0];
-    query = query.gte('show_date', startDate).lte('show_date', endDate);
-  }
-
-  if (filters?.artist) {
-    query = query.ilike('artist_name', `%${filters.artist}%`);
+    const start = new Date(filters.year, filters.month - 1, 1).toISOString().split('T')[0];
+    const end   = new Date(filters.year, filters.month, 0).toISOString().split('T')[0];
+    query = query.gte('show_date', start).lte('show_date', end);
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
-  return data || [];
+  return (data || []).map(normalizeShow);
 }
 
 export async function getShowById(id: string): Promise<Show | null> {
   const { data, error } = await supabase
     .from('shows')
-    .select('*')
+    .select('*, artists(name, stage_name)')
     .eq('id', id)
     .maybeSingle();
-
   if (error) throw error;
-  return data;
+  return data ? normalizeShow(data) : null;
 }
 
-export async function uploadContract(
-  showId: string,
-  file: File
-): Promise<ShowContract> {
+// ── Financeiro ────────────────────────────────────────────────────────────────
+
+async function createFinancialEntry(show: Show): Promise<void> {
+  if (!show.value && !show.deal_value) return;
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuario nao autenticado');
-
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-  const filePath = `contracts/${showId}/${fileName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('files')
-    .upload(filePath, file);
-
-  if (uploadError) throw uploadError;
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('files')
-    .getPublicUrl(filePath);
-
-  const { data, error } = await supabase
-    .from('show_contracts')
-    .insert({
-      show_id: showId,
-      file_url: publicUrl,
-      file_name: file.name,
-      file_size: file.size,
-      uploaded_by: user.id
-    })
-    .select()
-    .single();
-
-  if (error) {
-    await supabase.storage.from('files').remove([filePath]);
-    throw error;
-  }
-
-  return data;
+  if (!user) return;
+  const orgId = show.org_id || (await getUserOrgId().catch(() => null));
+  if (!orgId) return;
+  await supabase.from('financial_transactions').insert({
+    organization_id: orgId,
+    type: 'revenue',
+    category: 'shows',
+    description: `Cachê: ${show.title} — ${show.artist_name}`,
+    amount: show.deal_value ?? show.value,
+    currency: 'BRL',
+    status: 'pending',
+    due_date: show.show_date,
+    reference_type: 'show',
+    reference_id: show.id,
+    notes: `Local: ${show.venue || ''} ${show.venue_address || ''}`.trim(),
+    created_by: user.id,
+  });
 }
 
-export async function listContracts(showId: string): Promise<ShowContract[]> {
-  const { data, error } = await supabase
-    .from('show_contracts')
-    .select('*')
-    .eq('show_id', showId)
-    .order('uploaded_at', { ascending: false });
+// ── Calendário ────────────────────────────────────────────────────────────────
 
-  if (error) throw error;
-  return data || [];
-}
-
-export async function deleteContract(id: string): Promise<void> {
-  const contract = await supabase
-    .from('show_contracts')
-    .select('file_url')
-    .eq('id', id)
-    .single();
-
-  if (contract.data) {
-    const urlParts = contract.data.file_url.split('/files/');
-    if (urlParts.length === 2) {
-      await supabase.storage.from('files').remove([urlParts[1]]);
-    }
-  }
-
-  const { error } = await supabase
-    .from('show_contracts')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
-}
-
-export async function createTask(taskData: Partial<ShowTask>): Promise<ShowTask> {
+async function createCalendarEvent(row: any, artistName?: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuario nao autenticado');
+  if (!user) return;
+  const orgId = row.org_id || await getUserOrgId().catch(() => null);
+  if (!orgId) return;
+  const name = row.artists?.stage_name || row.artists?.name || artistName || '';
+  await supabase.from('calendar_events').insert({
+    organization_id: orgId,
+    artist_id: row.artist_id || null,
+    created_by: user.id,
+    title: `Show: ${row.title}`,
+    description: `${name} em ${row.venue || row.venue_address || ''}`,
+    event_date: row.show_date ? String(row.show_date).substring(0, 10) : null,
+    start_time: row.show_time ? String(row.show_time).substring(11, 16) : null,
+    event_type: 'show',
+    color: 'purple',
+    location: `${row.venue || ''} ${row.venue_address || ''}`.trim(),
+    metadata: { show_id: row.id, artist_name: name, status: row.status },
+  }).then(() => {}).catch(() => {}); // não bloqueia se falhar
+}
 
-  const { data, error } = await supabase
-    .from('show_tasks')
-    .insert({
-      ...taskData,
-      created_by: user.id
+async function updateCalendarEvent(row: any): Promise<void> {
+  const name = row.artists?.stage_name || row.artists?.name || '';
+  await supabase
+    .from('calendar_events')
+    .update({
+      title: `Show: ${row.title}`,
+      event_date: row.show_date ? String(row.show_date).substring(0, 10) : null,
+      location: `${row.venue || ''} ${row.venue_address || ''}`.trim(),
     })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+    .eq('metadata->>show_id', row.id)
+    .then(() => {}).catch(() => {});
 }
 
-export async function updateTask(id: string, updates: Partial<ShowTask>): Promise<ShowTask> {
-  if (updates.status === 'completed' && !updates.completed_at) {
-    updates.completed_at = new Date().toISOString();
-  }
+// ── Utilitários ───────────────────────────────────────────────────────────────
 
-  const { data, error } = await supabase
-    .from('show_tasks')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-export async function listTasks(showId: string): Promise<ShowTask[]> {
-  const { data, error } = await supabase
-    .from('show_tasks')
-    .select('*')
-    .eq('show_id', showId)
-    .order('due_date', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
-}
-
-export async function deleteTask(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('show_tasks')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
-}
-
-// Funcao para calcular lucro do show
-export async function getShowProfit(showId: string): Promise<{
-  revenue: number;
-  expenses: number;
-  profit: number;
-  profitMargin: number;
-}> {
-  const { data: transactions } = await supabase
-    .from('financial_transactions')
-    .select('*')
-    .eq('reference_id', showId)
-    .neq('status', 'cancelled');
-
-  let revenue = 0;
-  let expenses = 0;
-
-  for (const t of transactions || []) {
-    if (t.type === 'revenue') {
-      revenue += parseFloat(t.amount);
-    } else {
-      expenses += parseFloat(t.amount);
-    }
-  }
-
-  const profit = revenue - expenses;
-  const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
-
-  return { revenue, expenses, profit, profitMargin };
-}
-
-export function formatCurrency(value: number, currency: string = 'BRL'): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: currency
-  }).format(value);
+export function formatCurrency(value: number, currency = 'BRL'): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value);
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  }).format(date);
+  const d = new Date(dateString + (dateString.length === 10 ? 'T00:00:00' : ''));
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(d);
 }
 
 export function getStatusColor(status: ShowStatus): string {
-  const statusInfo = SHOW_STATUSES.find(s => s.value === status);
-  return statusInfo?.color || 'gray';
+  return SHOW_STATUSES.find(s => s.value === status)?.color || 'gray';
 }
