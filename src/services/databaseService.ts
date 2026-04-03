@@ -1,6 +1,13 @@
 import { supabase } from '../lib/supabase';
 
 // ============================================
+// ⚠️  ARQUIVO LEGADO — NÃO USAR EM CÓDIGO NOVO
+// Os tipos e schemas aqui estão desalinhados do banco real.
+// Use os services dedicados:
+//   shows       → services/showService.ts
+//   releases    → services/releaseService.ts
+//   financeiro  → services/financeService.ts
+// ============================================
 // SERVIÇO UNIFICADO DE BANCO DE DADOS
 // Conecta todos os módulos ao Supabase
 // ============================================

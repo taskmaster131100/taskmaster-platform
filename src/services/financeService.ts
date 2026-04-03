@@ -11,14 +11,15 @@ export interface FinancialTransaction {
   subcategory?: string;
   description: string;
   amount: number;
-  currency: string;
-  status: 'pending' | 'confirmed' | 'paid' | 'cancelled';
+  // Campos reais do banco: user_id, transaction_date
+  user_id?: string;
+  transaction_date?: string;
+  // Aliases mantidos para compatibilidade com código legado
   due_date?: string;
-  paid_date?: string;
   reference_type?: 'show' | 'release' | 'production' | 'marketing' | 'audiovisual' | 'team' | 'other';
   reference_id?: string;
   notes?: string;
-  created_by: string;
+  status: 'pending' | 'confirmed' | 'paid' | 'cancelled';
   created_at: string;
   updated_at: string;
 }
@@ -75,12 +76,24 @@ export async function createTransaction(data: Partial<FinancialTransaction>): Pr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
+  // Embute referência nas notas quando fornecida (colunas reference_* não existem no banco)
+  const refNote = data.reference_type && data.reference_id
+    ? `ref:${data.reference_type}:${data.reference_id}`
+    : null;
+  const finalNotes = [data.notes, refNote].filter(Boolean).join(' | ') || null;
+
   const { data: transaction, error } = await supabase
     .from('financial_transactions')
     .insert({
-      ...data,
-      created_by: user.id,
-      currency: data.currency || 'BRL'
+      user_id: user.id,
+      description: data.description,
+      category: data.category,
+      amount: data.amount,
+      type: data.type,
+      status: data.status || 'pending',
+      // due_date é o alias legado; transaction_date é o campo real do banco
+      transaction_date: data.transaction_date || data.due_date || new Date().toISOString().split('T')[0],
+      notes: finalNotes,
     })
     .select()
     .single();
@@ -93,12 +106,19 @@ export async function createTransaction(data: Partial<FinancialTransaction>): Pr
  * Atualiza uma transação financeira
  */
 export async function updateTransaction(id: string, updates: Partial<FinancialTransaction>): Promise<FinancialTransaction> {
+  const dbUpdates: any = { updated_at: new Date().toISOString() };
+  if (updates.description !== undefined) dbUpdates.description = updates.description;
+  if (updates.category !== undefined)    dbUpdates.category = updates.category;
+  if (updates.amount !== undefined)      dbUpdates.amount = updates.amount;
+  if (updates.type !== undefined)        dbUpdates.type = updates.type;
+  if (updates.status !== undefined)      dbUpdates.status = updates.status;
+  if (updates.notes !== undefined)       dbUpdates.notes = updates.notes;
+  if (updates.transaction_date !== undefined) dbUpdates.transaction_date = updates.transaction_date;
+  else if (updates.due_date !== undefined)    dbUpdates.transaction_date = updates.due_date;
+
   const { data, error } = await supabase
     .from('financial_transactions')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    })
+    .update(dbUpdates)
     .eq('id', id)
     .select()
     .single();
@@ -127,10 +147,10 @@ export async function listTransactions(filters?: {
   if (filters?.type) query = query.eq('type', filters.type);
   if (filters?.category) query = query.eq('category', filters.category);
   if (filters?.status) query = query.eq('status', filters.status);
-  if (filters?.startDate) query = query.gte('due_date', filters.startDate);
-  if (filters?.endDate) query = query.lte('due_date', filters.endDate);
-  if (filters?.referenceType) query = query.eq('reference_type', filters.referenceType);
-  if (filters?.referenceId) query = query.eq('reference_id', filters.referenceId);
+  if (filters?.startDate) query = query.gte('transaction_date', filters.startDate);
+  if (filters?.endDate) query = query.lte('transaction_date', filters.endDate);
+  // reference_type e reference_id não existem no banco — use notes ILIKE se necessário
+  if (filters?.referenceId) query = (query as any).ilike('notes', `%${filters.referenceId}%`);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -177,18 +197,13 @@ export async function markShowAsPaid(showId: string): Promise<void> {
   const { data: transactions } = await supabase
     .from('financial_transactions')
     .select('id')
-    .eq('reference_type', 'show')
-    .eq('reference_id', showId);
+    .ilike('notes', `%ref:show:${showId}%`);
 
   if (transactions && transactions.length > 0) {
     await supabase
       .from('financial_transactions')
-      .update({
-        status: 'paid',
-        paid_date: new Date().toISOString().split('T')[0]
-      })
-      .eq('reference_type', 'show')
-      .eq('reference_id', showId);
+      .update({ status: 'paid' })
+      .ilike('notes', `%ref:show:${showId}%`);
   }
 }
 

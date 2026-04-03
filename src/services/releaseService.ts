@@ -143,6 +143,7 @@ export async function createRelease(
     catalog_number: releaseData.catalog_number || null,
     cover_art_url: releaseData.cover_art_url || releaseData.cover_url || null,
     release_notes: releaseData.release_notes || releaseData.notes || null,
+    isrc: (releaseData as any).isrc || null,
     status: releaseData.status || 'pre_production',
   };
 
@@ -176,6 +177,7 @@ export async function updateRelease(id: string, updates: Partial<Release> & { ar
   if (updates.cover_art_url !== undefined || updates.cover_url !== undefined) {
     dbUpdates.cover_art_url = updates.cover_art_url || updates.cover_url;
   }
+  if ((updates as any).isrc !== undefined) dbUpdates.isrc = (updates as any).isrc;
   if (updates.artist_name) {
     const aid = await resolveArtistId(updates.artist_name, updates.artist_id);
     if (aid) dbUpdates.artist_id = aid;

@@ -71,6 +71,8 @@ export default function ReleasesManager() {
     notes: ''
   });
 
+  const [navArtistId, setNavArtistId] = useState<string | undefined>(undefined);
+
   // Pré-filtrar pelo artista se a navegação veio do contexto do artista
   useEffect(() => {
     const artistFromNav = (location.state as any)?.artist;
@@ -79,17 +81,22 @@ export default function ReleasesManager() {
       setArtistFilter(artistFromNav.name);
       setFormData(prev => ({ ...prev, artist_name: artistFromNav.name }));
     }
+    if (artistFromNav?.id) {
+      setNavArtistId(artistFromNav.id);
+    }
   }, []);
 
   useEffect(() => {
     loadReleases();
-  }, [typeFilter]);
+  }, [typeFilter, navArtistId]);
 
   const loadReleases = async () => {
     try {
       setLoading(true);
       const filters: any = {};
       if (typeFilter) filters.type = typeFilter;
+      if (navArtistId) filters.artist_id = navArtistId;
+      else if (navArtistName) filters.artist = navArtistName;
       const data = await listReleases(filters);
       setReleases(data);
     } catch (error) {

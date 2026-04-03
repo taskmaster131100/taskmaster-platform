@@ -34,6 +34,9 @@ export default function ShowsManager() {
   // Artista vindo da navegação — persiste para pré-preencher o form
   const [navArtistName, setNavArtistName] = useState('');
 
+  // Artista vindo da navegação — usado tanto no filtro visual quanto na query
+  const [navArtistId, setNavArtistId] = useState<string | undefined>(undefined);
+
   // Pré-filtrar pelo artista se a navegação veio do contexto do artista
   useEffect(() => {
     const artistFromNav = (location.state as any)?.artist;
@@ -41,17 +44,22 @@ export default function ShowsManager() {
       setNavArtistName(artistFromNav.name);
       setSearchTerm(artistFromNav.name);
     }
+    if (artistFromNav?.id) {
+      setNavArtistId(artistFromNav.id);
+    }
   }, []);
 
   useEffect(() => {
     loadShows();
-  }, [selectedStatus]);
+  }, [selectedStatus, navArtistId]);
 
   const loadShows = async () => {
     try {
       setLoading(true);
       const data = await listShows({
-        status: selectedStatus || undefined
+        status: selectedStatus || undefined,
+        artist_id: navArtistId,
+        artist: !navArtistId && navArtistName ? navArtistName : undefined,
       });
       setShows(data);
     } catch (error) {

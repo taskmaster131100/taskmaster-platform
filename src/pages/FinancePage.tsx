@@ -78,29 +78,20 @@ export default function FinancePage() {
       
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        setTransactions(data.map((t: any) => ({
-          id: t.id,
-          description: t.description,
-          category: t.category,
-          amount: Number(t.amount),
-          type: t.type,
-          status: t.status || 'paid',
-          transaction_date: t.transaction_date,
-          created_at: t.created_at
-        })));
-      } else {
-        setTransactions([
-          { id: '1', description: 'Cachê Show SP (exemplo)', category: 'Show', amount: 25000, type: 'revenue', status: 'paid', transaction_date: '2025-01-10', created_at: '2025-01-10' },
-          { id: '2', description: 'Anúncios Meta (exemplo)', category: 'Marketing', amount: 3500, type: 'expense', status: 'paid', transaction_date: '2025-01-15', created_at: '2025-01-15' }
-        ]);
-      }
+      setTransactions((data || []).map((t: any) => ({
+        id: t.id,
+        description: t.description,
+        category: t.category,
+        amount: Number(t.amount),
+        type: t.type,
+        status: t.status || 'paid',
+        transaction_date: t.transaction_date,
+        created_at: t.created_at
+      })));
     } catch (error) {
       console.error('Erro ao carregar dados financeiros:', error);
-      setTransactions([
-        { id: '1', description: 'Cachê Show SP (exemplo)', category: 'Show', amount: 25000, type: 'revenue', status: 'paid', transaction_date: '2025-01-10', created_at: '2025-01-10' },
-        { id: '2', description: 'Anúncios Meta (exemplo)', category: 'Marketing', amount: 3500, type: 'expense', status: 'paid', transaction_date: '2025-01-15', created_at: '2025-01-15' }
-      ]);
+      toast.error('Erro ao carregar transações financeiras');
+      setTransactions([]);
     } finally {
       setLoading(false);
     }

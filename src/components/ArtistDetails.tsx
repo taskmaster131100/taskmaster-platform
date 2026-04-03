@@ -358,14 +358,14 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
               <span>Novo Projeto</span>
             </button>
             <button
-              onClick={() => navigate('/releases', { state: { artist: { name: artist.stage_name || artist.name } } })}
+              onClick={() => navigate('/releases', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
               className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-bold"
             >
               <Radio className="w-4 h-4 flex-shrink-0" />
               <span>Novo Lançamento</span>
             </button>
             <button
-              onClick={() => navigate('/shows', { state: { artist: { name: artist.stage_name || artist.name } } })}
+              onClick={() => navigate('/shows', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
               className="flex items-center gap-2 p-3 bg-white border border-gray-200 text-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-yellow-300 transition-all text-sm font-bold"
             >
               <Mic2 className="w-4 h-4 flex-shrink-0 text-yellow-600" />
@@ -653,7 +653,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   Próximos Shows
                 </h3>
                 <button
-                  onClick={() => navigate('/shows')}
+                  onClick={() => navigate('/shows', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                   className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
                 >
                   Ver todos <ArrowRight className="w-3 h-3" />
@@ -673,7 +673,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   {artistShows.map(show => (
                     <li
                       key={show.id}
-                      onClick={() => navigate('/shows')}
+                      onClick={() => navigate('/shows', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                       className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -710,7 +710,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   Releases em Andamento
                 </h3>
                 <button
-                  onClick={() => navigate('/releases')}
+                  onClick={() => navigate('/releases', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                   className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
                 >
                   Ver todas <ArrowRight className="w-3 h-3" />
@@ -730,7 +730,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   {artistReleases.map(release => (
                     <li
                       key={release.id}
-                      onClick={() => navigate('/releases')}
+                      onClick={() => navigate('/releases', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                       className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
                     >
                       <div className="min-w-0">
@@ -878,7 +878,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   )}
                 </h3>
                 <button
-                  onClick={() => navigate('/shows')}
+                  onClick={() => navigate('/shows', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                   className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-1"
                 >
                   Ver shows <ArrowRight className="w-3 h-3" />
