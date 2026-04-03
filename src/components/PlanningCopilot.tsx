@@ -714,16 +714,19 @@ export default function PlanningCopilot() {
           }
         }
 
-        // Toast com ação de navegação direta para as tarefas
-        toast.success(`Projeto "${projectData.name}" criado!`, {
-          action: { label: 'Ver Tarefas →', onClick: () => navigate('/tasks') },
-          duration: 8000,
-        });
-
-        // Notificar App.tsx para recarregar a lista de projetos e selecionar o novo
+        // Notificar ArtistDetails para recarregar projetos
         window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
           detail: { projectId: newProject.id, projectName: projectData.name }
         }));
+
+        // Toast com navegação direta para o TaskBoard filtrado pelo projeto
+        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas!`, {
+          action: {
+            label: 'Ver Tarefas →',
+            onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name } })
+          },
+          duration: 10000,
+        });
 
         // Montar mensagem amigável (SEM código, SEM JSON)
         const friendlyMessage = `✅ **Pronto! Projeto "${projectData.name}" criado com sucesso!**
@@ -733,9 +736,10 @@ export default function PlanningCopilot() {
 • **${totalTasks} tarefas** com prazos automáticos
 ${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}
 
-➡️ **Clique em "Tarefas" no menu lateral** para ver e gerenciar todas as tarefas do projeto.
+➡️ Clique em **"Ver Tarefas →"** na notificação acima para acompanhar o projeto.
+Ou acesse **Tarefas** no menu lateral a qualquer momento.
 
-Quer continuar? Posso ajudar a definir responsáveis, prioridades ou identificar o que precisa de atenção primeiro.`;
+Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identificar o que precisa de atenção primeiro.`;
 
         return {
           role: 'assistant' as const,

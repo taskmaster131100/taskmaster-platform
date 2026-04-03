@@ -180,8 +180,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     const path = location.pathname;
     if (path === '/' || path === '/organization') {
       setActiveTab('organization');
-    } else if (path === '/tasks') {
+    } else if (path === '/tasks' || path === '/tarefas') {
       setActiveTab('tasks');
+      // Se veio com projectId no state (ex: do Copilot), foca o projeto
+      const navState = location.state as any;
+      if (navState?.projectId) {
+        setSelectedProjectId(navState.projectId);
+      }
     } else if (path === '/calendar') {
       setActiveTab('calendar');
     } else if (path === '/reports') {
