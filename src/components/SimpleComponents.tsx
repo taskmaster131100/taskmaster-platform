@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 // ============================================================
 // WhatsApp Manager - Gerenciamento de contatos e comunicação
 // ============================================================
-export const WhatsAppManager = () => {
+export const WhatsAppManager = (_props?: any) => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [newContact, setNewContact] = useState({ name: '', phone: '', group: '' });
   const [showForm, setShowForm] = useState(false);
@@ -226,7 +226,7 @@ export const GoogleIntegration = () => {
 // ============================================================
 // Meetings Manager - Gerenciamento de Reuniões
 // ============================================================
-export const MeetingsManager = () => {
+export const MeetingsManager = (_props?: any) => {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newMeeting, setNewMeeting] = useState({ title: '', date: '', time: '', participants: '', notes: '', status: 'agendada' });
@@ -325,7 +325,7 @@ export const MeetingsManager = () => {
 // ============================================================
 // Marketing Manager - Assistente de Marketing com IA
 // ============================================================
-export const MarketingManager = () => {
+export const MarketingManager = (_props?: any) => {
   const [artists, setArtists] = useState<any[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -396,7 +396,7 @@ export const MarketingManager = () => {
 // ============================================================
 // Production Manager - Gerenciamento de Produção de Conteúdo
 // ============================================================
-export const ProductionManager = () => {
+export const ProductionManager = (_props?: any) => {
   const [productions, setProductions] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newProd, setNewProd] = useState({ title: '', type: 'video', status: 'planejado', deadline: '', responsible: '', notes: '' });
@@ -492,7 +492,7 @@ export const ProductionManager = () => {
 // ============================================================
 // Pre-Production Manager
 // ============================================================
-export const PreProductionManager = () => {
+export const PreProductionManager = (_props?: any) => {
   const [items, setItems] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', category: 'roteiro', status: 'pendente', notes: '' });
@@ -571,7 +571,7 @@ export const PreProductionManager = () => {
 // ============================================================
 // AI Insights - Análises e Insights com IA
 // ============================================================
-export const AIInsights = () => {
+export const AIInsights = (_props?: any) => {
   const [insights, setInsights] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState('geral');
@@ -650,7 +650,7 @@ export const AIInsights = () => {
 // ============================================================
 // Mind Map - Mapa Mental de Ideias
 // ============================================================
-export const MindMap = () => {
+export const MindMap = (_props?: any) => {
   const [nodes, setNodes] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newNode, setNewNode] = useState({ title: '', parent: '', color: '#FFAD85' });
@@ -745,7 +745,7 @@ export const MindMap = () => {
 // ============================================================
 // User Management - Gerenciamento de Usuários com InviteManager
 // ============================================================
-export const UserManagement = () => {
+export const UserManagement = (_props?: any) => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto">
@@ -1092,7 +1092,7 @@ export const About = () => {
 // ============================================================
 // Schedule (kept as alias for CalendarView)
 // ============================================================
-export const Schedule = () => {
+export const Schedule = (_props?: any) => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto">

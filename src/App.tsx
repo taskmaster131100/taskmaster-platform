@@ -655,6 +655,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             setTasks(tasks.map(t => t.id === task.id ? task : t));
           }}
           onAddTask={() => {}}
+          onNavigateToTasks={() => setActiveTab('tasks')}
         />
       );
     }
@@ -685,7 +686,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       return (
         <Schedule
           selectedProject={selectedProject}
-          onProjectUpdate={(project) => {
+          onProjectUpdate={(project: any) => {
             setProjects(projects.map(p => p.id === project.id ? project : p));
           }}
           tasks={projectTasks}
@@ -699,7 +700,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <WhatsAppManager
           tasks={projectTasks}
           selectedProject={selectedProject}
-          onProjectUpdate={(project) => {
+          onProjectUpdate={(project: any) => {
             setProjects(projects.map(p => p.id === project.id ? project : p));
           }}
         />
@@ -727,7 +728,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         return (
           <UserManagement
             project={selectedProject}
-            onProjectUpdate={(project) => {
+            onProjectUpdate={(project: any) => {
               setProjects(projects.map(p => p.id === project.id ? project : p));
             }}
           />

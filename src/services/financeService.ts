@@ -181,7 +181,6 @@ export async function createShowRevenue(show: {
     category: 'shows',
     description: `Cachê: ${show.title} - ${show.artist_name}`,
     amount: show.value,
-    currency: show.currency || 'BRL',
     status: 'pending',
     due_date: show.show_date,
     reference_type: 'show',

@@ -29,6 +29,7 @@ export interface Show {
   status: ShowStatus;
   notes?: string;
   org_id?: string;
+  contractor_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -312,7 +313,7 @@ async function createCalendarEvent(row: any, artistName?: string): Promise<void>
     color: 'purple',
     location: `${row.venue || ''} ${row.venue_address || ''}`.trim(),
     metadata: { show_id: row.id, artist_name: name, status: row.status },
-  }).then(() => {}).catch(() => {}); // não bloqueia se falhar
+  }); // não bloqueia se falhar — erros ignorados pelo caller
 }
 
 async function updateCalendarEvent(row: any): Promise<void> {
@@ -324,8 +325,7 @@ async function updateCalendarEvent(row: any): Promise<void> {
       event_date: row.show_date ? String(row.show_date).substring(0, 10) : null,
       location: `${row.venue || ''} ${row.venue_address || ''}`.trim(),
     })
-    .eq('metadata->>show_id', row.id)
-    .then(() => {}).catch(() => {});
+    .eq('metadata->>show_id', row.id);
 }
 
 // ── Utilitários ───────────────────────────────────────────────────────────────

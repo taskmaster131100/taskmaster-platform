@@ -6,7 +6,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface Task {
   id: string;
-  organization_id: string;
+  organization_id?: string;
   title: string;
   description?: string;
   status: string;
@@ -18,8 +18,8 @@ interface Task {
   assignee_id?: string;
   labels?: string[];
   order_index?: number;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface TaskBoardProps {
@@ -491,7 +491,7 @@ function TaskFormModal({
                 </label>
                 <select
                   name="priority"
-                  defaultValue={task?.metadata?.priority || 'medium'}
+                  defaultValue={task?.priority || 'medium'}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
                 >
                   <option value="low">Baixa</option>
@@ -508,7 +508,7 @@ function TaskFormModal({
               <input
                 name="deadline"
                 type="date"
-                defaultValue={task?.deadline?.split('T')[0]}
+                defaultValue={task?.due_date?.split('T')[0]}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
               />
             </div>

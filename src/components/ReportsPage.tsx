@@ -44,6 +44,7 @@ interface TaskByStatus {
   name: string;
   value: number;
   color: string;
+  [key: string]: unknown;
 }
 
 // Templates de análise disponíveis
@@ -393,7 +394,7 @@ const ReportsPage: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="despesa" name="Despesa" fill="#ef4444" radius={[4, 4, 0, 0]} />

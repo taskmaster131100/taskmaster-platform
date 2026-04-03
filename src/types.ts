@@ -17,15 +17,26 @@ export interface Project {
 
 export interface Task {
   id: string;
-  projectId: string;
+  // DB columns
+  organization_id?: string;
+  project_id?: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in_progress' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: string;
+  priority?: string;
+  workstream?: string;
+  assignee_id?: string;
+  reporter_id?: string;
+  due_date?: string;
+  labels?: string[];
+  order_index?: number;
+  created_at?: string;
+  updated_at?: string;
+  // legacy aliases (backwards compat)
+  projectId?: string;
   assignedTo?: string;
   dueDate?: string;
   departmentId?: string;
-  dependencies?: string[];
 }
 
 export interface Artist {

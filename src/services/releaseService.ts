@@ -27,6 +27,7 @@ export interface Release {
   status: ReleaseStatus;
   organization_id?: string;
   org_id?: string;
+  isrc?: string;
   created_at: string;
   updated_at: string;
 }
@@ -197,7 +198,7 @@ export async function updateRelease(id: string, updates: Partial<Release> & { ar
 export async function deleteRelease(id: string): Promise<void> {
   const { error } = await supabase.from('releases').delete().eq('id', id);
   if (error) throw error;
-  await supabase.from('calendar_events').delete().eq('metadata->>release_id', id).catch(() => {});
+  try { await supabase.from('calendar_events').delete().eq('metadata->>release_id', id); } catch { /* ignore */ }
 }
 
 export async function listReleases(filters?: {

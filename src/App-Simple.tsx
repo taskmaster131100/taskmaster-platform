@@ -41,7 +41,7 @@ function AppSimple() {
             Bem-vindo ao TaskMaster
           </h1>
           <p className="text-gray-600 mb-6">
-            Olá, {user.name || user.email}!
+            Olá, {(user as any).name || user.email}!
           </p>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <p className="text-green-800 font-medium">

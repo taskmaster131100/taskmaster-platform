@@ -180,7 +180,7 @@ const UserProfilePage: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{profileData.name}</h2>
                 <p className="text-gray-600">{profileData.role}</p>
-                <p className="text-sm text-gray-500">{profileData.department}</p>
+                <p className="text-sm text-gray-500">{(profileData as any).department}</p>
               </div>
             </div>
 

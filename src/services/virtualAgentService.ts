@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Show, ShowTask } from './showService';
+import { Show } from './showService';
 
 export interface AgentNotification {
   id: string;
@@ -69,7 +69,7 @@ export async function getAgentNotifications(): Promise<AgentNotification[]> {
         .eq('show_id', show.id)
         .eq('status', 'pending');
 
-      const pendingTasks = (tasks || []) as ShowTask[];
+      const pendingTasks = (tasks || []) as any[];
       
       // Alerta de Contrato (Legal)
       if (pendingTasks.find(t => t.title.toLowerCase().includes('contrato'))) {
