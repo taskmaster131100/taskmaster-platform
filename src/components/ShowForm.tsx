@@ -8,15 +8,16 @@ interface ShowFormProps {
   show?: Show | null;
   onClose: () => void;
   onSave: () => void;
+  initialArtistName?: string;
 }
 
-export default function ShowForm({ show, onClose, onSave }: ShowFormProps) {
+export default function ShowForm({ show, onClose, onSave, initialArtistName }: ShowFormProps) {
   const [loading, setLoading] = useState(false);
   const [artists, setArtists] = useState<any[]>([]);
-  
+
   const [formData, setFormData] = useState({
     title: show?.title || '',
-    artist_name: show?.artist_name || '',
+    artist_name: show?.artist_name || initialArtistName || '',
     show_date: show?.show_date || '',
     show_time: show?.show_time || '',
     venue: show?.venue || '',

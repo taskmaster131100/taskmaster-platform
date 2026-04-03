@@ -1,8 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase, TrendingUp, Star, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+
+// ── Fase de Carreira por Artista ──────────────────────────────────────────────
+type CareerStage = 'iniciante' | 'desenvolvimento' | 'crescimento' | 'profissional';
+
+interface CareerInfo {
+  stage: CareerStage;
+  label: string;
+  color: string;
+  bg: string;
+  description: string;
+  nextSteps: string[];
+}
+
+function computeCareerStage(totalShows: number, totalReleases: number, activeProjects: number): CareerInfo {
+  if (totalShows >= 20 && totalReleases >= 8) {
+    return {
+      stage: 'profissional',
+      label: 'Profissional',
+      color: 'text-purple-700',
+      bg: 'bg-purple-100',
+      description: 'Carreira consolidada com histórico sólido de shows e lançamentos.',
+      nextSteps: [
+        'Avaliar parceria com booking internacional',
+        'Estruturar estratégia de licenciamento e sync',
+        'Considerar distribuição própria ou selo',
+      ],
+    };
+  }
+  if (totalShows >= 10 || totalReleases >= 5) {
+    return {
+      stage: 'crescimento',
+      label: 'Em Crescimento',
+      color: 'text-blue-700',
+      bg: 'bg-blue-100',
+      description: 'Base construída. Hora de estruturar equipe, marca e escala.',
+      nextSteps: [
+        'Lançar EP ou álbum para consolidar identidade',
+        'Definir manager/booking dedicado',
+        'Criar estratégia de conteúdo consistente',
+      ],
+    };
+  }
+  if (totalShows >= 3 || totalReleases >= 2) {
+    return {
+      stage: 'desenvolvimento',
+      label: 'Em Desenvolvimento',
+      color: 'text-amber-700',
+      bg: 'bg-amber-100',
+      description: 'Primeiros resultados. Foco em consistência e audiência.',
+      nextSteps: [
+        'Lançar pelo menos 1 música por trimestre',
+        'Atingir 5 shows e coletar feedbacks',
+        'Estabelecer presença digital ativa',
+      ],
+    };
+  }
+  return {
+    stage: 'iniciante',
+    label: 'Iniciante',
+    color: 'text-green-700',
+    bg: 'bg-green-100',
+    description: 'Início de jornada. Prioridade: primeiro lançamento e primeiros shows.',
+    nextSteps: [
+      'Gravar e lançar o primeiro single',
+      'Fazer os 3 primeiros shows (mesmo que pequenos)',
+      'Abrir perfis nas plataformas de streaming',
+    ],
+  };
+}
 
 interface ArtistDetailsProps {
   artistId: string;
@@ -33,6 +102,9 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
   const [artistProjects, setArtistProjects] = useState<any[]>([]);
   const [artistProjectTasks, setArtistProjectTasks] = useState<any[]>([]);
   const [loadingOps, setLoadingOps] = useState(false);
+  // Contagens totais para cálculo de fase de carreira
+  const [totalShowsCount, setTotalShowsCount] = useState(0);
+  const [totalReleasesCount, setTotalReleasesCount] = useState(0);
 
   useEffect(() => {
     const loadArtist = async () => {
@@ -108,7 +180,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
       try {
         const today = new Date().toISOString().split('T')[0];
 
-        const [showsResult, releasesResult] = await Promise.all([
+        const [showsResult, releasesResult, totalShowsResult, totalReleasesResult] = await Promise.all([
           supabase
             .from('shows')
             .select('id, title, show_date, city, status, value')
@@ -122,12 +194,22 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
             .eq('artist_name', artist.name)
             .neq('status', 'released')
             .order('release_date', { ascending: true })
-            .limit(5)
+            .limit(5),
+          supabase
+            .from('shows')
+            .select('id', { count: 'exact', head: true })
+            .eq('artist_name', artist.name),
+          supabase
+            .from('releases')
+            .select('id', { count: 'exact', head: true })
+            .eq('artist_name', artist.name),
         ]);
 
         const shows = showsResult.data || [];
         setArtistShows(shows);
         setArtistReleases(releasesResult.data || []);
+        setTotalShowsCount(totalShowsResult.count ?? 0);
+        setTotalReleasesCount(totalReleasesResult.count ?? 0);
 
         // Buscar tarefas abertas dos shows deste artista
         if (shows.length > 0) {
@@ -374,7 +456,25 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                     }`}>
                       {artist.status === 'active' ? 'Ativo' : 'Inativo'}
                     </span>
+                    {/* Badge fase de carreira */}
+                    {!loadingOps && (() => {
+                      const career = computeCareerStage(totalShowsCount, totalReleasesCount, artistProjects.length);
+                      return (
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold border flex items-center gap-1 ${career.bg} ${career.color} border-transparent`}>
+                          <Star className="w-3 h-3" />
+                          {career.label}
+                        </span>
+                      );
+                    })()}
                   </div>
+                  {/* Contadores rápidos */}
+                  {!loadingOps && (
+                    <div className="flex gap-4 mt-3 justify-center md:justify-start text-xs text-gray-500">
+                      <span><strong className="text-gray-800">{totalShowsCount}</strong> show{totalShowsCount !== 1 ? 's' : ''}</span>
+                      <span><strong className="text-gray-800">{totalReleasesCount}</strong> lançamento{totalReleasesCount !== 1 ? 's' : ''}</span>
+                      <span><strong className="text-gray-800">{artistProjects.length}</strong> projeto{artistProjects.length !== 1 ? 's' : ''} ativos</span>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -512,6 +612,36 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                 </p>
               )}
             </div>
+
+            {/* ── Fase de Carreira e Próximos Passos ── */}
+            {!loadingOps && (() => {
+              const career = computeCareerStage(totalShowsCount, totalReleasesCount, artistProjects.length);
+              return (
+                <div className={`rounded-2xl shadow-sm p-6 border ${career.bg} border-transparent`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className={`w-5 h-5 ${career.color}`} />
+                    <h3 className={`text-base font-bold ${career.color}`}>Fase de Carreira: {career.label}</h3>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-4">{career.description}</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-2">Próximos passos recomendados</p>
+                  <ul className="space-y-2">
+                    {career.nextSteps.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
+                        <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-0.5 ${career.color}`} />
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                    className={`mt-4 text-xs font-bold ${career.color} flex items-center gap-1 hover:underline`}
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Planejar com o Copiloto IA
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* ── VISÃO 360 OPERACIONAL ── */}
 

@@ -31,10 +31,14 @@ export default function ShowsManager() {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeView, setActiveView] = useState<'details' | 'roadmap' | 'setlist' | 'rider' | 'finance'>('details');
 
+  // Artista vindo da navegação — persiste para pré-preencher o form
+  const [navArtistName, setNavArtistName] = useState('');
+
   // Pré-filtrar pelo artista se a navegação veio do contexto do artista
   useEffect(() => {
     const artistFromNav = (location.state as any)?.artist;
     if (artistFromNav?.name) {
+      setNavArtistName(artistFromNav.name);
       setSearchTerm(artistFromNav.name);
     }
   }, []);
@@ -321,6 +325,7 @@ export default function ShowsManager() {
           show={selectedShow}
           onClose={handleFormClose}
           onSave={handleFormSave}
+          initialArtistName={selectedShow ? undefined : navArtistName}
         />
       )}
 
