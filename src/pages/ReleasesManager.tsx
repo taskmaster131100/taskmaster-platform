@@ -56,6 +56,8 @@ export default function ReleasesManager() {
   const [artistFilter, setArtistFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | ''>('');
   const [uploading, setUploading] = useState(false);
+  // Artista vindo da navegação — persiste para pré-preencher o form mesmo após resetForm
+  const [navArtistName, setNavArtistName] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -73,8 +75,8 @@ export default function ReleasesManager() {
   useEffect(() => {
     const artistFromNav = (location.state as any)?.artist;
     if (artistFromNav?.name) {
+      setNavArtistName(artistFromNav.name);
       setArtistFilter(artistFromNav.name);
-      // Pré-preencher o form de novo lançamento com o artista
       setFormData(prev => ({ ...prev, artist_name: artistFromNav.name }));
     }
   }, []);
@@ -195,7 +197,7 @@ export default function ReleasesManager() {
   const resetForm = () => {
     setFormData({
       title: '',
-      artist_name: '',
+      artist_name: navArtistName, // preserva artista do contexto de navegação
       release_type: 'single',
       release_date: '',
       isrc: '',
