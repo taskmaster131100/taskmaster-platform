@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown, Upload, File, Image, Headphones, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 
 interface UploadedFile {
   name: string;
@@ -117,6 +118,56 @@ export default function MusicHub() {
     const artistFromNav = (location.state as any)?.artist;
     if (artistFromNav?.name) setArtistContext(artistFromNav);
   }, []);
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('user_arrangements')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (error) { console.error('loadData error:', error); return; }
+    const rows = data || [];
+    const parseMeta = (row: any) => {
+      try { return row.content ? JSON.parse(row.content) : {}; } catch { return {}; }
+    };
+    setSongs(rows.filter(r => r.type === 'song').map(r => {
+      const m = parseMeta(r);
+      return { id: r.id, name: r.title, artist: r.artist || '', key: r.key, bpm: r.tempo, duration: m.duration, genre: m.genre, lyrics: m.lyrics, chords: m.chords, notes: m.notes, files: m.files, createdAt: r.created_at };
+    }));
+    setArrangements(rows.filter(r => r.type === 'arrangement').map(r => {
+      const m = parseMeta(r);
+      return { id: r.id, name: r.title, songName: r.artist || undefined, key: r.key, bpm: r.tempo, timeSignature: r.time_signature || '4/4', genre: m.genre, instruments: Array.isArray(r.instruments) ? r.instruments : [], sections: m.sections, notes: m.notes, files: m.files, status: (r.status as any) || 'rascunho', createdAt: r.created_at };
+    }));
+    setRehearsals(rows.filter(r => r.type === 'rehearsal').map(r => {
+      const m = parseMeta(r);
+      return { id: r.id, name: r.title, date: m.date || '', time: m.time || '', location: m.location, duration: m.duration, songs: m.songs || [], notes: m.notes, status: m.status || 'agendado', createdAt: r.created_at };
+    }));
+    setSetlists(rows.filter(r => r.type === 'setlist').map(r => {
+      const m = parseMeta(r);
+      return { id: r.id, name: r.title, event: m.event, date: m.date, songs: m.songs || [], totalDuration: m.totalDuration, notes: m.notes, createdAt: r.created_at };
+    }));
+  };
+
+  const saveToDb = async (type: string, title: string, artist: string, extra: Record<string, any>, structuredFields?: Record<string, any>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Não autenticado');
+    const { data, error } = await supabase
+      .from('user_arrangements')
+      .insert({ user_id: user.id, type, title, artist, content: JSON.stringify(extra), ...structuredFields })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  };
+
+  const deleteFromDb = async (id: string) => {
+    const { error } = await supabase.from('user_arrangements').delete().eq('id', id);
+    if (error) throw error;
+  };
 
   const [showSongModal, setShowSongModal] = useState(false);
   const [showArrangementModal, setShowArrangementModal] = useState(false);
@@ -268,14 +319,20 @@ export default function MusicHub() {
     setArrangementSections(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
   };
 
-  const deleteArrangement = (id: string) => {
-    setArrangements(prev => prev.filter(a => a.id !== id));
-    toast.success('Arranjo removido');
+  const deleteArrangement = async (id: string) => {
+    try {
+      await deleteFromDb(id);
+      setArrangements(prev => prev.filter(a => a.id !== id));
+      toast.success('Arranjo removido');
+    } catch { toast.error('Erro ao remover arranjo'); }
   };
 
-  const deleteSong = (id: string) => {
-    setSongs(prev => prev.filter(s => s.id !== id));
-    toast.success('Música removida');
+  const deleteSong = async (id: string) => {
+    try {
+      await deleteFromDb(id);
+      setSongs(prev => prev.filter(s => s.id !== id));
+      toast.success('Música removida');
+    } catch { toast.error('Erro ao remover música'); }
   };
 
   return (
@@ -651,27 +708,24 @@ export default function MusicHub() {
               <h3 className="text-lg font-semibold">Nova Música</h3>
               <button onClick={() => setShowSongModal(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
-              const newSong: Song = {
-                id: Date.now().toString(),
-                name: fd.get('name') as string,
-                artist: fd.get('artist') as string,
-                key: fd.get('key') as string || undefined,
-                bpm: fd.get('bpm') ? Number(fd.get('bpm')) : undefined,
-                duration: fd.get('duration') as string || undefined,
-                genre: fd.get('genre') as string || undefined,
-                lyrics: fd.get('lyrics') as string || undefined,
-                chords: fd.get('chords') as string || undefined,
-                notes: fd.get('notes') as string || undefined,
-                files: songFiles.length > 0 ? [...songFiles] : undefined,
-                createdAt: new Date().toISOString()
-              };
-              setSongs([...songs, newSong]);
-              setShowSongModal(false);
-              setSongFiles([]);
-              toast.success('Música adicionada com sucesso!');
+              const songName = fd.get('name') as string;
+              const songArtist = fd.get('artist') as string;
+              const songKey = fd.get('key') as string || undefined;
+              const songBpm = fd.get('bpm') ? Number(fd.get('bpm')) : undefined;
+              try {
+                const row = await saveToDb('song', songName, songArtist,
+                  { duration: fd.get('duration') || undefined, genre: fd.get('genre') || undefined, lyrics: fd.get('lyrics') || undefined, chords: fd.get('chords') || undefined, notes: fd.get('notes') || undefined, files: songFiles.length > 0 ? [...songFiles] : undefined },
+                  { key: songKey || null, tempo: songBpm || null }
+                );
+                const newSong: Song = { id: row.id, name: songName, artist: songArtist, key: songKey, bpm: songBpm, duration: fd.get('duration') as string || undefined, genre: fd.get('genre') as string || undefined, lyrics: fd.get('lyrics') as string || undefined, chords: fd.get('chords') as string || undefined, notes: fd.get('notes') as string || undefined, files: songFiles.length > 0 ? [...songFiles] : undefined, createdAt: row.created_at };
+                setSongs([...songs, newSong]);
+                setShowSongModal(false);
+                setSongFiles([]);
+                toast.success('Música adicionada com sucesso!');
+              } catch (err: any) { toast.error(err?.message || 'Erro ao salvar música'); }
             }}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -734,30 +788,28 @@ export default function MusicHub() {
               <h3 className="text-lg font-semibold">Novo Arranjo</h3>
               <button onClick={() => setShowArrangementModal(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
-              const newArr: Arrangement = {
-                id: Date.now().toString(),
-                name: fd.get('name') as string,
-                songName: fd.get('songName') as string || undefined,
-                key: fd.get('key') as string || undefined,
-                bpm: fd.get('bpm') ? Number(fd.get('bpm')) : undefined,
-                timeSignature: fd.get('timeSignature') as string || '4/4',
-                genre: fd.get('genre') as string || undefined,
-                instruments: selectedInstruments,
-                sections: arrangementSections.length > 0 ? arrangementSections : undefined,
-                notes: fd.get('notes') as string || undefined,
-                files: arrangementFiles.length > 0 ? [...arrangementFiles] : undefined,
-                status: (fd.get('status') as Arrangement['status']) || 'rascunho',
-                createdAt: new Date().toISOString()
-              };
-              setArrangements([...arrangements, newArr]);
-              setShowArrangementModal(false);
-              setSelectedInstruments([]);
-              setArrangementSections([]);
-              setArrangementFiles([]);
-              toast.success('Arranjo criado com sucesso!');
+              const arrName = fd.get('name') as string;
+              const arrSongName = fd.get('songName') as string || undefined;
+              const arrKey = fd.get('key') as string || undefined;
+              const arrBpm = fd.get('bpm') ? Number(fd.get('bpm')) : undefined;
+              const arrTimeSig = fd.get('timeSignature') as string || '4/4';
+              const arrStatus = (fd.get('status') as Arrangement['status']) || 'rascunho';
+              try {
+                const row = await saveToDb('arrangement', arrName, arrSongName || '',
+                  { genre: fd.get('genre') || undefined, sections: arrangementSections.length > 0 ? arrangementSections : undefined, notes: fd.get('notes') || undefined, files: arrangementFiles.length > 0 ? [...arrangementFiles] : undefined },
+                  { key: arrKey || null, tempo: arrBpm || null, time_signature: arrTimeSig, instruments: selectedInstruments, status: arrStatus }
+                );
+                const newArr: Arrangement = { id: row.id, name: arrName, songName: arrSongName, key: arrKey, bpm: arrBpm, timeSignature: arrTimeSig, genre: fd.get('genre') as string || undefined, instruments: selectedInstruments, sections: arrangementSections.length > 0 ? [...arrangementSections] : undefined, notes: fd.get('notes') as string || undefined, files: arrangementFiles.length > 0 ? [...arrangementFiles] : undefined, status: arrStatus, createdAt: row.created_at };
+                setArrangements([...arrangements, newArr]);
+                setShowArrangementModal(false);
+                setSelectedInstruments([]);
+                setArrangementSections([]);
+                setArrangementFiles([]);
+                toast.success('Arranjo criado com sucesso!');
+              } catch (err: any) { toast.error(err?.message || 'Erro ao salvar arranjo'); }
             }}>
               <div className="space-y-5">
                 {/* Info básica */}
@@ -903,24 +955,19 @@ export default function MusicHub() {
               <h3 className="text-lg font-semibold">Novo Ensaio</h3>
               <button onClick={() => setShowRehearsalModal(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
-              const newReh: Rehearsal = {
-                id: Date.now().toString(),
-                name: fd.get('name') as string,
-                date: fd.get('date') as string,
-                time: fd.get('time') as string,
-                location: fd.get('location') as string || undefined,
-                duration: fd.get('duration') as string || undefined,
-                songs: [],
-                notes: fd.get('notes') as string || undefined,
-                status: 'agendado',
-                createdAt: new Date().toISOString()
-              };
-              setRehearsals([...rehearsals, newReh]);
-              setShowRehearsalModal(false);
-              toast.success('Ensaio agendado com sucesso!');
+              const rehName = fd.get('name') as string;
+              try {
+                const row = await saveToDb('rehearsal', rehName, '',
+                  { date: fd.get('date'), time: fd.get('time'), location: fd.get('location') || undefined, duration: fd.get('duration') || undefined, songs: [], notes: fd.get('notes') || undefined, status: 'agendado' }
+                );
+                const newReh: Rehearsal = { id: row.id, name: rehName, date: fd.get('date') as string, time: fd.get('time') as string, location: fd.get('location') as string || undefined, duration: fd.get('duration') as string || undefined, songs: [], notes: fd.get('notes') as string || undefined, status: 'agendado', createdAt: row.created_at };
+                setRehearsals([...rehearsals, newReh]);
+                setShowRehearsalModal(false);
+                toast.success('Ensaio agendado com sucesso!');
+              } catch (err: any) { toast.error(err?.message || 'Erro ao salvar ensaio'); }
             }}>
               <div className="space-y-4">
                 <div>
@@ -967,22 +1014,19 @@ export default function MusicHub() {
               <h3 className="text-lg font-semibold">Novo Setlist</h3>
               <button onClick={() => setShowSetlistModal(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
-              const newSet: Setlist = {
-                id: Date.now().toString(),
-                name: fd.get('name') as string,
-                event: fd.get('event') as string || undefined,
-                date: fd.get('date') as string || undefined,
-                songs: [],
-                totalDuration: fd.get('totalDuration') as string || undefined,
-                notes: fd.get('notes') as string || undefined,
-                createdAt: new Date().toISOString()
-              };
-              setSetlists([...setlists, newSet]);
-              setShowSetlistModal(false);
-              toast.success('Setlist criado com sucesso!');
+              const setName = fd.get('name') as string;
+              try {
+                const row = await saveToDb('setlist', setName, '',
+                  { event: fd.get('event') || undefined, date: fd.get('date') || undefined, songs: [], totalDuration: fd.get('totalDuration') || undefined, notes: fd.get('notes') || undefined }
+                );
+                const newSet: Setlist = { id: row.id, name: setName, event: fd.get('event') as string || undefined, date: fd.get('date') as string || undefined, songs: [], totalDuration: fd.get('totalDuration') as string || undefined, notes: fd.get('notes') as string || undefined, createdAt: row.created_at };
+                setSetlists([...setlists, newSet]);
+                setShowSetlistModal(false);
+                toast.success('Setlist criado com sucesso!');
+              } catch (err: any) { toast.error(err?.message || 'Erro ao salvar setlist'); }
             }}>
               <div className="space-y-4">
                 <div>

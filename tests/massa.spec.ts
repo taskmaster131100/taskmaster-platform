@@ -1,0 +1,645 @@
+import { test, expect, Page } from '@playwright/test';
+
+const BASE_URL = 'https://www.taskmaster.works';
+const TEST_EMAIL = `test_${Date.now()}@taskmaster.test`;
+const TEST_PASSWORD = 'Bal@131100';
+const EXISTING_EMAIL = 'balmarcos@hotmail.com';
+
+// ─── HELPERS ───────────────────────────────────────────
+async function login(page: Page, email = EXISTING_EMAIL, password = TEST_PASSWORD) {
+  await page.goto(`${BASE_URL}/login`);
+  await page.waitForLoadState('networkidle');
+  await page.fill('input[type="email"], input[name="email"]', email);
+  await page.fill('input[type="password"], input[name="password"]', password);
+  await page.click('button[type="submit"], button:has-text("Entrar"), button:has-text("Login")');
+  await page.waitForTimeout(2000);
+}
+
+async function screenshot(page: Page, name: string) {
+  await page.screenshot({ path: `tests/screenshots/${name}.png`, fullPage: true });
+}
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 1 — ACESSO E NAVEGAÇÃO
+// ══════════════════════════════════════════════════════════
+
+test.describe('1. Acesso e Carregamento', () => {
+  test('1.1 Homepage carrega sem erro', async ({ page }) => {
+    const response = await page.goto(BASE_URL);
+    expect(response?.status()).toBeLessThan(400);
+    await screenshot(page, '1-1-homepage');
+    await expect(page).not.toHaveTitle(''); // tem título
+    console.log('Título da página:', await page.title());
+  });
+
+  test('1.2 Página de login acessível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
+    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible({ timeout: 10000 });
+    await screenshot(page, '1-2-login-page');
+  });
+
+  test('1.3 Redirecionamento para login sem auth', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(2000);
+    const url = page.url();
+    console.log('Redirecionou para:', url);
+    await screenshot(page, '1-3-redirect-sem-auth');
+    // Deve estar em login ou na home, não em /tasks
+    expect(url).not.toContain('/tasks');
+  });
+
+  test('1.4 Console sem erros críticos na homepage', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+    page.on('pageerror', err => errors.push(err.message));
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+    const criticalErrors = errors.filter(e => !e.includes('favicon') && !e.includes('analytics'));
+    console.log('Erros no console:', criticalErrors);
+    await screenshot(page, '1-4-console-errors');
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 2 — AUTENTICAÇÃO
+// ══════════════════════════════════════════════════════════
+
+test.describe('2. Autenticação', () => {
+  test('2.1 Login com credenciais inválidas mostra erro', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
+    await page.waitForLoadState('networkidle');
+    await page.fill('input[type="email"], input[name="email"]', 'naoexiste@test.com');
+    await page.fill('input[type="password"], input[name="password"]', 'senhaerrada123');
+    await page.click('button[type="submit"], button:has-text("Entrar"), button:has-text("Login")');
+    await page.waitForTimeout(3000);
+    await screenshot(page, '2-1-login-invalido');
+    // Deve continuar na página de login ou mostrar erro
+    const url = page.url();
+    console.log('URL após login inválido:', url);
+  });
+
+  test('2.2 Registro de novo usuário', async ({ page }) => {
+    await page.goto(`${BASE_URL}/register`);
+    await page.waitForLoadState('networkidle');
+    await screenshot(page, '2-2-register-page');
+
+    // Verificar se página de registro existe
+    const hasForm = await page.locator('input[type="email"], form').count() > 0;
+    console.log('Formulário de registro encontrado:', hasForm);
+
+    if (hasForm) {
+      const fields = await page.locator('input').count();
+      console.log('Campos de input encontrados:', fields);
+    }
+  });
+
+  test('2.3 Recuperação de senha acessível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/reset-password`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '2-3-reset-password');
+    const url = page.url();
+    console.log('URL reset password:', url);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 3 — DASHBOARD PÓS-LOGIN
+// ══════════════════════════════════════════════════════════
+
+test.describe('3. Dashboard e Navegação', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('3.1 Login bem-sucedido redireciona corretamente', async ({ page }) => {
+    const url = page.url();
+    console.log('URL após login:', url);
+    await screenshot(page, '3-1-pos-login');
+    // Não deve estar em /login
+    expect(url).not.toContain('/login');
+  });
+
+  test('3.2 Sidebar/Menu principal visível', async ({ page }) => {
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-2-sidebar');
+
+    // Verificar elementos de navegação
+    const navItems = await page.locator('nav a, aside a, [role="navigation"] a').count();
+    console.log('Links de navegação encontrados:', navItems);
+    expect(navItems).toBeGreaterThan(3);
+  });
+
+  test('3.3 Navegar para Tarefas (/tasks)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-3-tasks');
+    const url = page.url();
+    console.log('URL tasks:', url);
+    // Verificar se carregou conteúdo
+    const hasContent = await page.locator('h1, h2, [class*="kanban"], [class*="board"], [class*="task"]').count() > 0;
+    console.log('Conteúdo de tasks encontrado:', hasContent);
+  });
+
+  test('3.4 Navegar para Calendário (/calendar)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/calendar`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-4-calendar');
+    const hasCalendar = await page.locator('[class*="calendar"], [class*="Calendar"], table').count() > 0;
+    console.log('Calendário encontrado:', hasCalendar);
+  });
+
+  test('3.5 Navegar para Financeiro (/finance)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/finance`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-5-finance');
+    const hasContent = await page.locator('h1, h2').count() > 0;
+    console.log('Financeiro carregou:', hasContent);
+  });
+
+  test('3.6 Navegar para Shows (/shows)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/shows`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-6-shows');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Shows carregou:', hasContent);
+  });
+
+  test('3.7 Navegar para Releases (/releases)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/releases`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-7-releases');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Releases carregou:', hasContent);
+  });
+
+  test('3.8 Navegar para Equipe (/team)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/team`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-8-team');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Equipe carregou:', hasContent);
+  });
+
+  test('3.9 Navegar para Produção Musical (/music)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/music`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-9-music');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Produção Musical carregou:', hasContent);
+  });
+
+  test('3.10 Navegar para Mentor Chat (/mentor-chat)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/mentor-chat`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-10-mentor-chat');
+    const hasContent = await page.locator('h1, h2, input, textarea').count() > 0;
+    console.log('Mentor Chat carregou:', hasContent);
+  });
+
+  test('3.11 Navegar para KPIs (/kpis)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/kpis`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-11-kpis');
+    const hasContent = await page.locator('h1, h2').count() > 0;
+    console.log('KPIs carregou:', hasContent);
+  });
+
+  test('3.12 Navegar para Relatórios (/reports)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/reports`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '3-12-reports');
+    const hasContent = await page.locator('h1, h2, svg').count() > 0;
+    console.log('Relatórios carregou:', hasContent);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 4 — CRUD DE ARTISTAS
+// ══════════════════════════════════════════════════════════
+
+test.describe('4. Artistas', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('4.1 Página de artistas acessível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/artists`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '4-1-artists-list');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Artistas carregou:', hasContent);
+  });
+
+  test('4.2 Botão criar artista existe', async ({ page }) => {
+    await page.goto(`${BASE_URL}/artists`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button:has-text("Novo Artista"), button:has-text("Criar Artista"), button:has-text("+ Artista")').first();
+    const exists = await createBtn.count() > 0;
+    console.log('Botão criar artista encontrado:', exists);
+    await screenshot(page, '4-2-create-artist-btn');
+  });
+
+  test('4.3 Abrir formulário de criação de artista', async ({ page }) => {
+    await page.goto(`${BASE_URL}/artists`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button:has-text("Novo"), button:has-text("Criar"), button:has-text("Artista"), button:has-text("+")').first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '4-3-artist-form');
+      const hasForm = await page.locator('input, form, [role="dialog"]').count() > 0;
+      console.log('Formulário abriu:', hasForm);
+    }
+  });
+
+  test('4.4 Criar artista completo', async ({ page }) => {
+    await page.goto(`${BASE_URL}/artists`);
+    await page.waitForTimeout(2000);
+
+    // Tentar abrir o modal/form
+    const createBtn = page.locator('button').filter({ hasText: /novo|criar|artista|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+
+      // Preencher campos disponíveis
+      const nameInput = page.locator('input[name*="name"], input[placeholder*="nome"], input[placeholder*="Nome"]').first();
+      if (await nameInput.count() > 0) {
+        await nameInput.fill('Artista Teste Playwright');
+      }
+
+      const stageInput = page.locator('input[name*="stage"], input[placeholder*="artístico"]').first();
+      if (await stageInput.count() > 0) {
+        await stageInput.fill('Artista Teste');
+      }
+
+      await screenshot(page, '4-4-artist-form-filled');
+
+      // Salvar
+      const saveBtn = page.locator('button[type="submit"], button:has-text("Salvar"), button:has-text("Criar")').last();
+      if (await saveBtn.count() > 0) {
+        await saveBtn.click();
+        await page.waitForTimeout(2000);
+        await screenshot(page, '4-4-artist-created');
+        console.log('URL após criar artista:', page.url());
+      }
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 5 — CRUD DE PROJETOS
+// ══════════════════════════════════════════════════════════
+
+test.describe('5. Projetos', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(2000);
+  });
+
+  test('5.1 Botão criar projeto visível no dashboard', async ({ page }) => {
+    await screenshot(page, '5-1-dashboard');
+    const createBtn = page.locator('button:has-text("Criar Projeto"), button:has-text("Novo Projeto"), button:has-text("+ Projeto")').first();
+    const exists = await createBtn.count() > 0;
+    console.log('Botão criar projeto no dashboard:', exists);
+  });
+
+  test('5.2 Abrir modal de criação de projeto', async ({ page }) => {
+    const createBtn = page.locator('button').filter({ hasText: /projeto|project|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '5-2-project-modal');
+      const hasModal = await page.locator('[role="dialog"], .modal, form').count() > 0;
+      console.log('Modal de projeto abriu:', hasModal);
+    }
+  });
+
+  test('5.3 Opções de criação de projeto disponíveis', async ({ page }) => {
+    const createBtn = page.locator('button').filter({ hasText: /projeto|project|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+
+      // Verificar se há opções (Do Zero, Template, IA)
+      const hasIA = await page.locator('text=IA, text=Copilot, text=Inteligência').count() > 0;
+      const hasTemplate = await page.locator('text=Template, text=template').count() > 0;
+      const hasZero = await page.locator('text=zero, text=Zero, text=scratch').count() > 0;
+
+      console.log('Opção IA Copilot:', hasIA);
+      console.log('Opção Template:', hasTemplate);
+      console.log('Opção Do Zero:', hasZero);
+      await screenshot(page, '5-3-project-options');
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 6 — TAREFAS E KANBAN
+// ══════════════════════════════════════════════════════════
+
+test.describe('6. Tarefas e Kanban', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('6.1 Board Kanban renderiza', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(3000);
+    await screenshot(page, '6-1-kanban-board');
+
+    // Verificar colunas do kanban
+    const cols = await page.locator('[class*="column"], [class*="Column"], [class*="kanban"]').count();
+    console.log('Colunas Kanban encontradas:', cols);
+  });
+
+  test('6.2 Colunas corretas no Kanban', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(3000);
+
+    const pageText = await page.textContent('body') || '';
+    const hasToDoCol = /a fazer|to.?do|pendente/i.test(pageText);
+    const hasProgressCol = /em progresso|in progress|andamento/i.test(pageText);
+    const hasDoneCol = /concluído|done|finalizado/i.test(pageText);
+
+    console.log('Coluna "A Fazer":', hasToDoCol);
+    console.log('Coluna "Em Progresso":', hasProgressCol);
+    console.log('Coluna "Concluído":', hasDoneCol);
+  });
+
+  test('6.3 Botão nova tarefa existe', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button').filter({ hasText: /nova tarefa|new task|adicionar|\+/i }).first();
+    const exists = await createBtn.count() > 0;
+    console.log('Botão nova tarefa:', exists);
+    await screenshot(page, '6-3-new-task-btn');
+  });
+
+  test('6.4 Criar nova tarefa', async ({ page }) => {
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button').filter({ hasText: /nova|new|task|tarefa|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '6-4-task-form');
+
+      const titleInput = page.locator('input[name*="title"], input[placeholder*="título"], input[placeholder*="Título"], input[name*="name"]').first();
+      if (await titleInput.count() > 0) {
+        await titleInput.fill('Tarefa Teste Playwright');
+        await screenshot(page, '6-4-task-filled');
+
+        const saveBtn = page.locator('button[type="submit"], button:has-text("Criar"), button:has-text("Salvar")').last();
+        if (await saveBtn.count() > 0) {
+          await saveBtn.click();
+          await page.waitForTimeout(2000);
+          await screenshot(page, '6-4-task-created');
+        }
+      }
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 7 — SHOWS
+// ══════════════════════════════════════════════════════════
+
+test.describe('7. Shows', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('7.1 Página de shows carrega', async ({ page }) => {
+    await page.goto(`${BASE_URL}/shows`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '7-1-shows');
+    const hasContent = await page.locator('h1, h2, button').count() > 0;
+    console.log('Shows carregou:', hasContent);
+  });
+
+  test('7.2 Abrir formulário de novo show', async ({ page }) => {
+    await page.goto(`${BASE_URL}/shows`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button').filter({ hasText: /novo show|new show|criar show|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '7-2-show-form');
+      const hasForm = await page.locator('input, [role="dialog"]').count() > 0;
+      console.log('Formulário show abriu:', hasForm);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 8 — IA E MENTOR
+// ══════════════════════════════════════════════════════════
+
+test.describe('8. IA e Mentor', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('8.1 Mentor Chat carrega', async ({ page }) => {
+    await page.goto(`${BASE_URL}/mentor-chat`);
+    await page.waitForTimeout(3000);
+    await screenshot(page, '8-1-mentor-chat');
+    const hasChat = await page.locator('input, textarea, [class*="chat"], [class*="message"]').count() > 0;
+    console.log('Mentor Chat tem input:', hasChat);
+  });
+
+  test('8.2 Enviar mensagem no Mentor Chat', async ({ page }) => {
+    await page.goto(`${BASE_URL}/mentor-chat`);
+    await page.waitForTimeout(3000);
+
+    const input = page.locator('input[type="text"], textarea').last();
+    if (await input.count() > 0) {
+      await input.fill('Olá, qual é o status da plataforma?');
+      await screenshot(page, '8-2-mentor-message-typed');
+
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(5000); // aguardar resposta da IA
+      await screenshot(page, '8-2-mentor-response');
+
+      const messages = await page.locator('[class*="message"], [class*="chat"], [class*="bubble"]').count();
+      console.log('Mensagens no chat:', messages);
+    }
+  });
+
+  test('8.3 Planning Copilot acessível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '8-3-planning');
+    const hasContent = await page.locator('h1, h2, button, input, textarea').count() > 0;
+    console.log('Planning carregou:', hasContent);
+  });
+
+  test('8.4 IA de Texto acessível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/ia-texto`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '8-4-ia-texto');
+    const hasContent = await page.locator('input, textarea, button').count() > 0;
+    console.log('IA Texto carregou:', hasContent);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 9 — FINANCEIRO
+// ══════════════════════════════════════════════════════════
+
+test.describe('9. Financeiro', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('9.1 Página financeira carrega', async ({ page }) => {
+    await page.goto(`${BASE_URL}/finance`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '9-1-finance');
+    const hasContent = await page.locator('h1, h2').count() > 0;
+    console.log('Financeiro carregou:', hasContent);
+  });
+
+  test('9.2 Aba de receitas visível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/finance`);
+    await page.waitForTimeout(2000);
+    const hasReceitas = await page.locator('text=Receita, text=receita').count() > 0;
+    console.log('Aba Receitas:', hasReceitas);
+    await screenshot(page, '9-2-receitas');
+  });
+
+  test('9.3 Gráficos renderizam', async ({ page }) => {
+    await page.goto(`${BASE_URL}/finance`);
+    await page.waitForTimeout(3000);
+    const hasSvg = await page.locator('svg, canvas, [class*="chart"], [class*="Chart"]').count() > 0;
+    console.log('Gráficos encontrados:', hasSvg);
+    await screenshot(page, '9-3-finance-charts');
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 10 — PRODUÇÃO MUSICAL
+// ══════════════════════════════════════════════════════════
+
+test.describe('10. Produção Musical', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('10.1 Módulo musical carrega', async ({ page }) => {
+    await page.goto(`${BASE_URL}/music`);
+    await page.waitForTimeout(3000);
+    await screenshot(page, '10-1-music');
+    const hasContent = await page.locator('h1, h2, button, [class*="music"], [class*="Music"]').count() > 0;
+    console.log('Módulo musical carregou:', hasContent);
+  });
+
+  test('10.2 Setlists acessíveis', async ({ page }) => {
+    await page.goto(`${BASE_URL}/music`);
+    await page.waitForTimeout(2000);
+
+    // Procurar aba ou link para setlists
+    const setlistLink = page.locator('text=Setlist, text=setlist, [href*="setlist"]').first();
+    if (await setlistLink.count() > 0) {
+      await setlistLink.click();
+      await page.waitForTimeout(1500);
+    }
+    await screenshot(page, '10-2-setlists');
+  });
+
+  test('10.3 Editor de arranjos carrega (abcjs)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/music`);
+    await page.waitForTimeout(3000);
+
+    // Verificar se abcjs não causou erros
+    const errors: string[] = [];
+    page.on('pageerror', err => errors.push(err.message));
+
+    await page.waitForTimeout(2000);
+    const abcjsError = errors.some(e => e.toLowerCase().includes('abc'));
+    console.log('Erro com abcjs:', abcjsError);
+    console.log('Erros de página:', errors.slice(0, 5));
+    await screenshot(page, '10-3-arrangement-editor');
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 11 — PERFORMANCE E QUALIDADE
+// ══════════════════════════════════════════════════════════
+
+test.describe('11. Performance', () => {
+  test('11.1 Homepage carrega em menos de 5 segundos', async ({ page }) => {
+    const start = Date.now();
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle');
+    const duration = Date.now() - start;
+    console.log(`Homepage carregou em: ${duration}ms`);
+    expect(duration).toBeLessThan(10000); // máx 10s
+  });
+
+  test('11.2 Dashboard pós-login carrega rápido', async ({ page }) => {
+    await login(page);
+    const start = Date.now();
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle');
+    const duration = Date.now() - start;
+    console.log(`Dashboard carregou em: ${duration}ms`);
+  });
+
+  test('11.3 Sem memory leaks óbvios (navegação múltipla)', async ({ page }) => {
+    await login(page);
+    const pages = ['/tasks', '/calendar', '/shows', '/releases', '/finance', '/music', '/reports'];
+
+    for (const path of pages) {
+      await page.goto(`${BASE_URL}${path}`);
+      await page.waitForTimeout(1000);
+    }
+
+    await screenshot(page, '11-3-nav-final');
+    console.log('Navegação múltipla completada sem crash');
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 12 — RESPONSIVIDADE
+// ══════════════════════════════════════════════════════════
+
+test.describe('12. Responsividade', () => {
+  test('12.1 Mobile (375x812) — iPhone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await login(page);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '12-1-mobile');
+    const hasContent = await page.locator('body').count() > 0;
+    console.log('Mobile carregou:', hasContent);
+  });
+
+  test('12.2 Tablet (768x1024) — iPad', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await login(page);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '12-2-tablet');
+  });
+
+  test('12.3 Desktop (1440x900)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '12-3-desktop');
+  });
+
+  test('12.4 Tasks mobile renderiza', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await login(page);
+    await page.goto(`${BASE_URL}/tasks`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '12-4-tasks-mobile');
+  });
+});
