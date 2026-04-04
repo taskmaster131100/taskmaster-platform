@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download, Truck } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '../components/auth/AuthProvider';
+import { useSubscription } from '../hooks/useSubscription';
+import PlanLimitModal from '../components/PlanLimitModal';
 import {
   Show,
   ShowStatus,
@@ -21,8 +24,11 @@ import FinancialSplit from '../components/FinancialSplit';
 
 export default function ShowsManager() {
   const location = useLocation();
+  const { organizationId } = useAuth();
+  const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ShowStatus | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -91,6 +97,10 @@ export default function ShowsManager() {
   };
 
   const handleCreateShow = () => {
+    if (planLimits.maxShows !== -1 && shows.length >= planLimits.maxShows) {
+      setShowLimitModal(true);
+      return;
+    }
     setSelectedShow(null);
     setShowFormModal(true);
   };
@@ -478,6 +488,15 @@ export default function ShowsManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {showLimitModal && (
+        <PlanLimitModal
+          resource="shows"
+          limit={planLimits.maxShows}
+          planName={planLimits.displayName || 'Plano atual'}
+          onClose={() => setShowLimitModal(false)}
+        />
       )}
     </div>
   );

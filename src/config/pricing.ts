@@ -144,44 +144,99 @@ export const PRICING_PLANS: PricingPlan[] = [
 
 /**
  * Feature limits by plan
+ *
+ * Mapeamento comercial:
+ *   starter      = Plano Inicial
+ *   pro          = Plano Base
+ *   professional = Plano Pro
+ *
+ * Regra: -1 = ilimitado | false = feature indisponível no plano
  */
 export const PLAN_LIMITS = {
+  // ── Plano Inicial ────────────────────────────────────────────────────────────
   starter: {
-    maxArtists: 3,
+    // Limites de recursos
+    maxArtists: 1,
+    maxProjects: 3,
+    maxTasks: 30,
+    maxShows: 5,
+    maxReleases: 1,
     maxKPIs: 5,
-    maxStorage: 5 * 1024 * 1024 * 1024,
+    maxStorage: 5 * 1024 * 1024 * 1024, // 5 GB
+
+    // Features de módulo
+    hasFinance: false,       // sem financeiro
+    hasTeam: false,          // sem equipe
+    hasTours: false,         // sem turnês
+    hasAI: false,            // sem IA (aguarda backend)
+    hasAIAdvanced: false,
+
+    // Legado — mantidos para compatibilidade
     aiPlanning: false,
     advancedAnalytics: false,
     customBranding: false,
     apiAccess: false,
     musicProduction: false,
     financeFull: false,
-    consulting: false
+    consulting: false,
+
+    // Metadados de exibição
+    displayName: 'Plano Inicial',
   },
+
+  // ── Plano Base ───────────────────────────────────────────────────────────────
   pro: {
-    maxArtists: 15,
+    maxArtists: 5,
+    maxProjects: 10,
+    maxTasks: 100,
+    maxShows: 20,
+    maxReleases: 5,
     maxKPIs: -1,
-    maxStorage: 50 * 1024 * 1024 * 1024,
-    aiPlanning: true,
+    maxStorage: 50 * 1024 * 1024 * 1024, // 50 GB
+
+    hasFinance: true,
+    hasTeam: false,
+    hasTours: false,
+    hasAI: false,            // ainda aguarda backend
+    hasAIAdvanced: false,
+
+    aiPlanning: false,
     advancedAnalytics: true,
     customBranding: false,
     apiAccess: false,
     musicProduction: true,
     financeFull: true,
-    consulting: false
+    consulting: false,
+
+    displayName: 'Plano Base',
   },
+
+  // ── Plano Pro ────────────────────────────────────────────────────────────────
   professional: {
     maxArtists: -1,
+    maxProjects: -1,
+    maxTasks: -1,
+    maxShows: -1,
+    maxReleases: -1,
     maxKPIs: -1,
-    maxStorage: 500 * 1024 * 1024 * 1024,
+    maxStorage: 500 * 1024 * 1024 * 1024, // 500 GB
+
+    hasFinance: true,
+    hasTeam: true,
+    hasTours: true,
+    hasAI: false,            // IA avançada — quando o backend estiver pronto
+    hasAIAdvanced: false,
+
     aiPlanning: true,
     advancedAnalytics: true,
     customBranding: true,
     apiAccess: true,
     musicProduction: true,
     financeFull: true,
-    consulting: true
-  }
+    consulting: true,
+
+    displayName: 'Plano Pro',
+  },
 };
 
 /**

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus, Music, Search, Filter, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle } from 'lucide-react';
+import { useAuth } from '../components/auth/AuthProvider';
+import { useSubscription } from '../hooks/useSubscription';
+import PlanLimitModal from '../components/PlanLimitModal';
 import {
   Release,
   ReleasePhase,
@@ -44,7 +47,10 @@ function getPhaseForRelease(status: ReleaseStatus): string {
 
 export default function ReleasesManager() {
   const location = useLocation();
+  const { organizationId } = useAuth();
+  const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [releaseLimitModal, setReleaseLimitModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -281,6 +287,10 @@ export default function ReleasesManager() {
         </div>
         <button
           onClick={() => {
+            if (planLimits.maxReleases !== -1 && releases.length >= planLimits.maxReleases) {
+              setReleaseLimitModal(true);
+              return;
+            }
             resetForm();
             setShowModal(true);
           }}
@@ -854,6 +864,15 @@ export default function ReleasesManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {releaseLimitModal && (
+        <PlanLimitModal
+          resource="lançamentos"
+          limit={planLimits.maxReleases}
+          planName={planLimits.displayName || 'Plano atual'}
+          onClose={() => setReleaseLimitModal(false)}
+        />
       )}
     </div>
   );

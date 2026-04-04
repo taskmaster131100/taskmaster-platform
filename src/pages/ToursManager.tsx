@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Calendar, Music, DollarSign, Clock, X, Search, Filter, Plane, Hotel, Users, Download } from 'lucide-react';
+import { MapPin, Plus, Calendar, Music, DollarSign, Clock, X, Search, Filter, Plane } from 'lucide-react';
 import {
   Tour,
   TourStatus,
@@ -105,29 +105,19 @@ export default function ToursManager() {
               <Plane className="w-6 h-6 text-[#FFAD85]" />
             </div>
 
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Hotel className="w-4 h-4" />
-                <span>3 Hotéis Reservados</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Users className="w-4 h-4" />
-                <span>Equipe: 12 pessoas</span>
-              </div>
+            <div className="space-y-2 mb-6">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>{formatDate(tour.start_date)} - {formatDate(tour.end_date)}</span>
+                <span>{formatDate(tour.start_date)} — {formatDate(tour.end_date)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                {getStatusBadge(tour.status)}
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-100 flex gap-2">
-              <button className="flex-1 py-2 bg-gray-50 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-100 flex items-center justify-center gap-1">
-                <Download className="w-3 h-3" /> Vouchers
-              </button>
-              <button className="flex-1 py-2 bg-gray-50 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-100 flex items-center justify-center gap-1">
-                <Users className="w-3 h-3" /> Equipe
-              </button>
-            </div>
+            {tour.description && (
+              <p className="text-sm text-gray-500 line-clamp-2 mb-4">{tour.description}</p>
+            )}
           </div>
         ))}
       </div>
@@ -141,35 +131,39 @@ export default function ToursManager() {
               <button onClick={() => setShowDetailsModal(false)} className="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2">
-                  <Plane className="w-5 h-5 text-blue-500" /> Voos e Deslocamento
-                </h3>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                  <p className="font-bold">Voo G3-1234 (GOL)</p>
-                  <p className="text-sm text-gray-600">GRU → SDU | 15/02 às 10:00</p>
-                  <p className="text-xs text-blue-600 mt-2 font-bold">Localizador: ABC123DEF</p>
-                </div>
+            {/* Informações reais da turnê */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs text-gray-500 mb-1">Início</p>
+                <p className="font-semibold text-gray-900">{formatDate(selectedTour.start_date)}</p>
               </div>
-
-              <div className="space-y-6">
-                <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2">
-                  <Hotel className="w-5 h-5 text-green-500" /> Hospedagem
-                </h3>
-                <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                  <p className="font-bold">Hotel Copacabana Palace</p>
-                  <p className="text-sm text-gray-600">Check-in: 15/02 | Check-out: 17/02</p>
-                  <p className="text-xs text-green-600 mt-2 font-bold">Reserva: #987654321</p>
-                </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs text-gray-500 mb-1">Fim</p>
+                <p className="font-semibold text-gray-900">{formatDate(selectedTour.end_date)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 col-span-2">
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                {getStatusBadge(selectedTour.status)}
               </div>
             </div>
 
-            <div className="mt-8 pt-8 border-t">
-              <button className="w-full py-4 bg-[#FFAD85] text-white rounded-xl font-bold text-lg hover:bg-[#FF9B6A] transition-all shadow-lg flex items-center justify-center gap-3">
-                <Download className="w-6 h-6" />
-                Baixar Malha de Viagem Completa (PDF)
-              </button>
+            {selectedTour.description && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-xs text-gray-500 mb-1">Descrição</p>
+                <p className="text-sm text-gray-700">{selectedTour.description}</p>
+              </div>
+            )}
+
+            {/* Logística: em desenvolvimento */}
+            <div className="mt-4 p-5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+              <span className="text-2xl mt-0.5">🚧</span>
+              <div>
+                <p className="font-bold text-amber-800 text-sm">Logística detalhada em desenvolvimento</p>
+                <p className="text-amber-700 text-xs mt-1">
+                  Gestão de voos, hospedagem e equipe técnica estará disponível em breve neste painel.
+                  Por enquanto, registre esses detalhes nas notas da turnê.
+                </p>
+              </div>
             </div>
           </div>
         </div>

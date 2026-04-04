@@ -87,6 +87,9 @@ const MailPreview = React.lazy(() => import('./pages/MailPreview'));
 import { localDatabase } from './services/localDatabase';
 import { supabase } from './lib/supabase';
 import type { Project, Task, Artist, Department, TeamMember } from './types';
+import { useSubscription } from './hooks/useSubscription';
+import ComingSoon from './components/ComingSoon';
+import PlanLimitModal from './components/PlanLimitModal';
 
 // Feature flag for classic routes
 const ENABLE_CLASSIC_ROUTES = import.meta.env.VITE_ENABLE_CLASSIC_ROUTES === 'true';
@@ -110,6 +113,10 @@ function App() {
   const [showCreateArtist, setShowCreateArtist] = useState(false);
   // tasksProjectMode: true = acesso via projeto (herda projeto), false = acesso global (sem projeto)
   const [tasksProjectMode, setTasksProjectMode] = useState(false);
+
+  // Plano e limites
+  const { limits: planLimits } = useSubscription(organizationId || undefined);
+  const [planLimitModal, setPlanLimitModal] = useState<{ resource: string; limit: number } | null>(null);
 
   // Importar componentes necessários
   const ProjectForm = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.ProjectForm })));
@@ -295,6 +302,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const handleProjectSubmit = async (projectData: any) => {
+    // Verificar limite do plano
+    if (planLimits.maxProjects !== -1 && projects.length >= planLimits.maxProjects) {
+      setPlanLimitModal({ resource: 'projetos', limit: planLimits.maxProjects });
+      setShowCreateProject(false);
+      return;
+    }
     try {
       const { data: newProject, error } = await supabase
         .from('projects')
@@ -326,6 +339,11 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const handleArtistSubmit = async (artistData: any) => {
+    // Verificar limite do plano
+    if (planLimits.maxArtists !== -1 && artists.length >= planLimits.maxArtists) {
+      setPlanLimitModal({ resource: 'artistas', limit: planLimits.maxArtists });
+      return;
+    }
     try {
       // Buscar organization_id do utilizador
       let orgId: string | null = null;
@@ -722,7 +740,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'marketing') return <MarketingManager project={selectedProject} />;
     if (activeTab === 'production') return <ProductionManager project={selectedProject} />;
     if (activeTab === 'preproduction') return <PreProductionManager project={selectedProject} />;
-    if (activeTab === 'ai') return <AIInsights project={selectedProject} tasks={projectTasks} />;
+    if (activeTab === 'ai') return (
+      <ComingSoon
+        title="IA Insights"
+        description="Análise inteligente dos seus projetos, tarefas e desempenho. Integração com IA em desenvolvimento."
+        eta="Em breve"
+      />
+    );
     if (activeTab === 'kpis') return <KPIManager selectedProject={selectedProject} />;
     if (activeTab === 'mindmap') {
       return (
@@ -762,10 +786,34 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'preferences') return <UserPreferences />;
     if (activeTab === 'role-features') return <UserRoleFeatures />;
     if (activeTab === 'about') return <About />;
-    if (activeTab === 'mentor-chat') return <MentorChatWithVoice userId={user?.id || ''} />;
-    if (activeTab === 'mentor-diagnosis') return <MentorDiagnosticOnboarding />;
-    if (activeTab === 'mentor-dashboard') return <MentorExecutiveDashboard />;
-    if (activeTab === 'mentor-consulting') return <PremiumConsultingBooking userId={user?.id || ''} />;
+    if (activeTab === 'mentor-chat') return (
+      <ComingSoon
+        title="Mentor IA — Marcos Menezes"
+        description="Converse com o mentor estratégico da TaskMaster. Backend de IA em integração final. Disponível em breve para todos os planos."
+        eta="Em breve"
+      />
+    );
+    if (activeTab === 'mentor-diagnosis') return (
+      <ComingSoon
+        title="Diagnóstico de Maturidade"
+        description="Avalie o estágio atual da sua operação e receba um plano de desenvolvimento personalizado."
+        eta="Em breve"
+      />
+    );
+    if (activeTab === 'mentor-dashboard') return (
+      <ComingSoon
+        title="Dashboard Executivo"
+        description="Visão consolidada do desempenho estratégico da sua operação artística."
+        eta="Em breve"
+      />
+    );
+    if (activeTab === 'mentor-consulting') return (
+      <ComingSoon
+        title="Consultoria Estratégica"
+        description="Sessões 1:1 com Marcos Menezes para estratégia de carreira, marketing e negócios. Agendamento online em breve."
+        eta="Em breve"
+      />
+    );
     if (activeTab === 'reports') {
       return <ReportsPage />;
     }
@@ -1078,12 +1126,20 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
 
 
-      {/* Marcos Menezes AI Mentor - Global Widgets */}
-      {user && (
-        <React.Suspense fallback={<div></div>}>
-          <VirtualAgentWidget />
-          <MentorProactiveNotification userId={user?.id || ''} />
-        </React.Suspense>
+      {/* VirtualAgentWidget e MentorProactiveNotification desabilitados — backend de IA em desenvolvimento */}
+
+      {/* Modal de limite de plano */}
+      {planLimitModal && (
+        <PlanLimitModal
+          resource={planLimitModal.resource}
+          limit={planLimitModal.limit}
+          planName={planLimits.displayName || 'Plano atual'}
+          onClose={() => setPlanLimitModal(null)}
+          onUpgrade={() => {
+            setPlanLimitModal(null);
+            navigate('/profile');
+          }}
+        />
       )}
     </div>
   );

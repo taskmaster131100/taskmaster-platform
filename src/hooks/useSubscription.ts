@@ -17,13 +17,33 @@ export interface Subscription {
 }
 
 export interface SubscriptionLimits {
+  // Limites de recursos
   maxArtists: number;
+  maxProjects: number;
+  maxTasks: number;
+  maxShows: number;
+  maxReleases: number;
   maxKPIs: number;
   maxStorage: number;
+
+  // Feature flags de módulo
+  hasFinance: boolean;
+  hasTeam: boolean;
+  hasTours: boolean;
+  hasAI: boolean;
+  hasAIAdvanced: boolean;
+
+  // Legado
   aiPlanning: boolean;
   advancedAnalytics: boolean;
   customBranding: boolean;
   apiAccess: boolean;
+  musicProduction?: boolean;
+  financeFull?: boolean;
+  consulting?: boolean;
+
+  // Metadados
+  displayName?: string;
 }
 
 export interface SubscriptionStatus {

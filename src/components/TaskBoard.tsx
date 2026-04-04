@@ -6,6 +6,9 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useAuth } from './auth/AuthProvider';
+import { useSubscription } from '../hooks/useSubscription';
+import PlanLimitModal from './PlanLimitModal';
 
 interface Task {
   id: string;
@@ -48,6 +51,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   availableProjects = [],
   onTasksChange
 }) => {
+  const { organizationId } = useAuth();
+  const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,6 +60,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterWorkstream, setFilterWorkstream] = useState<string>('all');
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
+  const [taskLimitModal, setTaskLimitModal] = useState(false);
 
   const columns = [
     { id: 'todo',        title: 'A Fazer',      icon: Clock,         color: 'gray' },
@@ -336,7 +342,13 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             ))}
           </select>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (planLimits.maxTasks !== -1 && tasks.length >= planLimits.maxTasks) {
+                setTaskLimitModal(true);
+                return;
+              }
+              setShowCreateModal(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
           >
             <Plus className="w-5 h-5" />
@@ -500,6 +512,15 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             setShowEditModal(false);
             setSelectedTask(null);
           }}
+        />
+      )}
+
+      {taskLimitModal && (
+        <PlanLimitModal
+          resource="tarefas"
+          limit={planLimits.maxTasks}
+          planName={planLimits.displayName || 'Plano atual'}
+          onClose={() => setTaskLimitModal(false)}
         />
       )}
     </div>
