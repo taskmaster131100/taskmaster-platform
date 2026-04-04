@@ -720,11 +720,13 @@ export default function ReleasesManager() {
                           {phase.description && (
                             <p className="text-sm text-gray-600 mb-2">{phase.description}</p>
                           )}
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span>Início: {formatDate(phase.start_date!)}</span>
-                            <span>•</span>
-                            <span>Fim: {formatDate(phase.end_date!)}</span>
-                          </div>
+                          {(phase.start_date || phase.end_date) && (
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              {phase.start_date && <span>Início: {formatDate(phase.start_date)}</span>}
+                              {phase.start_date && phase.end_date && <span>•</span>}
+                              {phase.end_date && <span>Fim: {formatDate(phase.end_date)}</span>}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

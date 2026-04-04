@@ -141,18 +141,16 @@ export const CONSULTING_TOPICS: Record<ConsultingTopic, { label: string; descrip
 
 /**
  * Gera slots de disponibilidade para agendamento
- * Simula agenda do Marcos Menezes
+ * Todos os horários padrão são exibidos como disponíveis.
+ * O bloqueio de slots ocupados é feito em etapa posterior (confirmação de pagamento).
  */
 export function generateAvailableSlots(daysAhead: number = 30): AvailableSlot[] {
   const slots: AvailableSlot[] = [];
   const now = new Date();
 
-  // Horários disponíveis (8h às 11:55h EST, de segunda a quinta)
-  const availableTimes = [
-    '08:00', '09:00', '10:00', '11:00'
-  ];
+  // Horários disponíveis: Segunda a Quinta, das 08h às 11h (horário de Brasília)
+  const availableTimes = ['08:00', '09:00', '10:00', '11:00'];
 
-  // Gerar slots para os próximos N dias
   for (let i = 1; i <= daysAhead; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() + i);
@@ -164,14 +162,7 @@ export function generateAvailableSlots(daysAhead: number = 30): AvailableSlot[] 
     const dateStr = date.toISOString().split('T')[0];
 
     availableTimes.forEach(time => {
-      // Simular que alguns slots já estão ocupados
-      const isAvailable = Math.random() > 0.3; // 70% de disponibilidade
-
-      slots.push({
-        date: dateStr,
-        time,
-        available: isAvailable
-      });
+      slots.push({ date: dateStr, time, available: true });
     });
   }
 

@@ -156,6 +156,9 @@ export async function createRelease(
 
   if (error) throw error;
 
+  // Cria fases padrão para o tipo de lançamento (não bloqueia se falhar)
+  createDefaultPhases(data.id, data.release_type as ReleaseType).catch(() => {});
+
   // Evento no calendário (não bloqueia se falhar)
   createCalendarEvent(data).catch(() => {});
 
@@ -242,13 +245,115 @@ export async function getReleaseById(id: string): Promise<Release | null> {
   return data ? normalizeRelease(data) : null;
 }
 
-// ── Fases (tabela não existe no banco ainda — stubs seguros) ──────────────────
+// ── Fases ─────────────────────────────────────────────────────────────────────
 export async function listPhases(releaseId: string): Promise<ReleasePhase[]> {
-  return [];
+  const { data, error } = await supabase
+    .from('release_phases')
+    .select('*')
+    .eq('release_id', releaseId)
+    .order('order_index', { ascending: true });
+  if (error) throw error;
+  return (data || []) as ReleasePhase[];
 }
 
 export async function updatePhase(id: string, updates: Partial<ReleasePhase>): Promise<ReleasePhase> {
-  throw new Error('Tabela release_phases não disponível neste ambiente');
+  const dbUpdates: any = { updated_at: new Date().toISOString() };
+  if (updates.name !== undefined)        dbUpdates.name = updates.name;
+  if (updates.description !== undefined) dbUpdates.description = updates.description;
+  if (updates.status !== undefined)      dbUpdates.status = updates.status;
+  if (updates.start_date !== undefined)  dbUpdates.start_date = updates.start_date;
+  if (updates.end_date !== undefined)    dbUpdates.end_date = updates.end_date;
+  if (updates.order_index !== undefined) dbUpdates.order_index = updates.order_index;
+  if (updates.color !== undefined)       dbUpdates.color = updates.color;
+
+  const { data, error } = await supabase
+    .from('release_phases')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ReleasePhase;
+}
+
+export async function createPhase(releaseId: string, phase: Partial<ReleasePhase>): Promise<ReleasePhase> {
+  const { data, error } = await supabase
+    .from('release_phases')
+    .insert({
+      release_id: releaseId,
+      name: phase.name || 'Nova Fase',
+      description: phase.description || null,
+      order_index: phase.order_index ?? 0,
+      start_date: phase.start_date || null,
+      end_date: phase.end_date || null,
+      status: phase.status || 'pending',
+      color: phase.color || '#6366f1',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ReleasePhase;
+}
+
+export async function deletePhase(id: string): Promise<void> {
+  const { error } = await supabase.from('release_phases').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Fases padrão por tipo de lançamento ──────────────────────────────────────
+export const DEFAULT_PHASES: Record<ReleaseType, { name: string; color: string }[]> = {
+  single: [
+    { name: 'Produção', color: '#6366f1' },
+    { name: 'Mixagem & Masterização', color: '#8b5cf6' },
+    { name: 'Arte & Capa', color: '#ec4899' },
+    { name: 'Distribuição', color: '#f59e0b' },
+    { name: 'Divulgação', color: '#10b981' },
+  ],
+  ep: [
+    { name: 'Produção', color: '#6366f1' },
+    { name: 'Mixagem & Masterização', color: '#8b5cf6' },
+    { name: 'Arte & Identidade Visual', color: '#ec4899' },
+    { name: 'Distribuição', color: '#f59e0b' },
+    { name: 'Press Kit & Mídia', color: '#3b82f6' },
+    { name: 'Divulgação', color: '#10b981' },
+  ],
+  album: [
+    { name: 'Pré-produção', color: '#6366f1' },
+    { name: 'Gravação', color: '#8b5cf6' },
+    { name: 'Mixagem', color: '#a855f7' },
+    { name: 'Masterização', color: '#ec4899' },
+    { name: 'Arte & Identidade Visual', color: '#f43f5e' },
+    { name: 'Distribuição', color: '#f59e0b' },
+    { name: 'Press Kit & Mídia', color: '#3b82f6' },
+    { name: 'Divulgação', color: '#10b981' },
+  ],
+  remix: [
+    { name: 'Produção do Remix', color: '#6366f1' },
+    { name: 'Masterização', color: '#8b5cf6' },
+    { name: 'Distribuição', color: '#f59e0b' },
+    { name: 'Divulgação', color: '#10b981' },
+  ],
+  live: [
+    { name: 'Gravação', color: '#6366f1' },
+    { name: 'Mixagem & Masterização', color: '#8b5cf6' },
+    { name: 'Edição de Vídeo', color: '#ec4899' },
+    { name: 'Distribuição', color: '#f59e0b' },
+    { name: 'Divulgação', color: '#10b981' },
+  ],
+};
+
+export async function createDefaultPhases(releaseId: string, releaseType: ReleaseType): Promise<ReleasePhase[]> {
+  const templates = DEFAULT_PHASES[releaseType] || DEFAULT_PHASES.single;
+  const rows = templates.map((t, i) => ({
+    release_id: releaseId,
+    name: t.name,
+    order_index: i,
+    status: 'pending' as PhaseStatus,
+    color: t.color,
+  }));
+  const { data, error } = await supabase.from('release_phases').insert(rows).select();
+  if (error) throw error;
+  return (data || []) as ReleasePhase[];
 }
 
 // ── Anexos ────────────────────────────────────────────────────────────────────
@@ -264,25 +369,82 @@ export async function uploadAttachment(releaseId: string, file: File, fileType: 
 
   const { data: { publicUrl } } = supabase.storage.from('files').getPublicUrl(path);
 
+  // Persiste na tabela release_attachments
+  const { data: attachment, error: dbError } = await supabase
+    .from('release_attachments')
+    .insert({
+      release_id: releaseId,
+      file_type: fileType,
+      file_url: publicUrl,
+      file_name: file.name,
+      file_size: file.size,
+      uploaded_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (dbError) {
+    // Upload no storage já foi feito; não bloqueia mas loga
+    console.warn('Erro ao registrar anexo no banco:', dbError.message);
+    return {
+      id: crypto.randomUUID(),
+      release_id: releaseId,
+      file_type: fileType,
+      file_url: publicUrl,
+      file_name: file.name,
+      file_size: file.size,
+      uploaded_by: user.id,
+      uploaded_at: new Date().toISOString(),
+    };
+  }
+
   // Se for capa, atualiza cover_art_url na release
   if (fileType === 'cover') {
     await supabase.from('releases').update({ cover_art_url: publicUrl }).eq('id', releaseId);
   }
 
   return {
-    id: crypto.randomUUID(),
-    release_id: releaseId,
-    file_type: fileType,
-    file_url: publicUrl,
-    file_name: file.name,
-    file_size: file.size,
-    uploaded_by: user.id,
-    uploaded_at: new Date().toISOString(),
+    id: attachment.id,
+    release_id: attachment.release_id,
+    file_type: attachment.file_type as FileType,
+    file_url: attachment.file_url,
+    file_name: attachment.file_name,
+    file_size: attachment.file_size,
+    uploaded_by: attachment.uploaded_by,
+    uploaded_at: attachment.uploaded_at,
   };
 }
 
 export async function listAttachments(releaseId: string): Promise<ReleaseAttachment[]> {
-  return [];
+  const { data, error } = await supabase
+    .from('release_attachments')
+    .select('*')
+    .eq('release_id', releaseId)
+    .order('uploaded_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((a: any) => ({
+    id: a.id,
+    release_id: a.release_id,
+    file_type: a.file_type as FileType,
+    file_url: a.file_url,
+    file_name: a.file_name,
+    file_size: a.file_size,
+    uploaded_by: a.uploaded_by,
+    uploaded_at: a.uploaded_at,
+  }));
+}
+
+export async function deleteAttachment(id: string, fileUrl: string): Promise<void> {
+  // Remove do banco
+  const { error } = await supabase.from('release_attachments').delete().eq('id', id);
+  if (error) throw error;
+  // Tenta remover do storage (não bloqueia se falhar)
+  try {
+    const urlParts = fileUrl.split('/storage/v1/object/public/files/');
+    if (urlParts[1]) {
+      await supabase.storage.from('files').remove([urlParts[1]]);
+    }
+  } catch { /* ignore */ }
 }
 
 // ── Calendário ────────────────────────────────────────────────────────────────

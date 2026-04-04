@@ -56,6 +56,7 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState('Todos os Artistas');
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTransaction, setNewTransaction] = useState({ description: '', category: 'Show', amount: 0, type: 'revenue' as 'revenue' | 'expense' });
@@ -63,21 +64,39 @@ export default function FinancePage() {
   const [analyzingFinances, setAnalyzingFinances] = useState(false);
 
   useEffect(() => {
-    loadFinanceData();
+    if (user) loadFinanceData();
   }, [user]);
 
   const loadFinanceData = async () => {
     if (!user) return;
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Resolve organization_id do usuário
+      const { data: orgData } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      const resolvedOrgId = orgData?.organization_id || null;
+      setOrgId(resolvedOrgId);
+
+      // Query por org_id quando disponível, fallback para user_id para dados legados
+      let query = supabase
         .from('financial_transactions')
         .select('*')
-        .eq('user_id', user.id)
         .order('transaction_date', { ascending: false });
-      
+
+      if (resolvedOrgId) {
+        query = query.or(`organization_id.eq.${resolvedOrgId},and(organization_id.is.null,user_id.eq.${user.id})`);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      
+
       setTransactions((data || []).map((t: any) => ({
         id: t.id,
         description: t.description,
@@ -107,6 +126,7 @@ export default function FinancePage() {
         .from('financial_transactions')
         .insert({
           user_id: user?.id,
+          organization_id: orgId,
           description: newTransaction.description,
           category: newTransaction.category,
           amount: newTransaction.amount,

@@ -76,6 +76,14 @@ export async function createTransaction(data: Partial<FinancialTransaction>): Pr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
+  // Resolve organization_id do usuário
+  const { data: orgData } = await supabase
+    .from('user_organizations')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .single();
+  const orgId = orgData?.organization_id || null;
+
   // Embute referência nas notas quando fornecida (colunas reference_* não existem no banco)
   const refNote = data.reference_type && data.reference_id
     ? `ref:${data.reference_type}:${data.reference_id}`
@@ -86,6 +94,7 @@ export async function createTransaction(data: Partial<FinancialTransaction>): Pr
     .from('financial_transactions')
     .insert({
       user_id: user.id,
+      organization_id: orgId,
       description: data.description,
       category: data.category,
       amount: data.amount,
