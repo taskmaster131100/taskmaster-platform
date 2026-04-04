@@ -22,6 +22,7 @@ export interface Task {
   project_id?: string;
   title: string;
   description?: string;
+  notes?: string;
   status: string;
   priority?: string;
   workstream?: string;

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Clock, CheckCircle, AlertCircle, Archive, Loader2, Edit2, Trash2, X, Filter } from 'lucide-react';
+import {
+  Plus, Clock, CheckCircle, AlertCircle, Archive,
+  Loader2, Edit2, Trash2, X, Filter, FileText, User
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -9,6 +12,7 @@ interface Task {
   organization_id?: string;
   title: string;
   description?: string;
+  notes?: string;
   status: string;
   priority?: string;
   workstream?: string;
@@ -20,6 +24,11 @@ interface Task {
   order_index?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+interface OrgMember {
+  id: string;
+  name: string;
 }
 
 interface TaskBoardProps {
@@ -41,25 +50,30 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterWorkstream, setFilterWorkstream] = useState<string>('all');
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
 
   const columns = [
-    { id: 'todo', title: 'A Fazer', icon: Clock, color: 'gray' },
-    { id: 'in_progress', title: 'Em Progresso', icon: AlertCircle, color: 'blue' },
-    { id: 'blocked', title: 'Bloqueado', icon: AlertCircle, color: 'red' },
-    { id: 'done', title: 'Concluído', icon: CheckCircle, color: 'green' }
+    { id: 'todo',        title: 'A Fazer',      icon: Clock,         color: 'gray' },
+    { id: 'in_progress', title: 'Em Progresso',  icon: AlertCircle,   color: 'blue' },
+    { id: 'blocked',     title: 'Bloqueado',     icon: AlertCircle,   color: 'red' },
+    { id: 'done',        title: 'Concluído',     icon: CheckCircle,   color: 'green' }
   ];
 
   const workstreams = [
-    { id: 'all', label: 'Todos' },
-    { id: 'conteudo', label: 'Conteúdo' },
-    { id: 'shows', label: 'Shows' },
-    { id: 'logistica', label: 'Logística' },
-    { id: 'estrategia', label: 'Estratégia' },
-    { id: 'geral', label: 'Geral' }
+    { id: 'all',         label: 'Todos' },
+    { id: 'conteudo',    label: 'Conteúdo' },
+    { id: 'marketing',   label: 'Marketing' },
+    { id: 'shows',       label: 'Shows' },
+    { id: 'logistica',   label: 'Logística' },
+    { id: 'estrategia',  label: 'Estratégia' },
+    { id: 'financeiro',  label: 'Financeiro' },
+    { id: 'lancamento',  label: 'Lançamento' },
+    { id: 'geral',       label: 'Geral' }
   ];
 
   useEffect(() => {
     loadTasks();
+    loadOrgMembers();
 
     const channel = supabase
       .channel('tasks-changes')
@@ -74,9 +88,11 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   async function loadTasks() {
     try {
       setLoading(true);
-      let query = supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      // Se há projeto em foco, mostrar apenas as tarefas desse projeto
       if (project?.id) {
         query = query.eq('project_id', project.id);
       }
@@ -93,45 +109,85 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
     }
   }
 
+  async function loadOrgMembers() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: orgData } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgData?.organization_id) return;
+
+      const { data: memberRows } = await supabase
+        .from('user_organizations')
+        .select('user_id')
+        .eq('organization_id', orgData.organization_id);
+
+      if (!memberRows?.length) return;
+
+      const userIds = memberRows.map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      setOrgMembers(
+        (profiles || []).map(p => ({ id: p.id, name: p.full_name || 'Usuário' }))
+      );
+    } catch {
+      // silently fail — assignee display degrades gracefully
+    }
+  }
+
   const getTasksByStatus = (status: string) => {
     let filtered = tasks.filter(task => task.status === status);
-
     if (filterWorkstream !== 'all') {
       filtered = filtered.filter(task => task.workstream === filterWorkstream);
     }
-
     return filtered;
   };
 
+  const getMemberName = (assigneeId?: string): string | null => {
+    if (!assigneeId) return null;
+    return orgMembers.find(m => m.id === assigneeId)?.name || null;
+  };
+
+  function getInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map(n => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  }
+
   async function handleCreateTask(taskData: any) {
     try {
-      // Validações frontend
       if (!taskData.title || taskData.title.trim() === '') {
         toast.error('O título da tarefa é obrigatório');
         return;
       }
-
       if (taskData.title.length > 200) {
         toast.error('O título deve ter no máximo 200 caracteres');
         return;
       }
-
       if (!taskData.workstream) {
         toast.error('Selecione um workstream para a tarefa');
         return;
       }
 
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        toast.error('Você precisa estar autenticado');
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Você precisa estar autenticado'); return; }
 
-      // Get user's organization
       const { data: orgData } = await supabase
         .from('user_organizations')
         .select('organization_id')
-        .eq('user_id', user.user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (!orgData?.organization_id) {
@@ -145,12 +201,13 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           organization_id: orgData.organization_id,
           title: taskData.title.trim(),
           description: taskData.description?.trim() || null,
+          notes: taskData.notes?.trim() || null,
           status: 'todo',
           priority: taskData.priority || 'medium',
           workstream: taskData.workstream || 'geral',
-          due_date: taskData.deadline || null,
-          reporter_id: user.user.id,
-          assignee_id: taskData.assigned_to || null,
+          due_date: taskData.due_date || null,
+          reporter_id: user.id,
+          assignee_id: taskData.assignee_id || null,
           ...(project?.id ? { project_id: project.id } : {}),
         });
 
@@ -165,19 +222,17 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
     }
   }
 
-  async function handleUpdateTask(taskId: string, updates: Partial<Task>) {
+  async function handleUpdateTask(taskId: string, updates: any) {
     try {
-      // Enviar apenas colunas que existem no banco real
       const safeUpdates: any = {};
-      if (updates.title !== undefined) safeUpdates.title = updates.title;
+      if (updates.title       !== undefined) safeUpdates.title       = updates.title;
       if (updates.description !== undefined) safeUpdates.description = updates.description;
-      if (updates.status !== undefined) safeUpdates.status = updates.status;
-      if (updates.priority !== undefined) safeUpdates.priority = updates.priority;
-      if (updates.workstream !== undefined) safeUpdates.workstream = updates.workstream;
-      if ((updates as any).due_date !== undefined) safeUpdates.due_date = (updates as any).due_date;
-      if ((updates as any).deadline !== undefined) safeUpdates.due_date = (updates as any).deadline;
-      if ((updates as any).assignee_id !== undefined) safeUpdates.assignee_id = (updates as any).assignee_id;
-      if ((updates as any).assigned_to !== undefined) safeUpdates.assignee_id = (updates as any).assigned_to;
+      if (updates.notes       !== undefined) safeUpdates.notes       = updates.notes;
+      if (updates.status      !== undefined) safeUpdates.status      = updates.status;
+      if (updates.priority    !== undefined) safeUpdates.priority    = updates.priority;
+      if (updates.workstream  !== undefined) safeUpdates.workstream  = updates.workstream;
+      if (updates.due_date    !== undefined) safeUpdates.due_date    = updates.due_date;
+      if (updates.assignee_id !== undefined) safeUpdates.assignee_id = updates.assignee_id;
 
       const { error } = await supabase
         .from('tasks')
@@ -213,11 +268,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
   function handleDragEnd(result: any) {
     if (!result.destination) return;
-
     const { draggableId, destination } = result;
-    const newStatus = destination.droppableId;
-
-    handleUpdateTask(draggableId, { status: newStatus });
+    handleUpdateTask(draggableId, { status: destination.droppableId });
   }
 
   const getPriorityColor = (task: Task) => {
@@ -247,14 +299,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       {!project?.id && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          Nenhum projeto selecionado — exibindo todas as tarefas. Selecione um projeto no menu lateral para ver as tarefas do projeto.
+          Nenhum projeto selecionado — exibindo todas as tarefas.
         </div>
       )}
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Tarefas</h2>
           <p className="text-gray-600">
-            {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}{tasks.length} tarefas
+            {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}
+            {tasks.length} tarefas
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -305,61 +359,95 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                           Nenhuma tarefa
                         </div>
                       ) : (
-                        columnTasks.map((task, index) => (
-                          <Draggable key={task.id} draggableId={task.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-move ${
-                                  snapshot.isDragging ? 'shadow-lg ring-2 ring-[#FFAD85]' : ''
-                                }`}
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-gray-900 flex-1">{task.title}</h4>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedTask(task);
-                                        setShowEditModal(true);
-                                      }}
-                                      className="p-1 text-gray-400 hover:text-[#FFAD85] transition-colors"
-                                    >
-                                      <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTask(task.id)}
-                                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
+                        columnTasks.map((task, index) => {
+                          const assigneeName = getMemberName(task.assignee_id);
+                          return (
+                            <Draggable key={task.id} draggableId={task.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-move ${
+                                    snapshot.isDragging ? 'shadow-lg ring-2 ring-[#FFAD85]' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <h4 className="font-medium text-gray-900 flex-1 pr-1">{task.title}</h4>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedTask(task);
+                                          setShowEditModal(true);
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-[#FFAD85] transition-colors"
+                                        title="Editar"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteTask(task.id)}
+                                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                        title="Excluir"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {task.description && (
+                                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                      {task.description}
+                                    </p>
+                                  )}
+
+                                  {/* Badges: prioridade, workstream, prazo */}
+                                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${getPriorityColor(task)}`}>
+                                      {getPriorityLabel(task)}
+                                    </span>
+                                    {task.workstream && task.workstream !== 'geral' && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                                        {workstreams.find(w => w.id === task.workstream)?.label || task.workstream}
+                                      </span>
+                                    )}
+                                    {task.due_date && (
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Rodapé: responsável + indicador de notas */}
+                                  <div className="flex items-center justify-between mt-1">
+                                    {assigneeName ? (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-xs text-gray-600 bg-white border border-gray-200 rounded-full px-2 py-0.5"
+                                        title={assigneeName}
+                                      >
+                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-[10px] font-bold">
+                                          {getInitials(assigneeName)}
+                                        </span>
+                                        <span className="max-w-[80px] truncate">{assigneeName.split(' ')[0]}</span>
+                                      </span>
+                                    ) : (
+                                      <span />
+                                    )}
+                                    {task.notes && (
+                                      <span
+                                        className="flex items-center gap-1 text-[10px] text-gray-400"
+                                        title="Tem observações"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        obs
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
-                                {task.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                                    {task.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task)}`}>
-                                    {getPriorityLabel(task)}
-                                  </span>
-                                  {task.workstream && task.workstream !== 'geral' && (
-                                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-[#FF9B6A]">
-                                      {workstreams.find(w => w.id === task.workstream)?.label || task.workstream}
-                                    </span>
-                                  )}
-                                  {(task as any).due_date && (
-                                    <span className="text-xs text-gray-500">
-                                      {new Date((task as any).due_date).toLocaleDateString('pt-BR')}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))
+                              )}
+                            </Draggable>
+                          );
+                        })
                       )}
                       {provided.placeholder}
                     </div>
@@ -375,6 +463,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       {showCreateModal && (
         <TaskFormModal
           title="Nova Tarefa"
+          orgMembers={orgMembers}
           onClose={() => setShowCreateModal(false)}
           onSave={handleCreateTask}
         />
@@ -385,6 +474,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         <TaskFormModal
           title="Editar Tarefa"
           task={selectedTask}
+          orgMembers={orgMembers}
           onClose={() => {
             setShowEditModal(false);
             setSelectedTask(null);
@@ -400,84 +490,96 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   );
 };
 
-// Componente de formulário reutilizável
+// ── Modal de formulário ────────────────────────────────────────────────────────
 function TaskFormModal({
   title,
   task,
+  orgMembers,
   onClose,
   onSave
 }: {
   title: string;
   task?: Task;
+  orgMembers: OrgMember[];
   onClose: () => void;
   onSave: (data: any) => void;
 }) {
   const workstreams = [
-    { id: 'conteudo', label: 'Conteúdo' },
-    { id: 'shows', label: 'Shows' },
-    { id: 'logistica', label: 'Logística' },
+    { id: 'conteudo',   label: 'Conteúdo' },
+    { id: 'marketing',  label: 'Marketing' },
+    { id: 'shows',      label: 'Shows' },
+    { id: 'logistica',  label: 'Logística' },
     { id: 'estrategia', label: 'Estratégia' },
-    { id: 'geral', label: 'Geral' }
+    { id: 'financeiro', label: 'Financeiro' },
+    { id: 'lancamento', label: 'Lançamento' },
+    { id: 'geral',      label: 'Geral' },
   ];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          onSave({
-            title: formData.get('title'),
-            description: formData.get('description'),
-            workstream: formData.get('workstream'),
-            deadline: formData.get('deadline'),
-            metadata: {
-              priority: formData.get('priority')
-            }
-          });
-        }}>
+        <form
+          className="px-6 py-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            onSave({
+              title:       fd.get('title'),
+              description: fd.get('description'),
+              notes:       fd.get('notes'),
+              workstream:  fd.get('workstream'),
+              priority:    fd.get('priority'),
+              due_date:    fd.get('due_date') || null,
+              assignee_id: fd.get('assignee_id') || null,
+            });
+          }}
+        >
           <div className="space-y-4">
+
+            {/* Título */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Título *
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Título <span className="text-red-500">*</span>
               </label>
               <input
                 name="title"
                 type="text"
                 required
                 defaultValue={task?.title}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                placeholder="Nome da tarefa"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
               />
             </div>
 
+            {/* Descrição */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Descrição
               </label>
               <textarea
                 name="description"
-                rows={3}
+                rows={2}
                 defaultValue={task?.description}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                placeholder="Descreva o objetivo desta tarefa..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm resize-none"
               />
             </div>
 
+            {/* Área + Prioridade */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Área
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Área</label>
                 <select
                   name="workstream"
                   defaultValue={task?.workstream || 'geral'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
                 >
                   {workstreams.map(ws => (
                     <option key={ws.id} value={ws.id}>{ws.label}</option>
@@ -486,13 +588,11 @@ function TaskFormModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prioridade
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Prioridade</label>
                 <select
                   name="priority"
                   defaultValue={task?.priority || 'medium'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
                 >
                   <option value="low">Baixa</option>
                   <option value="medium">Média</option>
@@ -501,16 +601,52 @@ function TaskFormModal({
               </div>
             </div>
 
+            {/* Prazo + Responsável */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Prazo</label>
+                <input
+                  name="due_date"
+                  type="date"
+                  defaultValue={task?.due_date?.split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5" />
+                  Responsável
+                </label>
+                <select
+                  name="assignee_id"
+                  defaultValue={task?.assignee_id || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
+                >
+                  <option value="">— Sem responsável —</option>
+                  {orgMembers.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Observações internas */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prazo
+              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-gray-500" />
+                Observações internas
               </label>
-              <input
-                name="deadline"
-                type="date"
-                defaultValue={task?.due_date?.split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+              <textarea
+                name="notes"
+                rows={3}
+                defaultValue={task?.notes}
+                placeholder="Registre o que falta, dependências, ajustes ou recados para o time..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-amber-50/40 focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm resize-none placeholder-gray-400"
               />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Campo interno — visível apenas para a equipe.
+              </p>
             </div>
           </div>
 
@@ -518,15 +654,15 @@ function TaskFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
+              className="px-5 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors text-sm font-bold"
             >
-              {task ? 'Salvar' : 'Criar Tarefa'}
+              {task ? 'Salvar alterações' : 'Criar Tarefa'}
             </button>
           </div>
         </form>

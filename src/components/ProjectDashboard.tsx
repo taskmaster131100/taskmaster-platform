@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Briefcase, CheckCircle2, Clock, AlertTriangle, ArrowRight,
   User, Calendar, DollarSign, BarChart2, Tag, Layers, Plus,
-  Circle, AlertCircle, Loader2
+  Circle, AlertCircle, Loader2, FileText
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -10,13 +10,17 @@ interface Task {
   id: string;
   title: string;
   description?: string;
+  notes?: string;
   status: string;
   priority?: string;
   workstream?: string;
   due_date?: string;
   project_id?: string;
+  assignee_id?: string;
   labels?: string[];
 }
+
+interface OrgMember { id: string; name: string; }
 
 interface ProjectDashboardProps {
   project?: any;
@@ -70,6 +74,10 @@ function daysUntil(dateStr?: string): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+function getInitials(name: string): string {
+  return name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
 export default function ProjectDashboard({
   project,
   tasks = [],
@@ -78,6 +86,7 @@ export default function ProjectDashboard({
 }: ProjectDashboardProps) {
   const [artist, setArtist] = useState<{ name: string; stage_name?: string } | null>(null);
   const [loadingArtist, setLoadingArtist] = useState(false);
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
 
   useEffect(() => {
     if (!project?.artist_id) return;
@@ -92,6 +101,38 @@ export default function ProjectDashboard({
         setLoadingArtist(false);
       });
   }, [project?.artist_id]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data: orgData }) => {
+          if (!orgData?.organization_id) return;
+          supabase
+            .from('user_organizations')
+            .select('user_id')
+            .eq('organization_id', orgData.organization_id)
+            .then(({ data: memberRows }) => {
+              if (!memberRows?.length) return;
+              const ids = memberRows.map(m => m.user_id);
+              supabase
+                .from('user_profiles')
+                .select('id, full_name')
+                .in('id', ids)
+                .then(({ data: profiles }) => {
+                  setOrgMembers((profiles || []).map(p => ({ id: p.id, name: p.full_name || 'Usuário' })));
+                });
+            });
+        });
+    });
+  }, []);
+
+  const getMemberName = (id?: string) =>
+    id ? (orgMembers.find(m => m.id === id)?.name || null) : null;
 
   if (!project) {
     return (
@@ -240,6 +281,7 @@ export default function ProjectDashboard({
                 {overdue.map(task => {
                   const days = daysUntil(task.due_date);
                   const ws = WORKSTREAMS.find(w => w.id === task.workstream);
+                  const assigneeName = getMemberName(task.assignee_id);
                   return (
                     <div key={task.id} className="px-5 py-3 flex items-start gap-3 hover:bg-red-50/30 transition-colors">
                       <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
@@ -260,6 +302,21 @@ export default function ProjectDashboard({
                             </span>
                           )}
                         </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {task.notes && (
+                          <span title="Tem observações" className="text-gray-300">
+                            <FileText className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                        {assigneeName && (
+                          <span
+                            title={assigneeName}
+                            className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center"
+                          >
+                            {getInitials(assigneeName)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -294,6 +351,7 @@ export default function ProjectDashboard({
                   const days = daysUntil(task.due_date);
                   const ws = WORKSTREAMS.find(w => w.id === task.workstream);
                   const urgent = days !== null && days <= 3;
+                  const assigneeName = getMemberName(task.assignee_id);
                   return (
                     <div key={task.id} className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors">
                       <div className="mt-0.5 shrink-0">
@@ -318,6 +376,21 @@ export default function ProjectDashboard({
                             </span>
                           )}
                         </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {task.notes && (
+                          <span title="Tem observações" className="text-gray-300">
+                            <FileText className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                        {assigneeName && (
+                          <span
+                            title={assigneeName}
+                            className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center"
+                          >
+                            {getInitials(assigneeName)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
