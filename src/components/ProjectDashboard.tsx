@@ -118,13 +118,19 @@ export default function ProjectDashboard({
             .eq('organization_id', orgData.organization_id)
             .then(({ data: memberRows }) => {
               if (!memberRows?.length) return;
-              const ids = memberRows.map(m => m.user_id);
+              const ids = memberRows.map((m: any) => m.user_id);
               supabase
                 .from('user_profiles')
                 .select('id, full_name')
                 .in('id', ids)
                 .then(({ data: profiles }) => {
-                  setOrgMembers((profiles || []).map(p => ({ id: p.id, name: p.full_name || 'Usuário' })));
+                  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.full_name]));
+                  setOrgMembers(
+                    ids.map((id: string) => ({
+                      id,
+                      name: profileMap.get(id) || `Membro ${id.substring(0, 6)}`
+                    }))
+                  );
                 });
             });
         });

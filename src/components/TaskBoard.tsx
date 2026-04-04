@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus, Clock, CheckCircle, AlertCircle, Archive,
-  Loader2, Edit2, Trash2, X, Filter, FileText, User
+  Loader2, Edit2, Trash2, X, FileText, User, Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -31,10 +31,13 @@ interface OrgMember {
   name: string;
 }
 
+interface AvailableProject { id: string; name: string; }
+
 interface TaskBoardProps {
   tasks?: Task[];
   departments?: any[];
   project?: any;
+  availableProjects?: AvailableProject[];
   onTasksChange?: (tasks: Task[]) => void;
 }
 
@@ -42,6 +45,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   tasks: propTasks = [],
   departments = [],
   project,
+  availableProjects = [],
   onTasksChange
 }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -129,14 +133,21 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
       if (!memberRows?.length) return;
 
-      const userIds = memberRows.map(m => m.user_id);
+      const userIds = memberRows.map((m: any) => m.user_id);
+
+      // Busca perfis — mas inclui todos os membros mesmo sem perfil
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('id, full_name')
         .in('id', userIds);
 
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.full_name]));
+
       setOrgMembers(
-        (profiles || []).map(p => ({ id: p.id, name: p.full_name || 'Usuário' }))
+        userIds.map((id: string) => ({
+          id,
+          name: profileMap.get(id) || `Membro ${id.substring(0, 6)}`
+        }))
       );
     } catch {
       // silently fail — assignee display degrades gracefully
@@ -195,6 +206,9 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         return;
       }
 
+      // project_id: usar o do prop (modo projeto) ou o selecionado no modal (modo global)
+      const resolvedProjectId = project?.id || taskData.project_id || null;
+
       const { error } = await supabase
         .from('tasks')
         .insert({
@@ -208,7 +222,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           due_date: taskData.due_date || null,
           reporter_id: user.id,
           assignee_id: taskData.assignee_id || null,
-          ...(project?.id ? { project_id: project.id } : {}),
+          ...(resolvedProjectId ? { project_id: resolvedProjectId } : {}),
         });
 
       if (error) throw error;
@@ -464,6 +478,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         <TaskFormModal
           title="Nova Tarefa"
           orgMembers={orgMembers}
+          availableProjects={availableProjects}
           onClose={() => setShowCreateModal(false)}
           onSave={handleCreateTask}
         />
@@ -475,6 +490,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           title="Editar Tarefa"
           task={selectedTask}
           orgMembers={orgMembers}
+          availableProjects={[]}
           onClose={() => {
             setShowEditModal(false);
             setSelectedTask(null);
@@ -495,15 +511,18 @@ function TaskFormModal({
   title,
   task,
   orgMembers,
+  availableProjects = [],
   onClose,
   onSave
 }: {
   title: string;
   task?: Task;
   orgMembers: OrgMember[];
+  availableProjects?: AvailableProject[];
   onClose: () => void;
   onSave: (data: any) => void;
 }) {
+  const showProjectSelector = availableProjects.length > 0;
   const workstreams = [
     { id: 'conteudo',   label: 'Conteúdo' },
     { id: 'marketing',  label: 'Marketing' },
@@ -538,10 +557,31 @@ function TaskFormModal({
               priority:    fd.get('priority'),
               due_date:    fd.get('due_date') || null,
               assignee_id: fd.get('assignee_id') || null,
+              project_id:  fd.get('project_id') || null,
             });
           }}
         >
           <div className="space-y-4">
+
+            {/* Projeto — só aparece no modo global (sem projeto no contexto) */}
+            {showProjectSelector && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5 text-gray-500" />
+                  Projeto
+                </label>
+                <select
+                  name="project_id"
+                  defaultValue=""
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
+                >
+                  <option value="">— Sem projeto (tarefa avulsa) —</option>
+                  {availableProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Título */}
             <div>

@@ -108,6 +108,8 @@ function App() {
   const [showArtistDetails, setShowArtistDetails] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateArtist, setShowCreateArtist] = useState(false);
+  // tasksProjectMode: true = acesso via projeto (herda projeto), false = acesso global (sem projeto)
+  const [tasksProjectMode, setTasksProjectMode] = useState(false);
 
   // Importar componentes necessários
   const ProjectForm = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.ProjectForm })));
@@ -182,10 +184,14 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('organization');
     } else if (path === '/tasks' || path === '/tarefas') {
       setActiveTab('tasks');
-      // Se veio com projectId no state (ex: do Copilot), foca o projeto
       const navState = location.state as any;
       if (navState?.projectId) {
+        // Veio de dentro de um projeto (ProjectDashboard, Copilot, etc.)
         setSelectedProjectId(navState.projectId);
+        setTasksProjectMode(true);
+      } else {
+        // Acesso global pelo menu — não herda projeto
+        setTasksProjectMode(false);
       }
     } else if (path === '/calendar') {
       setActiveTab('calendar');
@@ -655,7 +661,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             setTasks(tasks.map(t => t.id === task.id ? task : t));
           }}
           onAddTask={() => {}}
-          onNavigateToTasks={() => setActiveTab('tasks')}
+          onNavigateToTasks={() => {
+            setTasksProjectMode(true);
+            navigate('/tasks', { state: { projectId: selectedProject?.id } });
+          }}
         />
       );
     }
@@ -663,9 +672,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     if (activeTab === 'tasks') {
       return (
         <TaskBoard
-          tasks={projectTasks}
+          tasks={tasksProjectMode ? projectTasks : []}
           departments={departments}
-          project={selectedProject}
+          project={tasksProjectMode ? selectedProject : undefined}
+          availableProjects={tasksProjectMode ? [] : projects.map(p => ({ id: p.id, name: (p as any).name || (p as any).title || 'Projeto' }))}
           onTasksChange={setTasks}
         />
       );

@@ -134,10 +134,13 @@ export default function TeamPage() {
 
       const membersWithProfiles = (membersData || []).map((member) => {
         const profile = profileByUserId.get(member.user_id);
-        const email = 'Email não disponível';
+        // Email não está disponível via client API — usar nome ou ID curto como identificador
+        const displayEmail = profile?.full_name
+          ? `${profile.full_name}`
+          : `Membro ${member.user_id.substring(0, 8)}`;
         return {
           ...member,
-          email,
+          email: displayEmail,
           status: 'active' as const,
           profile
         };
@@ -478,13 +481,16 @@ export default function TeamPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
-                    {member.email?.charAt(0).toUpperCase() || '?'}
+                    {(member.profile?.full_name || member.email || '?').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">
-                      {member.profile?.full_name || member.email?.split('@')[0] || shortId(member.user_id)}
+                      {member.profile?.full_name || `Membro ${member.user_id.substring(0, 8)}`}
+                      {member.user_id === user?.id && ' (você)'}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {member.profile?.full_name ? `ID: ${member.user_id.substring(0, 8)}` : 'Perfil não configurado'}
+                    </div>
                   </div>
                 </div>
                 {canManageTeam && member.user_id !== user?.id && (
@@ -555,13 +561,16 @@ export default function TeamPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#FFAD85] to-[#FF9B6A] rounded-full flex items-center justify-center text-white font-medium">
-                        {member.email?.charAt(0).toUpperCase() || '?'}
+                        {(member.profile?.full_name || member.email || '?').charAt(0).toUpperCase()}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {member.profile?.full_name || member.email || shortId(member.user_id)}
+                          {member.profile?.full_name || `Membro ${member.user_id.substring(0, 8)}`}
+                          {member.user_id === user?.id && <span className="ml-1 text-xs text-gray-400">(você)</span>}
                         </div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
+                        <div className="text-sm text-gray-500">
+                          {member.profile?.full_name ? `ID: ${member.user_id.substring(0, 8)}` : 'Perfil não configurado'}
+                        </div>
                       </div>
                     </div>
                   </td>
