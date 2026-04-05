@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Edit2, Save, X, Loader2, KeyRound } from 'lucide-react';
+import { User, Mail, Phone, Edit2, Save, X, Loader2, KeyRound, Zap, ArrowUpCircle } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
+import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -17,7 +18,8 @@ const ROLE_OPTIONS = [
 ];
 
 const UserProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
+  const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -291,6 +293,53 @@ const UserProfilePage: React.FC = () => {
                 {profileData.bio || 'Nenhuma informação adicional'}
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Meu Plano */}
+        <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[#FFAD85]" />
+              <h3 className="text-lg font-bold text-gray-900">Meu Plano</h3>
+            </div>
+            <span className="px-3 py-1 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white text-sm font-bold rounded-full">
+              {planLimits.displayName || 'Plano Inicial'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+            {[
+              { label: 'Artistas', value: planLimits.maxArtists },
+              { label: 'Projetos', value: planLimits.maxProjects },
+              { label: 'Tarefas', value: planLimits.maxTasks },
+              { label: 'Shows', value: planLimits.maxShows },
+              { label: 'Lançamentos', value: planLimits.maxReleases },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500 mb-1">{label}</p>
+                <p className="text-lg font-bold text-gray-800">
+                  {value === -1 ? '∞' : value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <ArrowUpCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800 mb-1">Precisa de mais recursos?</p>
+              <p className="text-xs text-amber-700 mb-3">
+                Entre em contato para fazer upgrade e desbloquear mais artistas, shows, lançamentos e funcionalidades avançadas.
+              </p>
+              <a
+                href="mailto:contact@taskmaster.works?subject=Upgrade de Plano"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white text-sm font-bold rounded-lg hover:from-[#FF9B6A] hover:to-[#FF8A55] transition-all shadow-sm"
+              >
+                <ArrowUpCircle className="w-4 h-4" />
+                Solicitar Upgrade
+              </a>
+            </div>
           </div>
         </div>
 

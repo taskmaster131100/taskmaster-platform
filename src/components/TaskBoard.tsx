@@ -6,6 +6,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import PlanLimitModal from './PlanLimitModal';
@@ -53,6 +54,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 }) => {
   const { organizationId } = useAuth();
   const { limits: planLimits } = useSubscription(organizationId || undefined);
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -328,7 +330,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           <h2 className="text-2xl font-bold text-gray-900">Tarefas</h2>
           <p className="text-gray-600">
             {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}
-            {tasks.length} tarefas
+            {tasks.length}{planLimits.maxTasks !== -1 ? ` / ${planLimits.maxTasks}` : ''} tarefas
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -521,6 +523,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           limit={planLimits.maxTasks}
           planName={planLimits.displayName || 'Plano atual'}
           onClose={() => setTaskLimitModal(false)}
+          onUpgrade={() => navigate('/profile')}
         />
       )}
     </div>

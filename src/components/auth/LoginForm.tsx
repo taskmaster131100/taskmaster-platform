@@ -106,10 +106,10 @@ export default function LoginForm() {
   ];
 
   const stats = [
-    { value: '+500', label: 'Artistas' },
-    { value: '+80', label: 'Escritórios' },
-    { value: '+20mil', label: 'Tarefas' },
-    { value: '+2mil', label: 'Lançamentos' }
+    { value: 'Global', label: 'Plataforma' },
+    { value: '$49', label: 'Plano Inicial' },
+    { value: '$75', label: 'Plano Base' },
+    { value: '360°', label: 'Gestão' }
   ];
 
   return (
@@ -135,12 +135,12 @@ export default function LoginForm() {
           {/* Main Content */}
           <div className="max-w-xl">
             <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-[1.15] tracking-tight">
-              Gerencie carreiras, lançamentos, shows e projetos
-              <span className="text-[#FF9B6A]"> em um só lugar.</span>
+              A plataforma que transforma artistas em
+              <span className="text-[#FF9B6A]"> profissionais organizados.</span>
             </h1>
-            
+
             <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-              A plataforma completa para músicos, produtores e gestores organizarem tudo com inteligência artificial.
+              Gerencie carreiras, shows, lançamentos e equipes em um só lugar — com a estrutura que o mercado exige.
             </p>
 
             {/* Features Grid */}
@@ -180,7 +180,7 @@ export default function LoginForm() {
 
         {/* Footer */}
         <div className="relative z-10 text-gray-400 text-sm">
-          © 2025 TaskMaster. Desenvolvido por profissionais da indústria musical.
+          © 2026 TaskMaster · taskmaster.works
         </div>
       </div>
 
@@ -324,7 +324,7 @@ export default function LoginForm() {
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                Suporte 24/7
+                Suporte por Email
               </span>
             </div>
           </div>

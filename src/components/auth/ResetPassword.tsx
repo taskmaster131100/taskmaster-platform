@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Music, Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export default function ResetPassword() {
   const [email, setEmail] = useState('');
@@ -14,11 +15,13 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`
+      });
+      if (resetError) throw resetError;
       setSuccess(true);
     } catch (err: any) {
-      setError('Erro ao enviar email de recuperação. Tente novamente.');
+      setError(err.message || 'Erro ao enviar email de recuperação. Tente novamente.');
     } finally {
       setLoading(false);
     }

@@ -238,10 +238,10 @@ export default function RegisterForm() {
         <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
           <div className="mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Crie sua conta gratuita
+              Crie sua conta
             </h2>
             <p className="text-gray-600 text-sm sm:text-base">
-              Comece a gerenciar sua carreira artística com inteligência e controle total
+              Comece a organizar sua carreira musical com ferramentas profissionais
             </p>
           </div>
 
@@ -489,19 +489,19 @@ export default function RegisterForm() {
           </div>
         </div>
 
-        {/* Features */}
+        {/* Trust */}
         <div className="mt-8 grid grid-cols-3 gap-4 text-center">
           <div className="bg-white rounded-lg p-3 shadow-sm">
             <CheckCircle className="w-5 h-5 text-green-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-600">Gratuito</p>
+            <p className="text-xs text-gray-600">Dados seguros</p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm">
             <CheckCircle className="w-5 h-5 text-green-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-600">Sem cartão</p>
+            <p className="text-xs text-gray-600">Suporte incluso</p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm">
             <CheckCircle className="w-5 h-5 text-green-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-600">Setup 2min</p>
+            <p className="text-xs text-gray-600">Plataforma global</p>
           </div>
         </div>
       </div>

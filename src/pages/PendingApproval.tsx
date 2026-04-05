@@ -47,16 +47,26 @@ export default function PendingApproval() {
           </h2>
 
           <p className="text-gray-600 mb-6">
-            Seu cadastro foi recebido com sucesso. O administrador irá analisar e aprovar seu acesso em breve.
+            Seu cadastro foi recebido. Assim que aprovado, você terá acesso completo à plataforma e poderá começar a organizar sua carreira imediatamente.
           </p>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-blue-500 flex-shrink-0" />
               <p className="text-sm text-blue-800 text-left">
-                Você receberá um <span className="font-semibold">email de confirmação</span> quando seu acesso for aprovado. Fique atento à sua caixa de entrada e spam.
+                Você receberá um <span className="font-semibold">email de confirmação</span> quando seu acesso for aprovado. Verifique também sua caixa de spam.
               </p>
             </div>
+          </div>
+
+          <div className="text-left bg-gray-50 rounded-xl p-4 mb-6">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Após aprovação você acessa:</p>
+            <ul className="space-y-1.5 text-sm text-gray-600">
+              <li className="flex items-center gap-2"><span className="text-orange-400">→</span> Gestão de artistas, projetos e tarefas</li>
+              <li className="flex items-center gap-2"><span className="text-orange-400">→</span> Agenda de shows e lançamentos</li>
+              <li className="flex items-center gap-2"><span className="text-orange-400">→</span> Produção musical e setlists</li>
+              <li className="flex items-center gap-2"><span className="text-orange-400">→</span> Planos a partir de US$49/mês</li>
+            </ul>
           </div>
 
           <div className="space-y-3">

@@ -32,17 +32,17 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
       image: '📋',
     },
     {
-      title: 'Insights e IA',
-      description: 'Inteligência artificial com 10+ anos de conhecimento musical',
+      title: 'Planejamento Inteligente',
+      description: 'Estrutura profissional para tomar decisões com clareza',
       icon: TrendingUp,
-      content: 'Receba sugestões inteligentes de planejamento, análise de viabilidade e recomendações baseadas em experiência real da indústria.',
+      content: 'Organize projetos, acompanhe KPIs e visualize o estado real da sua carreira. A plataforma é construída para apoiar decisões estratégicas com dados e estrutura.',
       image: '🤖',
     },
     {
       title: 'Produção Musical Integrada',
       description: 'Do repertório ao palco, tudo em uma plataforma',
       icon: Music,
-      content: 'Gerencie repertório, arranjos, ensaios e setlists. Sistema completo com modo palco offline, QR codes para músicos e muito mais.',
+      content: 'Gerencie repertório, arranjos, ensaios e setlists. Inclui modo palco com acesso rápido a letras e cifras, e QR code para músicos acessarem o material direto do celular.',
       image: '🎸',
     }
   ];
@@ -148,20 +148,18 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
             </div>
           )}
 
-          {/* Stats */}
+          {/* Plans */}
           {currentStep === 4 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#FFAD85]">95%</div>
-                <div className="text-xs text-gray-600">Funcionalidades</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-center">
+                <div className="text-2xl font-bold text-orange-600">$49<span className="text-sm font-normal text-gray-500">/mês</span></div>
+                <div className="text-sm font-medium text-gray-700 mt-1">Plano Inicial</div>
+                <div className="text-xs text-gray-500 mt-0.5">1 artista · projetos · shows · tarefas</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">26</div>
-                <div className="text-xs text-gray-600">Tabelas Database</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">12</div>
-                <div className="text-xs text-gray-600">Módulos Enterprise</div>
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-center">
+                <div className="text-2xl font-bold text-purple-600">$75<span className="text-sm font-normal text-gray-500">/mês</span></div>
+                <div className="text-sm font-medium text-gray-700 mt-1">Plano Base</div>
+                <div className="text-xs text-gray-500 mt-0.5">Múltiplos artistas · financeiro · CRM</div>
               </div>
             </div>
           )}

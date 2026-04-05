@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -24,6 +24,7 @@ import FinancialSplit from '../components/FinancialSplit';
 
 export default function ShowsManager() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { organizationId } = useAuth();
   const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [shows, setShows] = useState<Show[]>([]);
@@ -496,6 +497,7 @@ export default function ShowsManager() {
           limit={planLimits.maxShows}
           planName={planLimits.displayName || 'Plano atual'}
           onClose={() => setShowLimitModal(false)}
+          onUpgrade={() => navigate('/profile')}
         />
       )}
     </div>

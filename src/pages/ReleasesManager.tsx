@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Music, Search, Filter, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
@@ -47,6 +47,7 @@ function getPhaseForRelease(status: ReleaseStatus): string {
 
 export default function ReleasesManager() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { organizationId } = useAuth();
   const { limits: planLimits } = useSubscription(organizationId || undefined);
   const [releases, setReleases] = useState<Release[]>([]);
@@ -872,6 +873,7 @@ export default function ReleasesManager() {
           limit={planLimits.maxReleases}
           planName={planLimits.displayName || 'Plano atual'}
           onClose={() => setReleaseLimitModal(false)}
+          onUpgrade={() => navigate('/profile')}
         />
       )}
     </div>
