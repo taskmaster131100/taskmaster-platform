@@ -174,11 +174,15 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         setShowOnboarding(true);
       } else {
         // Check if user should see welcome modal (for returning users)
+        // welcomeVersion forces re-display when modal has significant changes
+        const WELCOME_VERSION = 'v2-apr2026';
         const lastLogin = localStorage.getItem('lastLogin');
+        const seenVersion = localStorage.getItem('welcomeVersion');
         const today = new Date().toDateString();
-        if (lastLogin !== today) {
+        if (lastLogin !== today || seenVersion !== WELCOME_VERSION) {
           setShowWelcome(true);
           localStorage.setItem('lastLogin', today);
+          localStorage.setItem('welcomeVersion', WELCOME_VERSION);
         }
       }
     }
