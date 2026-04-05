@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Music, Search, Filter, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import PlanLimitModal from '../components/PlanLimitModal';
+import {
+  generateReleaseProposal,
+  saveReleaseWithTasks,
+  getMinReleaseDateFor,
+  ReleaseTimelineProposal,
+  AIReleaseTask,
+} from '../services/releaseAIService';
 import {
   Release,
   ReleasePhase,
@@ -63,6 +70,12 @@ export default function ReleasesManager() {
   const [artistFilter, setArtistFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | ''>('');
   const [uploading, setUploading] = useState(false);
+  // AI-guided creation flow
+  const [modalStep, setModalStep] = useState<'form' | 'proposal'>('form');
+  const [proposal, setProposal] = useState<ReleaseTimelineProposal | null>(null);
+  const [savingRelease, setSavingRelease] = useState(false);
+  const [adjustingDate, setAdjustingDate] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   // Artista vindo da navegação — persiste para pré-preencher o form mesmo após resetForm
   const [navArtistName, setNavArtistName] = useState('');
 
@@ -97,6 +110,17 @@ export default function ReleasesManager() {
     loadReleases();
   }, [typeFilter, navArtistId]);
 
+  // Auto-focus date field when returning from proposal to adjust date
+  useEffect(() => {
+    if (adjustingDate && modalStep === 'form') {
+      const timer = setTimeout(() => {
+        dateInputRef.current?.focus();
+        setAdjustingDate(false);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [adjustingDate, modalStep]);
+
   const loadReleases = async () => {
     try {
       setLoading(true);
@@ -115,29 +139,66 @@ export default function ReleasesManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.release_date) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const releaseDate = new Date(formData.release_date + 'T00:00:00');
-      if (releaseDate < today && !selectedRelease) {
-        const confirmed = window.confirm(
-          `A data de lançamento (${new Date(formData.release_date + 'T00:00:00').toLocaleDateString('pt-BR')}) é no passado.\n\nDeseja continuar mesmo assim?`
-        );
-        if (!confirmed) return;
-      }
-    }
-    try {
-      if (selectedRelease) {
+
+    // Edit mode: save directly (no AI flow for edits)
+    if (selectedRelease) {
+      try {
         await updateRelease(selectedRelease.id, formData);
-      } else {
-        await createRelease(formData);
+        setShowModal(false);
+        resetForm();
+        loadReleases();
+      } catch (error) {
+        console.error('Erro ao atualizar lançamento:', error);
       }
+      return;
+    }
+
+    // New release: compute AI proposal and show proposal step
+    const computed = generateReleaseProposal(formData.release_type, formData.release_date || null);
+    setProposal(computed);
+    setModalStep('proposal');
+  };
+
+  const handleConfirmWithTimeline = async () => {
+    if (!proposal || !proposal.viable) return;
+    setSavingRelease(true);
+    try {
+      const newRelease = await createRelease(formData);
+      await saveReleaseWithTasks(newRelease.id, proposal.tasks);
       setShowModal(false);
+      setModalStep('form');
+      setProposal(null);
       resetForm();
       loadReleases();
     } catch (error) {
-      console.error('Erro ao salvar lançamento:', error);
+      console.error('Erro ao criar lançamento com cronograma:', error);
+    } finally {
+      setSavingRelease(false);
     }
+  };
+
+  // Adjustment 2: button text is "Criar apenas o lançamento"
+  const handleConfirmWithoutTimeline = async () => {
+    setSavingRelease(true);
+    try {
+      await createRelease(formData);
+      setShowModal(false);
+      setModalStep('form');
+      setProposal(null);
+      resetForm();
+      loadReleases();
+    } catch (error) {
+      console.error('Erro ao criar lançamento:', error);
+    } finally {
+      setSavingRelease(false);
+    }
+  };
+
+  // Adjustment 3: "Ajustar data" — go back to form, preserve all fields, auto-focus date
+  const handleAdjustDate = () => {
+    setModalStep('form');
+    setAdjustingDate(true);
+    setProposal(null);
   };
 
   const handleEdit = (release: Release) => {
@@ -221,6 +282,8 @@ export default function ReleasesManager() {
       notes: ''
     });
     setSelectedRelease(null);
+    setModalStep('form');
+    setProposal(null);
   };
 
   const filteredReleases = releases.filter(release => {
@@ -467,8 +530,15 @@ export default function ReleasesManager() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {selectedRelease ? 'Editar Lançamento' : 'Novo Lançamento'}
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                {modalStep === 'proposal' && !selectedRelease && (
+                  <Sparkles className="w-6 h-6 text-[#FFAD85]" />
+                )}
+                {selectedRelease
+                  ? 'Editar Lançamento'
+                  : modalStep === 'proposal'
+                    ? 'Cronograma do Lançamento'
+                    : 'Novo Lançamento'}
               </h2>
               <button
                 onClick={() => {
@@ -481,159 +551,295 @@ export default function ReleasesManager() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Título do Lançamento *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="Ex: Meu Novo Single"
-                  />
+            {/* Step 1: Form */}
+            {modalStep === 'form' && (
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Título do Lançamento *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="Ex: Meu Novo Single"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Artista *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.artist_name}
+                      onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="Nome do artista"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo *
+                    </label>
+                    <select
+                      value={formData.release_type}
+                      onChange={(e) => setFormData({ ...formData, release_type: e.target.value as ReleaseType })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    >
+                      {RELEASE_TYPES.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Data de Lançamento *
+                    </label>
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      required
+                      value={formData.release_date}
+                      onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    />
+                    {adjustingDate && formData.release_date && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        Data mínima recomendada: {new Date(getMinReleaseDateFor(formData.release_type) + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status *
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as ReleaseStatus })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    >
+                      {RELEASE_STATUSES.map(status => (
+                        <option key={status.value} value={status.value}>{status.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ISRC
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.isrc}
+                      onChange={(e) => setFormData({ ...formData, isrc: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="BR-XXX-XX-XXXXX"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      UPC / EAN
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.upc}
+                      onChange={(e) => setFormData({ ...formData, upc: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="000000000000"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Distribuidora
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.distributor}
+                      onChange={(e) => setFormData({ ...formData, distributor: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="Ex: CD Baby, DistroKid, ONErpm"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Observações
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="Anotações sobre o lançamento..."
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Artista *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.artist_name}
-                    onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="Nome do artista"
-                  />
-                </div>
+                {!selectedRelease && (
+                  <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-[#FFAD85] flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-orange-800">
+                      <strong>Cronograma inteligente:</strong> Na próxima etapa, vamos calcular automaticamente as tarefas e datas do seu lançamento com base na data escolhida.
+                    </p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo *
-                  </label>
-                  <select
-                    value={formData.release_type}
-                    onChange={(e) => setFormData({ ...formData, release_type: e.target.value as ReleaseType })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      resetForm();
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    {RELEASE_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data de Lançamento *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.release_date}
-                    onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status *
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as ReleaseStatus })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
                   >
-                    {RELEASE_STATUSES.map(status => (
-                      <option key={status.value} value={status.value}>{status.label}</option>
-                    ))}
-                  </select>
+                    {selectedRelease ? 'Atualizar Lançamento' : 'Continuar →'}
+                  </button>
                 </div>
+              </form>
+            )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ISRC
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.isrc}
-                    onChange={(e) => setFormData({ ...formData, isrc: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="BR-XXX-XX-XXXXX"
-                  />
-                </div>
+            {/* Step 2: AI Proposal */}
+            {modalStep === 'proposal' && proposal && (
+              <div className="p-6">
+                {/* Viable: show timeline */}
+                {proposal.viable && (
+                  <>
+                    <div className="mb-5 flex items-start gap-3 bg-green-50 border border-green-100 rounded-xl p-4">
+                      <CheckCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-green-800">
+                          Cronograma viável — {proposal.tasks.length} tarefas em {proposal.daysUntilRelease} dias
+                        </p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          Data de lançamento: {new Date(formData.release_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    UPC / EAN
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.upc}
-                    onChange={(e) => setFormData({ ...formData, upc: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="000000000000"
-                  />
-                </div>
+                    {/* Tasks grouped by area */}
+                    {(['Lançamento', 'Marketing'] as const).map(area => {
+                      const areaTasks = proposal.tasks.filter(t => t.area === area);
+                      if (areaTasks.length === 0) return null;
+                      return (
+                        <div key={area} className="mb-5">
+                          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{area}</h3>
+                          <div className="space-y-2">
+                            {areaTasks.map((task, i) => (
+                              <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className={`mt-0.5 flex-shrink-0 w-2 h-2 rounded-full ${task.priority === 'alta' ? 'bg-orange-400' : 'bg-gray-300'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900">{task.title}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
+                                </div>
+                                <div className="flex-shrink-0 text-right">
+                                  <p className="text-xs font-medium text-gray-700">
+                                    {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                  </p>
+                                  {task.priority === 'alta' && (
+                                    <span className="text-xs text-orange-500 font-medium">alta</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Distribuidora
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.distributor}
-                    onChange={(e) => setFormData({ ...formData, distributor: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="Ex: CD Baby, DistroKid, ONErpm"
-                  />
-                </div>
+                    <div className="flex flex-col gap-2 pt-2">
+                      <button
+                        onClick={handleConfirmWithTimeline}
+                        disabled={savingRelease}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+                      >
+                        {savingRelease ? 'Criando...' : 'Confirmar e criar lançamento com cronograma'}
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAdjustDate}
+                          disabled={savingRelease}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm flex items-center justify-center gap-1.5"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          Ajustar data
+                        </button>
+                        <button
+                          onClick={handleConfirmWithoutTimeline}
+                          disabled={savingRelease}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        >
+                          Criar apenas o lançamento
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observações
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                    placeholder="Anotações sobre o lançamento..."
-                  />
-                </div>
+                {/* Inviable: show reason + options */}
+                {!proposal.viable && proposal.inviableReason !== 'no_date' && (
+                  <>
+                    <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800">
+                          {proposal.inviableReason === 'below_minimum'
+                            ? `Data muito próxima para um ${RELEASE_TYPES.find(t => t.value === formData.release_type)?.label ?? formData.release_type}`
+                            : 'Tarefas críticas já estariam no passado'}
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          {proposal.inviableReason === 'below_minimum'
+                            ? `Este tipo de lançamento requer pelo menos ${proposal.minDaysRequired} dias de antecedência. Você tem ${proposal.daysUntilRelease} dias.`
+                            : `Com essa data, algumas tarefas obrigatórias (envio ao distribuidor, pitch editorial) já estariam no passado.`}
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1 font-medium">
+                          Data mínima recomendada: {new Date(getMinReleaseDateFor(formData.release_type) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={handleAdjustDate}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Ajustar data de lançamento
+                      </button>
+                      <button
+                        onClick={handleConfirmWithoutTimeline}
+                        disabled={savingRelease}
+                        className="w-full px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
+                      >
+                        {savingRelease ? 'Criando...' : 'Criar apenas o lançamento'}
+                      </button>
+                      <button
+                        onClick={() => { setShowModal(false); resetForm(); }}
+                        className="w-full px-4 py-2 text-gray-400 hover:text-gray-600 transition-colors text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-
-              {!selectedRelease && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>🎯 Timeline automática:</strong> Ao criar o lançamento, serão geradas automaticamente 6 fases de produção (pré-produção até divulgação) com datas calculadas a partir da data de lançamento.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
-                >
-                  {selectedRelease ? 'Atualizar' : 'Criar'} Lançamento
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}
