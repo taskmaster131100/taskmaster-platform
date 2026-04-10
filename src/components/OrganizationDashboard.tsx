@@ -4,7 +4,7 @@ import {
   Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search,
   MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles,
   AlertTriangle, Info, CheckCircle2, ArrowRight, Building2, Plus,
-  Clock, Mic2, Disc3
+  Clock, Mic2, Disc3, Archive, ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProactiveSuggestions, Suggestion } from '../services/suggestionService';
@@ -58,7 +58,7 @@ export default function OrganizationDashboard({
       subtitle: 'carregando...',
       color: 'from-orange-500 to-orange-600',
       iconColor: 'text-orange-600',
-      onClick: () => navigate('/planejamento')
+      onClick: () => navigate('/tasks')
     },
     {
       icon: DollarSign,
@@ -97,17 +97,23 @@ export default function OrganizationDashboard({
       const { data: artistsData } = await supabase
         .from('artists')
         .select('*')
+        .neq('status', 'archived')
         .order('name');
       
       const artistsList = artistsData || [];
       setArtists(artistsList);
 
-      // 2. Carregar Projetos: tabela projects (Copilot/wizard) + plannings (PlanningDashboard)
+      // 2. Carregar Projetos: tabela projects + plannings
+      // Cross-filtrar projetos de artistas arquivados usando a lista de artistas ativos acima
+      const activeArtistIds = new Set(artistsList.map((a: any) => a.id));
       const [{ data: projectsData }, { data: planningsData }] = await Promise.all([
-        supabase.from('projects').select('id, name, status, created_at'),
+        supabase.from('projects').select('id, name, status, created_at, artist_id').neq('status', 'archived'),
         supabase.from('plannings').select('id, name, status, created_at')
       ]);
-      const combinedProjects = [...(projectsData || []), ...(planningsData || [])];
+      const filteredProjects = (projectsData || []).filter((p: any) =>
+        !p.artist_id || activeArtistIds.has(p.artist_id)
+      );
+      const combinedProjects = [...filteredProjects, ...(planningsData || [])];
       setProjects(combinedProjects);
 
       // 3. Carregar Shows
@@ -186,7 +192,7 @@ export default function OrganizationDashboard({
           subtitle: `${combinedProjects.length} projeto${combinedProjects.length !== 1 ? 's' : ''} ativo${combinedProjects.length !== 1 ? 's' : ''}`,
           color: 'from-orange-500 to-orange-600',
           iconColor: 'text-orange-600',
-          onClick: () => navigate('/planejamento')
+          onClick: () => navigate('/tasks')
         },
         {
           icon: DollarSign,
@@ -723,6 +729,115 @@ export default function OrganizationDashboard({
               className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors text-sm font-medium"
             >
               Adicionar Artista
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Projects Table */}
+      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-gray-700" />
+            <h2 className="text-xl font-bold text-gray-900">Projetos</h2>
+          </div>
+          <button
+            onClick={() => navigate('/planejamento')}
+            className="px-4 py-2 bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white rounded-lg hover:shadow-lg transition-all shadow-sm flex items-center gap-2 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Projeto
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Criado em</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {projects.map((project) => (
+                <tr
+                  key={project.id}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => onSelectProject(project.id)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                        {(project.name || 'P').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-gray-900">{project.name || project.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      project.status === 'active' || project.status === 'ativo'
+                        ? 'bg-green-100 text-green-700'
+                        : project.status === 'completed' || project.status === 'concluido'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        project.status === 'active' || project.status === 'ativo' ? 'bg-green-500' :
+                        project.status === 'completed' || project.status === 'concluido' ? 'bg-blue-500' : 'bg-gray-500'
+                      }`}></span>
+                      {project.status === 'active' ? 'Ativo' :
+                       project.status === 'completed' ? 'Concluído' :
+                       project.status || 'Ativo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {project.created_at
+                      ? new Date(project.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                      : '—'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onSelectProject(project.id); }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#FF9B6A] hover:bg-orange-50 rounded-lg transition-colors"
+                        title="Abrir projeto"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Abrir
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!window.confirm(`Arquivar "${project.name || project.title}"? O projeto não aparecerá mais na lista, mas os dados ficam salvos.`)) return;
+                          const { error } = await supabase.from('projects').update({ status: 'archived' }).eq('id', project.id);
+                          if (error) { console.error(error); return; }
+                          setProjects(prev => prev.filter(p => p.id !== project.id));
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1.5 text-sm text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Arquivar projeto"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {projects.length === 0 && (
+          <div className="text-center py-12">
+            <Rocket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium mb-1">Nenhum projeto ativo</p>
+            <p className="text-gray-400 text-sm mb-4">Crie seu primeiro projeto com o Copilot IA</p>
+            <button
+              onClick={() => navigate('/planejamento')}
+              className="px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors text-sm font-medium"
+            >
+              Criar Projeto com IA
             </button>
           </div>
         )}

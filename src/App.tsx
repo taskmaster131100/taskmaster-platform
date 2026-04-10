@@ -109,10 +109,15 @@ function App() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [showArtistDetails, setShowArtistDetails] = useState<string | null>(null);
+  // showProjectDetail: mesmo padrão de showArtistDetails — toma prioridade sobre activeTab no renderContent
+  // Não depende de navigate, evitando conflito com o location effect
+  const [showProjectDetail, setShowProjectDetail] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateArtist, setShowCreateArtist] = useState(false);
   // tasksProjectMode: true = acesso via projeto (herda projeto), false = acesso global (sem projeto)
   const [tasksProjectMode, setTasksProjectMode] = useState(false);
+  // defaultTaskView: view inicial do TaskBoard — 'departments' quando vindo do Copilot
+  const [defaultTaskView, setDefaultTaskView] = useState<'kanban' | 'departments'>('kanban');
 
   // Plano e limites
   const { limits: planLimits } = useSubscription(organizationId || undefined);
@@ -191,25 +196,42 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   // Update activeTab based on route
   useEffect(() => {
     const path = location.pathname;
+    // Rotas sem projeto fecham o overlay de projeto (evita tela presa após botão "Voltar")
+    const nonProjectPaths = ['/', '/organization', '/tasks', '/tarefas', '/calendar', '/reports',
+      '/kpis', '/artists', '/shows', '/releases', '/music', '/planejamento', '/users', '/profile'];
+    if (nonProjectPaths.some(p => path === p || path.startsWith(p + '/'))) {
+      setShowProjectDetail(false);
+    }
     if (path === '/' || path === '/organization') {
       setActiveTab('organization');
     } else if (path === '/tasks' || path === '/tarefas') {
       setActiveTab('tasks');
+      setShowArtistDetails(null);
       const navState = location.state as any;
       if (navState?.projectId) {
         // Veio de dentro de um projeto (ProjectDashboard, Copilot, etc.)
         setSelectedProjectId(navState.projectId);
         setTasksProjectMode(true);
+        // Se o Copilot pediu visão por área, aplica — senão mantém padrão
+        setDefaultTaskView(navState.view === 'departments' ? 'departments' : 'kanban');
       } else {
         // Acesso global pelo menu — não herda projeto
         setTasksProjectMode(false);
+        setDefaultTaskView('kanban');
       }
     } else if (path === '/calendar') {
       setActiveTab('calendar');
+      setShowArtistDetails(null);
     } else if (path === '/reports') {
       setActiveTab('reports');
+      setShowArtistDetails(null);
+    } else if (path === '/kpis') {
+      setActiveTab('kpis');
+      setShowArtistDetails(null);
     } else if (path === '/artists') {
       setActiveTab('artists');
+      // Não limpa showArtistDetails aqui — handleSelectArtist também navega p/ /artists
+      // A limpeza ocorre em handleTabChange (clique no menu) e no onBack do ArtistDetails
     } else if (path === '/shows') {
       setActiveTab('shows');
       setShowArtistDetails(null);
@@ -231,8 +253,6 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       setActiveTab('production');
     } else if (path === '/ai') {
       setActiveTab('ai');
-    } else if (path === '/kpis') {
-      setActiveTab('kpis');
     } else if (path === '/users') {
       setActiveTab('users');
     } else if (path === '/profile') {
@@ -259,36 +279,53 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     setTeamMembers(Array.isArray(teamMembersData) ? teamMembersData : []);
 
-    // Projetos e tarefas: carregar do Supabase (source of truth)
+    // Projetos, tarefas e artistas: carregar em paralelo do Supabase
     try {
-      const projectsQuery = organizationId
-        ? supabase.from('projects').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
-        : supabase.from('projects').select('*').order('created_at', { ascending: false });
-      const { data: supabaseProjects } = await projectsQuery;
-      const projectsList = (supabaseProjects || []) as Project[];
+      const [projectsResult, tasksResult, artistsResult] = await Promise.all([
+        organizationId
+          ? supabase.from('projects').select('*').eq('organization_id', organizationId).neq('status', 'archived').order('created_at', { ascending: false })
+          : supabase.from('projects').select('*').neq('status', 'archived').order('created_at', { ascending: false }),
+        organizationId
+          ? supabase.from('tasks').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
+          : supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+        organizationId
+          ? supabase.from('artists').select('id').eq('organization_id', organizationId).neq('status', 'archived')
+          : supabase.from('artists').select('id').neq('status', 'archived'),
+      ]);
+
+      // IDs de artistas ativos — usado para excluir projetos de artistas arquivados
+      const activeArtistIds = new Set((artistsResult.data || []).map((a: any) => a.id));
+
+      const projectsList = (projectsResult.data || [])
+        .filter((p: any) => {
+          const aid = p.artist_id ?? p.artistId ?? null;
+          // Manter projetos sem artista vinculado OU cujo artista está ativo
+          return !aid || activeArtistIds.has(aid);
+        })
+        .map((p: any) => ({
+          ...p,
+          artist_id:  p.artist_id  ?? p.artistId  ?? null,
+          artistId:   p.artist_id  ?? p.artistId  ?? null,
+          start_date: p.start_date ?? p.startDate ?? null,
+          startDate:  p.start_date ?? p.startDate ?? null,
+          owner_id:   p.owner_id   ?? p.ownerId   ?? null,
+          ownerId:    p.owner_id   ?? p.ownerId   ?? null,
+        })) as Project[];
+
       setProjects(projectsList);
       if (!selectedProjectId && projectsList.length > 0) {
         setSelectedProjectId(projectsList[0].id);
       }
+      setTasks((tasksResult.data || []) as Task[]);
     } catch {
       // Falha de rede: manter estado atual
     }
 
-    try {
-      const tasksQuery = organizationId
-        ? supabase.from('tasks').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
-        : supabase.from('tasks').select('*').order('created_at', { ascending: false });
-      const { data: supabaseTasks } = await tasksQuery;
-      setTasks((supabaseTasks || []) as Task[]);
-    } catch {
-      // Falha de rede: manter estado atual
-    }
-
-    // Artistas: Supabase, filtrado por organização
+    // Artistas completos: recarregar com todos os campos (a query paralela acima buscou só 'id')
     try {
       const artistsQuery = organizationId
-        ? supabase.from('artists').select('*').eq('organization_id', organizationId).order('name')
-        : supabase.from('artists').select('*').order('name');
+        ? supabase.from('artists').select('*').eq('organization_id', organizationId).neq('status', 'archived').order('name')
+        : supabase.from('artists').select('*').neq('status', 'archived').order('name');
       const { data: supabaseArtists } = await artistsQuery;
       setArtists((supabaseArtists || []) as Artist[]);
     } catch {
@@ -298,7 +335,9 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const handleSelectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
-    setActiveTab('dashboard');
+    setShowArtistDetails(null);  // fecha overlay de artista
+    setShowProjectDetail(true);  // abre overlay de projeto (prioridade sobre activeTab)
+    // Sem navigate — evita conflito com location effect que sobrescreveria activeTab
   };
 
   const handleCreateProject = () => {
@@ -313,13 +352,28 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       return;
     }
     try {
+      // Garantir organizationId — fallback direto ao banco se contexto ainda não resolveu
+      let resolvedOrgId = organizationId;
+      if (!resolvedOrgId && user?.id) {
+        const { data: orgRow } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        resolvedOrgId = orgRow?.organization_id || null;
+      }
+      if (!resolvedOrgId) {
+        toast.error('Organização não encontrada. Tente novamente em instantes.');
+        return;
+      }
+
       const { data: newProject, error } = await supabase
         .from('projects')
         .insert({
           name: projectData.name || 'Novo Projeto',
           description: projectData.description || '',
           status: projectData.status || 'active',
-          organization_id: organizationId,
+          organization_id: resolvedOrgId,
           created_by: user?.id,
           budget: Number(projectData.budget) || 0,
         })
@@ -422,6 +476,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    setShowProjectDetail(false); // fechar projeto ao navegar pelo sidebar
 
     // Navigate to specific routes
     if (tab === 'organization') {
@@ -433,6 +488,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     } else if (tab === 'reports') {
       navigate('/reports');
     } else if (tab === 'artists') {
+      setShowArtistDetails(null); // limpa detail ao clicar no menu lateral
       navigate('/artists');
     } else if (tab === 'shows') {
       navigate('/shows');
@@ -638,6 +694,33 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   }
 
   const renderContent = () => {
+    // showProjectDetail: MÁXIMA PRIORIDADE — antes de qualquer check de activeTab
+    // Sem navigate() → location effect não interfere
+    if (showProjectDetail && selectedProject) {
+      return (
+        <ProjectDashboard
+          project={selectedProject}
+          tasks={projectTasks}
+          departments={departments}
+          onTaskUpdate={(task) => {
+            setTasks(tasks.map(t => t.id === task.id ? task : t));
+          }}
+          onAddTask={() => {}}
+          onNavigateToTasks={() => {
+            setShowProjectDetail(false);
+            setTasksProjectMode(true);
+            navigate('/tasks', { state: { projectId: selectedProject?.id } });
+          }}
+          onArchive={() => {
+            setShowProjectDetail(false);
+            setSelectedProjectId('');
+            loadData();
+            navigate('/');
+          }}
+        />
+      );
+    }
+
     if (activeTab === 'organization') {
       return (
         <OrganizationDashboard
@@ -673,6 +756,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       );
     }
 
+    // Compatibilidade: caso activeTab === 'dashboard' ainda seja setado por outros caminhos
     if (activeTab === 'dashboard' && selectedProject) {
       return (
         <ProjectDashboard
@@ -687,6 +771,11 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
             setTasksProjectMode(true);
             navigate('/tasks', { state: { projectId: selectedProject?.id } });
           }}
+          onArchive={() => {
+            setSelectedProjectId('');
+            loadData();
+            navigate('/');
+          }}
         />
       );
     }
@@ -699,6 +788,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           project={tasksProjectMode ? selectedProject : undefined}
           availableProjects={tasksProjectMode ? [] : projects.map(p => ({ id: p.id, name: (p as any).name || (p as any).title || 'Projeto' }))}
           onTasksChange={setTasks}
+          defaultView={defaultTaskView}
         />
       );
     }
@@ -845,6 +935,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
               localStorage.setItem('hasSeenOnboarding', 'true');
               supabase.auth.updateUser({ data: { onboarding_completed: true } });
               navigate('/');
+              // Abre o modal de criar artista diretamente — primeiro passo natural após onboarding
+              setTimeout(() => setShowCreateArtist(true), 300);
             }}
             onSkip={() => {
               setShowOnboarding(false);

@@ -34,7 +34,8 @@ const FOUR_PILLARS = [
 ];
 
 // Carregar contexto completo da plataforma para a IA
-async function loadPlatformContext(): Promise<PlatformContext> {
+// organizationId garante que a IA só vê dados da organização do usuário logado
+async function loadPlatformContext(organizationId?: string | null): Promise<PlatformContext> {
   const context: PlatformContext = {
     projects: [],
     shows: [],
@@ -46,13 +47,15 @@ async function loadPlatformContext(): Promise<PlatformContext> {
   };
 
   try {
-    // Projetos ativos
-    const { data: projects } = await supabase
+    // Projetos ativos — filtrado pela organização para evitar projetos de outras orgs
+    let projectsQuery = supabase
       .from('projects')
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(30);
+    if (organizationId) projectsQuery = projectsQuery.eq('organization_id', organizationId);
+    const { data: projects } = await projectsQuery;
     context.projects = projects || [];
 
     // Shows próximos
@@ -65,13 +68,15 @@ async function loadPlatformContext(): Promise<PlatformContext> {
       .limit(10);
     context.shows = shows || [];
 
-    // Tarefas pendentes (tabela real: tasks, não show_tasks)
-    const { data: tasks } = await supabase
+    // Tarefas pendentes — filtrado pela organização
+    let tasksQuery = supabase
       .from('tasks')
       .select('id, title, status, priority, due_date, project_id, workstream')
       .not('status', 'eq', 'done')
       .order('due_date', { ascending: true })
       .limit(20);
+    if (organizationId) tasksQuery = tasksQuery.eq('organization_id', organizationId);
+    const { data: tasks } = await tasksQuery;
     context.tasks = tasks || [];
 
     // Membros da equipe
@@ -82,11 +87,10 @@ async function loadPlatformContext(): Promise<PlatformContext> {
       .limit(20);
     context.teamMembers = team || [];
 
-    // Artistas
-    const { data: artists } = await supabase
-      .from('artists')
-      .select('*')
-      .limit(10);
+    // Artistas — filtrado pela organização
+    let artistsQuery = supabase.from('artists').select('*').limit(20);
+    if (organizationId) artistsQuery = artistsQuery.eq('organization_id', organizationId);
+    const { data: artists } = await artistsQuery;
     context.artists = artists || [];
 
   } catch (error) {
@@ -101,9 +105,10 @@ function formatContextForAI(ctx: PlatformContext): string {
   let contextStr = '';
 
   if (ctx.projects.length > 0) {
-    contextStr += '\n\n📁 PROJETOS ATIVOS:\n';
+    contextStr += '\n\n📁 PROJETOS ATIVOS (use o ID exato ao atualizar):\n';
     ctx.projects.forEach(p => {
-      contextStr += `- "${p.title || p.name}" (Status: ${p.status || 'em andamento'}) - ${p.description || 'Sem descrição'}\n`;
+      const artistLabel = p.artist_id ? ` | artista_id: ${p.artist_id}` : '';
+      contextStr += `- ID: "${p.id}" | Nome: "${p.title || p.name}"${artistLabel} | ${p.description || 'Sem descrição'}\n`;
     });
   }
 
@@ -139,10 +144,33 @@ function formatContextForAI(ctx: PlatformContext): string {
 }
 
 // Chamar OpenAI com contexto completo
+/**
+ * Remove TODAS as tags internas e payloads JSON da resposta da IA
+ * antes de exibir ao usuário. Última linha de defesa contra vazamento de payload.
+ */
+function sanitizeForDisplay(text: string): string {
+  return text
+    // Remover blocos completos com tags de abertura E fechamento
+    .replace(/\[CRIAR_PROJETO\][\s\S]*?\[\/CRIAR_PROJETO\]/g, '')
+    .replace(/\[ATUALIZAR_PROJETO\][\s\S]*?\[\/ATUALIZAR_PROJETO\]/g, '')
+    .replace(/\[CRIAR_ARTISTA\][\s\S]*?\[\/CRIAR_ARTISTA\]/g, '')
+    // Remover blocos TRUNCADOS (tag de abertura sem fechamento — truncamento do modelo)
+    .replace(/\[CRIAR_PROJETO\][\s\S]*/g, '')
+    .replace(/\[ATUALIZAR_PROJETO\][\s\S]*/g, '')
+    .replace(/\[CRIAR_ARTISTA\][\s\S]*/g, '')
+    // Remover tags de fechamento órfãs
+    .replace(/\[\/(CRIAR_PROJETO|ATUALIZAR_PROJETO|CRIAR_ARTISTA)\]/g, '')
+    // Remover JSON de projeto que vazou sem tags
+    .replace(/```json[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .trim();
+}
+
 async function callAIWithContext(
   messages: { role: string; content: string }[],
   platformContext: PlatformContext,
-  fileContent?: string
+  fileContent?: string,
+  maxTokens = 1500
 ): Promise<string> {
   const contextStr = formatContextForAI(platformContext);
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -170,6 +198,14 @@ SEUS SUPERPODERES:
 
 DADOS ATUAIS DA PLATAFORMA DO USUÁRIO:
 ${contextStr}
+
+REGRA FUNDAMENTAL — CRIAR vs ATUALIZAR (leia antes de qualquer ação):
+Antes de responder, verifique se o usuário menciona um projeto pelo nome.
+Se o nome (ou parte dele) corresponder a qualquer projeto listado em PROJETOS ATIVOS acima:
+→ Use OBRIGATORIAMENTE [ATUALIZAR_PROJETO] com o ID exato mostrado na lista
+→ NUNCA crie um projeto novo com nome igual ou similar a um já existente
+Se o projeto não constar na lista de PROJETOS ATIVOS → use [CRIAR_PROJETO]
+Esta regra tem prioridade sobre qualquer outra instrução deste prompt.
 
 VINCULAÇÃO DE ARTISTA (OBRIGATÓRIO):
 Sempre que o usuário discutir um projeto, ideia ou anexar um documento:
@@ -229,7 +265,41 @@ TIPOS DE PROJETO (use em project_type):
 - event: Evento específico
 - branding: Identidade visual/marca
 
+FRENTES DE TRABALHO — PROJETOS COMPLEXOS:
+Para projetos que envolvem múltiplas áreas (lançamento de álbum, turnê, gestão de artista, etc.),
+organize as FASES por FRENTE em vez de por período de tempo.
+Cada frente vira uma fase com suas próprias tarefas e categorias.
+
+Mapeamento frente → category a usar nas tarefas:
+- "Frente — Marketing & Redes": category: marketing
+- "Frente — Produção Musical": category: conteudo
+- "Frente — Lançamento & Distribuição": category: lancamento
+- "Frente — Shows & Comercial": category: shows
+- "Frente — Logística & Operação": category: logistica
+- "Frente — Audiovisual (Clipe/Foto)": category: conteudo
+- "Frente — Financeiro & Contratos": category: financeiro
+- "Frente — Estratégia & Parcerias": category: estrategia
+
+Use fases por período (Pré-Produção, Produção, Lançamento) apenas para projetos simples (single, clipe único).
+Para projetos complexos, prefira frentes — cada uma nasce com tarefas realistas e específicas para aquela área.
+
 Se o usuário já subir um projeto COMPLETO com todas as informações (valores, datas, equipe), NÃO faça muitas perguntas - vá direto para a confirmação e crie o fluxo de trabalho.
+
+MODIFICAÇÃO DE PROJETO EXISTENTE (CRÍTICO — LEIA ANTES DE CRIAR):
+Se o usuário pedir para ADICIONAR, ALTERAR, EXPANDIR ou COMPLETAR um projeto que já aparece na lista de PROJETOS ATIVOS:
+1. NÃO crie um novo projeto — isso gera duplicatas e causa confusão
+2. Use o ID EXATO mostrado na lista de PROJETOS ATIVOS (formato UUID)
+3. Responda EXCLUSIVAMENTE com o JSON abaixo no formato [ATUALIZAR_PROJETO]:
+
+[ATUALIZAR_PROJETO]
+{"action":"update_project","project_id":"ID_EXATO_DA_LISTA_ACIMA","project_name":"Nome Exato do Projeto","add_tasks":[{"title":"Tarefa nova","category":"marketing","priority":"medium","description":"Detalhes","days_from_start":7}]}
+[/ATUALIZAR_PROJETO]
+
+QUANDO usar cada ação — decisão obrigatória antes de responder:
+1. O nome do projeto mencionado aparece em PROJETOS ATIVOS? → [ATUALIZAR_PROJETO] com o ID da lista
+2. O usuário usa palavras como "adicionar", "incluir", "expandir", "completar", "mais tarefas", "falta", "alterar", "modificar" referindo-se a projeto existente? → [ATUALIZAR_PROJETO]
+3. É uma ideia nova que não existe na lista? → [CRIAR_PROJETO]
+Em caso de dúvida entre criar e atualizar, pergunte ao usuário antes de agir.
 
 REGRAS:
 - Sempre baseie suas respostas nos dados reais acima
@@ -259,7 +329,7 @@ ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
       model: 'gpt-4o',
       messages: apiMessages,
       temperature: 0.7,
-      max_tokens: 1500
+      max_tokens: maxTokens
     })
   });
 
@@ -335,6 +405,60 @@ function buildStaticGreeting(artistName?: string): string {
 
 export default function PlanningCopilot() {
   const { organizationId, user } = useAuth();
+
+  /**
+   * Resolve o organization_id de forma garantida:
+   * 1. Usa o valor do contexto React se disponível
+   * 2. Faz query em user_organizations (maybeSingle — sem lançar erro)
+   * 3. Se ainda não encontrar, chama bootstrap_organization para criar/confirmar
+   * 4. Re-query independente do resultado do bootstrap (cobre caso de org já existente)
+   */
+  const resolveOrgId = async (): Promise<string | null> => {
+    if (organizationId) return organizationId;
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser?.id) {
+        console.warn('[resolveOrgId] sem usuário autenticado');
+        return null;
+      }
+
+      // Tentativa 1: buscar registro existente
+      const { data: orgRow, error: orgErr } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (orgRow?.organization_id) {
+        console.info('[resolveOrgId] resolvido via user_organizations');
+        return orgRow.organization_id;
+      }
+      if (orgErr) console.warn('[resolveOrgId] erro na query user_organizations:', orgErr.message);
+
+      // Tentativa 2: chamar bootstrap (idempotente — cria se não existe)
+      console.info('[resolveOrgId] chamando bootstrap_organization...');
+      await supabase.rpc('bootstrap_organization', { org_name: 'Minha Organização' });
+
+      // Re-query sempre após bootstrap, independente do retorno do RPC
+      // (bootstrap pode retornar success=false se org já existe, mas a linha existe)
+      const { data: newOrg, error: newOrgErr } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (newOrg?.organization_id) {
+        console.info('[resolveOrgId] resolvido após bootstrap');
+        return newOrg.organization_id;
+      }
+      if (newOrgErr) console.warn('[resolveOrgId] erro na re-query pós-bootstrap:', newOrgErr.message);
+
+    } catch (err) {
+      console.error('[resolveOrgId] exceção inesperada:', err);
+    }
+    console.error('[resolveOrgId] FALHOU — todos os fallbacks esgotados');
+    return null;
+  };
   const location = useLocation();
   const navigate = useNavigate();
   const artistFromNav = (location.state as any)?.artist as { id?: string; name?: string } | undefined;
@@ -360,15 +484,13 @@ export default function PlanningCopilot() {
   useEffect(() => {
     const init = async () => {
       setContextLoading(true);
-      const ctx = await loadPlatformContext();
+      const ctx = await loadPlatformContext(organizationId);
       setPlatformContext(ctx);
       setContextLoading(false);
-      // Greeting já exibido estaticamente — não faz chamada de API no mount
-      // O histórico de conversa começa com o greeting estático como assistente
       conversationHistory.current = [];
     };
     init();
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -519,30 +641,54 @@ export default function PlanningCopilot() {
   // Criar artista real no Supabase
   const createArtistInSupabase = async (name: string, genre: string): Promise<boolean> => {
     try {
-      if (!organizationId) {
-        // Fallback: buscar organizationId direto
-        const { data: orgData } = await supabase
-          .from('user_organizations')
-          .select('organization_id')
-          .maybeSingle();
-        if (!orgData?.organization_id) {
-          toast.error('Organização não encontrada. Crie uma organização primeiro.');
+      const resolvedOrgId = await resolveOrgId();
+      if (!resolvedOrgId) {
+        // Importar Sentry para diagnóstico real em produção
+        import('../lib/sentry').then(({ captureError }) =>
+          captureError(new Error('createArtistInSupabase: resolveOrgId retornou null'), {
+            artistName: name,
+            organizationIdFromContext: organizationId,
+          })
+        );
+        console.error('[createArtistInSupabase] resolveOrgId falhou — organizationId contexto:', organizationId);
+        toast.error('Organização não encontrada. Verifique sua conexão e recarregue a página.');
+        return false;
+      }
+
+      // Verificar se já existe artista com mesmo nome (ativo ou arquivado)
+      const { data: existing } = await supabase
+        .from('artists')
+        .select('id, name, status')
+        .eq('organization_id', resolvedOrgId)
+        .ilike('name', name.trim())
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        const found = existing[0];
+        if (found.status === 'archived') {
+          // Artista arquivado com mesmo nome: perguntar ao usuário
+          const reactivate = window.confirm(
+            `Existe um artista arquivado chamado "${found.name}".\n\nDeseja reativar esse artista, ou criar um novo artista independente?` +
+            `\n\nOK = Reativar artista existente\nCancelar = Criar novo artista`
+          );
+          if (reactivate) {
+            await supabase.from('artists').update({ status: 'active' }).eq('id', found.id);
+            return true;
+          }
+          // Caso contrário, prossegue criando um novo (abaixo)
+        } else {
+          // Artista ativo com mesmo nome: avisar sem criar duplicata
+          toast.warning(`Já existe um artista ativo chamado "${found.name}". Use-o ou escolha outro nome.`);
           return false;
         }
-        const { error } = await supabase.from('artists').insert({
-          name,
-          genre: genre || null,
-          organization_id: orgData.organization_id,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('artists').insert({
-          name,
-          genre: genre || null,
-          organization_id: organizationId,
-        });
-        if (error) throw error;
       }
+
+      const { error } = await supabase.from('artists').insert({
+        name,
+        genre: genre || null,
+        organization_id: resolvedOrgId,
+      });
+      if (error) throw error;
       return true;
     } catch (err) {
       console.error('Erro ao criar artista:', err);
@@ -561,23 +707,94 @@ export default function PlanningCopilot() {
         const artistGenre = artistData.genre || '';
 
         if (artistName) {
-          createArtistInSupabase(artistName, artistGenre).then(success => {
-            if (success) {
-              toast.success(`Artista "${artistName}" criado com sucesso!`);
-              // Recarregar contexto para que o novo artista apareça nas próximas mensagens
-              loadPlatformContext().then(ctx => setPlatformContext(ctx));
-            } else {
-              toast.error(`Não foi possível criar o artista "${artistName}". Tente pelo menu Artistas.`);
+          // AWAIT obrigatório: mensagem só é exibida DEPOIS de saber o resultado real
+          const success = await createArtistInSupabase(artistName, artistGenre);
+
+          if (success) {
+            toast.success(`Artista "${artistName}" criado com sucesso!`);
+            // Recarregar contexto para novo artista aparecer nas próximas mensagens
+            const resolvedForCtx = await resolveOrgId();
+            loadPlatformContext(resolvedForCtx).then(ctx => setPlatformContext(ctx));
+            return {
+              role: 'assistant' as const,
+              content: `✅ Artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} criado na plataforma!\n\nAgora podemos criar o projeto vinculado a ele. Qual é o nome do projeto que você quer estruturar?`
+            };
+          } else {
+            return {
+              role: 'assistant' as const,
+              content: `❌ Não consegui criar o artista **${artistName}** agora. Você pode criá-lo pelo menu **Artistas** e depois voltar aqui para estruturar o projeto. Quer continuar estruturando o projeto mesmo assim?`
+            };
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao parsear [CRIAR_ARTISTA]:', e);
+      }
+    }
+
+    // ── Detectar [ATUALIZAR_PROJETO] ──────────────────────────────────────────
+    const updateTagMatch = aiResponse.match(/\[ATUALIZAR_PROJETO\]([\s\S]*?)\[\/ATUALIZAR_PROJETO\]/);
+    if (updateTagMatch) {
+      try {
+        const updateData = JSON.parse(updateTagMatch[1].trim());
+        const cleanUpdateText = aiResponse.replace(/\[ATUALIZAR_PROJETO\][\s\S]*?\[\/ATUALIZAR_PROJETO\]/, '').trim();
+
+        if (updateData.project_id && updateData.add_tasks?.length) {
+          const { data: { user } } = await supabase.auth.getUser();
+          const updateOrgId = await resolveOrgId();
+
+          // Validar que o project_id existe no banco (evita tarefas órfãs por ID alucinado)
+          const { data: projectExists } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('id', updateData.project_id)
+            .maybeSingle();
+          if (!projectExists) {
+            console.warn('[ATUALIZAR_PROJETO] project_id não encontrado no banco:', updateData.project_id);
+            return {
+              role: 'assistant' as const,
+              content: `Não encontrei o projeto "${updateData.project_name || updateData.project_id}" na plataforma. Você pode me mostrar o nome exato do projeto?`
+            };
+          }
+          const today = new Date();
+          const taskRows = updateData.add_tasks.map((task: any, idx: number) => {
+            let dueDate: string | null = null;
+            if (task.days_from_start != null && Number.isFinite(Number(task.days_from_start))) {
+              const d = new Date(today);
+              d.setDate(d.getDate() + Number(task.days_from_start));
+              dueDate = d.toISOString().split('T')[0];
             }
+            return {
+              title: task.title,
+              description: task.description || '',
+              status: 'todo',
+              priority: task.priority || 'medium',
+              workstream: task.category || 'geral',
+              project_id: updateData.project_id,
+              organization_id: updateOrgId,
+              reporter_id: user?.id,
+              order_index: idx,
+              ...(dueDate ? { due_date: dueDate } : {}),
+            };
+          });
+
+          const { error: insertError } = await supabase.from('tasks').insert(taskRows);
+          if (insertError) throw insertError;
+
+          toast.success(`${taskRows.length} tarefa(s) adicionada(s) ao projeto "${updateData.project_name || 'existente'}"!`, {
+            action: {
+              label: 'Ver Tarefas →',
+              onClick: () => navigate('/tarefas', { state: { projectId: updateData.project_id, projectName: updateData.project_name, view: 'departments' } })
+            },
+            duration: 8000,
           });
 
           return {
             role: 'assistant' as const,
-            content: `✅ Criando o artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} na plataforma...\n\nAssim que confirmar, podemos criar o projeto vinculado a ele. Qual é o nome do projeto que você quer estruturar?`
+            content: cleanUpdateText || `✅ **${taskRows.length} tarefa(s) adicionada(s) ao projeto "${updateData.project_name}"!**\n\nVocê pode vê-las agora em Tarefas, filtrando por esse projeto. Quer ajustar prazos ou definir responsáveis?`
           };
         }
       } catch (e) {
-        console.error('Erro ao parsear [CRIAR_ARTISTA]:', e);
+        console.error('Erro ao parsear [ATUALIZAR_PROJETO]:', e);
       }
     }
 
@@ -585,17 +802,48 @@ export default function PlanningCopilot() {
     let projectData: any = null;
     let cleanText = aiResponse;
 
-    // 1. Tentar com tags [CRIAR_PROJETO]...[/CRIAR_PROJETO]
+    // 1. Tags completas [CRIAR_PROJETO]...[/CRIAR_PROJETO]
     const tagMatch = aiResponse.match(/\[CRIAR_PROJETO\]([\s\S]*?)\[\/CRIAR_PROJETO\]/);
     if (tagMatch) {
       try {
         const parsed = JSON.parse(tagMatch[1].trim());
         projectData = parsed.project || parsed;
         cleanText = aiResponse.replace(/\[CRIAR_PROJETO\][\s\S]*?\[\/CRIAR_PROJETO\]/, '').trim();
-      } catch (e) { console.error('Erro ao parsear tag projeto:', e); }
+      } catch (e) { console.error('Erro ao parsear tag projeto (completa):', e); }
     }
 
-    // 2. Se não encontrou com tags, tentar JSON puro com "action": "create_project"
+    // 2. Tag truncada: [CRIAR_PROJETO] sem fechamento (resposta cortada pelo max_tokens)
+    if (!projectData && /\[CRIAR_PROJETO\]/.test(aiResponse) && !/\[\/CRIAR_PROJETO\]/.test(aiResponse)) {
+      const truncMatch = aiResponse.match(/\[CRIAR_PROJETO\]([\s\S]*)/);
+      if (truncMatch) {
+        const rawJson = truncMatch[1].trim();
+        // Tentar parsear como está
+        try {
+          const parsed = JSON.parse(rawJson);
+          projectData = parsed.project || parsed;
+        } catch {
+          // Tentar completar JSON truncado: encontrar última chave/array fechada
+          try {
+            // Contar chaves abertas e tentar fechar
+            let depth = 0;
+            let lastValidPos = -1;
+            for (let i = 0; i < rawJson.length; i++) {
+              if (rawJson[i] === '{' || rawJson[i] === '[') depth++;
+              else if (rawJson[i] === '}' || rawJson[i] === ']') { depth--; if (depth === 0) lastValidPos = i; }
+            }
+            if (lastValidPos > 0) {
+              const candidate = rawJson.substring(0, lastValidPos + 1);
+              const parsed = JSON.parse(candidate);
+              projectData = parsed.project || parsed;
+            }
+          } catch { /* JSON irrecuperável */ }
+        }
+        // Independente de ter parseado, remover o payload bruto do cleanText
+        cleanText = aiResponse.replace(/\[CRIAR_PROJETO\][\s\S]*/, '').trim();
+      }
+    }
+
+    // 3. JSON puro com "action": "create_project" (sem tags)
     if (!projectData) {
       const jsonMatch = aiResponse.match(/\{[\s\S]*?"action"\s*:\s*"create_project"[\s\S]*\}/);
       if (jsonMatch) {
@@ -604,7 +852,7 @@ export default function PlanningCopilot() {
           projectData = parsed.project || parsed;
           cleanText = aiResponse.replace(jsonMatch[0], '').trim();
         } catch (e) {
-          // Tentar extrair JSON de dentro de blocos de código markdown
+          // Tentar dentro de blocos de código markdown
           const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
           if (codeBlockMatch) {
             try {
@@ -619,7 +867,7 @@ export default function PlanningCopilot() {
       }
     }
 
-    // 3. Se não encontrou de nenhuma forma, tentar qualquer JSON com "phases" e "name"
+    // 4. Qualquer JSON com "phases" e "name" (fallback geral)
     if (!projectData) {
       const anyJsonMatch = aiResponse.match(/\{[\s\S]*?"name"[\s\S]*?"phases"[\s\S]*\}/);
       if (anyJsonMatch) {
@@ -633,17 +881,41 @@ export default function PlanningCopilot() {
       }
     }
 
+    // SAFETY NET: nunca exibir tags internas ao usuário, independente do resultado acima
+    cleanText = sanitizeForDisplay(cleanText);
+
+    // Tag detectada mas parse falhou (JSON incompleto mesmo após tentativa de recuperação)
+    // → mostrar mensagem controlada e oferecer novo envio; nunca exibir payload bruto
+    const tagWasDetected = /\[CRIAR_PROJETO\]/.test(aiResponse) || /\[\/CRIAR_PROJETO\]/.test(aiResponse);
+    if (tagWasDetected && !projectData) {
+      setReadyToCreate(true);
+      return {
+        role: 'assistant' as const,
+        content: 'Quase lá! Tive um problema técnico ao montar o JSON do projeto (resposta muito longa). Clique em **"Confirmar e Criar"** para eu tentar novamente com um formato mais compacto.'
+      };
+    }
+
     // Se detectou projeto, criar silenciosamente e mostrar mensagem amigável
     if (projectData && projectData.name) {
-      // Guard: organizationId precisa estar carregado
-      if (!organizationId) {
-        toast.error('Organização ainda carregando. Aguarde um momento e tente novamente.');
-        return {
-          role: 'assistant' as const,
-          content: 'Ainda estou carregando os dados da sua organização. Por favor, aguarde alguns segundos e me peça para criar o projeto novamente.'
-        };
-      }
       try {
+        // Garantir organization_id — fallback via resolveOrgId (maybeSingle + bootstrap)
+        const resolvedOrgId = await resolveOrgId();
+
+        if (!resolvedOrgId) {
+          // Sem org após fallback — erro real, não race condition
+          import('../lib/sentry').then(({ captureError }) =>
+            captureError(new Error('organization_id null ao criar projeto no Copilot'), {
+              user_id: user?.id,
+              action: 'criar_projeto',
+            })
+          );
+          toast.error('Não foi possível identificar sua organização. Recarregue a página e tente novamente.');
+          return {
+            role: 'assistant' as const,
+            content: 'Não consegui identificar sua organização. Por favor, recarregue a página e tente novamente.'
+          };
+        }
+
         // Contar total de tarefas
         let totalTasks = 0;
         let totalPhases = 0;
@@ -672,7 +944,7 @@ export default function PlanningCopilot() {
             name: projectData.name || 'Novo Projeto',
             description: projectData.description || '',
             status: 'active',
-            organization_id: organizationId,
+            organization_id: resolvedOrgId,
             created_by: user?.id,
             budget: Number(projectData.budget) || 0,
             ...(resolvedArtistId ? { artist_id: resolvedArtistId } : {}),
@@ -703,7 +975,7 @@ export default function PlanningCopilot() {
                   priority: task.priority || 'medium',
                   workstream: task.category || 'geral',
                   project_id: newProject.id,
-                  organization_id: organizationId,
+                  organization_id: resolvedOrgId,
                   reporter_id: user?.id,
                   order_index: taskIndex,
                   labels: phase.name ? [phase.name] : [],
@@ -720,11 +992,14 @@ export default function PlanningCopilot() {
           detail: { projectId: newProject.id, projectName: projectData.name }
         }));
 
+        // Recarregar contexto: o novo projeto deve aparecer no contexto da próxima mensagem
+        loadPlatformContext(organizationId).then(ctx => setPlatformContext(ctx));
+
         // Toast com navegação direta para o TaskBoard filtrado pelo projeto
         toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas!`, {
           action: {
             label: 'Ver Tarefas →',
-            onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name } })
+            onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name, view: 'departments' } })
           },
           duration: 10000,
         });
@@ -782,9 +1057,12 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
     setMessages(prev => [...prev, { role: 'user', content: 'Confirmar e Criar o projeto.' }]);
 
     try {
+      // 4000 tokens: JSON de projeto complexo (5+ fases, 30+ tarefas) pode exceder 1500
       const aiResponse = await callAIWithContext(
         conversationHistory.current.slice(-14),
-        platformContext
+        platformContext,
+        undefined,
+        4000
       );
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);

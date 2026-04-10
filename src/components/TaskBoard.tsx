@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Clock, CheckCircle, AlertCircle, Archive,
-  Loader2, Edit2, Trash2, X, FileText, User, Briefcase
+  Plus, Clock, CheckCircle, AlertCircle,
+  Loader2, Edit2, Trash2, X, FileText, User, Briefcase,
+  LayoutGrid, List
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -43,6 +44,7 @@ interface TaskBoardProps {
   project?: any;
   availableProjects?: AvailableProject[];
   onTasksChange?: (tasks: Task[]) => void;
+  defaultView?: 'kanban' | 'departments';
 }
 
 const TaskBoard: React.FC<TaskBoardProps> = ({
@@ -50,7 +52,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   departments = [],
   project,
   availableProjects = [],
-  onTasksChange
+  onTasksChange,
+  defaultView = 'kanban'
 }) => {
   const { organizationId } = useAuth();
   const { limits: planLimits } = useSubscription(organizationId || undefined);
@@ -61,8 +64,18 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterWorkstream, setFilterWorkstream] = useState<string>('all');
+  const [filterProjectId, setFilterProjectId] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'kanban' | 'departments'>(defaultView);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [taskLimitModal, setTaskLimitModal] = useState(false);
+
+  // Filtro por artista (modo global)
+  const [filterArtistId, setFilterArtistId] = useState<string>('');
+  const [artists, setArtists] = useState<{ id: string; name: string }[]>([]);
+  // Mapa project_id → artist_id, construído uma vez no mount (modo global)
+  const [projectArtistMap, setProjectArtistMap] = useState<Map<string, string>>(new Map());
+  // Mapa project_id → project name, construído da query (não depende do prop availableProjects)
+  const [projectNamesMap, setProjectNamesMap] = useState<Map<string, string>>(new Map());
 
   const columns = [
     { id: 'todo',        title: 'A Fazer',      icon: Clock,         color: 'gray' },
@@ -72,15 +85,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   ];
 
   const workstreams = [
-    { id: 'all',         label: 'Todos' },
-    { id: 'conteudo',    label: 'Conteúdo' },
-    { id: 'marketing',   label: 'Marketing' },
-    { id: 'shows',       label: 'Shows' },
-    { id: 'logistica',   label: 'Logística' },
-    { id: 'estrategia',  label: 'Estratégia' },
-    { id: 'financeiro',  label: 'Financeiro' },
-    { id: 'lancamento',  label: 'Lançamento' },
-    { id: 'geral',       label: 'Geral' }
+    { id: 'all',               label: 'Todos' },
+    { id: 'producao_musical',  label: 'Produção Musical' },
+    { id: 'conteudo',          label: 'Conteúdo' },
+    { id: 'marketing',         label: 'Marketing' },
+    { id: 'shows',             label: 'Shows' },
+    { id: 'logistica',         label: 'Logística' },
+    { id: 'estrategia',        label: 'Estratégia' },
+    { id: 'financeiro',        label: 'Financeiro' },
+    { id: 'lancamento',        label: 'Lançamento' },
+    { id: 'geral',             label: 'Geral' }
   ];
 
   useEffect(() => {
@@ -95,7 +109,49 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [project?.id]);
+  }, [project?.id, filterProjectId, organizationId]);
+
+  // Carrega artistas e mapa project→artist apenas no modo global
+  // Não aguarda organizationId — RLS filtra pelo usuário logado; quando org resolver, re-executa
+  useEffect(() => {
+    if (project?.id) return; // só modo global
+
+    async function loadArtistContext() {
+      let artistsQuery = supabase.from('artists').select('id, name, stage_name').neq('status', 'archived');
+      // Busca TODOS os projetos ativos para montar mapa de nomes E mapa artista
+      let projectsQuery = supabase.from('projects').select('id, name, title, artist_id').neq('status', 'archived');
+
+      if (organizationId) {
+        artistsQuery = artistsQuery.eq('organization_id', organizationId);
+        projectsQuery = projectsQuery.eq('organization_id', organizationId);
+      }
+
+      const [artistsResult, projectsResult] = await Promise.all([artistsQuery, projectsQuery]);
+
+      const artistMap = new Map<string, string>();
+      const namesMap = new Map<string, string>();
+
+      (projectsResult.data || []).forEach((p: any) => {
+        // Mapa de nomes: todos os projetos
+        const name = p.name || p.title || 'Projeto';
+        namesMap.set(p.id, name);
+        // Mapa artista: só projetos com artist_id
+        if (p.artist_id) artistMap.set(p.id, p.artist_id);
+      });
+
+      setProjectArtistMap(artistMap);
+      setProjectNamesMap(namesMap);
+
+      setArtists(
+        (artistsResult.data || []).map((a: any) => ({
+          id: a.id,
+          name: a.stage_name || a.name,
+        }))
+      );
+    }
+
+    loadArtistContext();
+  }, [project?.id, organizationId]);
 
   async function loadTasks() {
     try {
@@ -107,6 +163,26 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
       if (project?.id) {
         query = query.eq('project_id', project.id);
+      } else if (filterProjectId) {
+        query = query.eq('project_id', filterProjectId);
+      } else {
+        // Modo global: usa organizationId do contexto; se ainda null, busca direto no banco
+        let orgId = organizationId;
+        if (!orgId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: orgData } = await supabase
+              .from('user_organizations')
+              .select('organization_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            orgId = orgData?.organization_id || null;
+          }
+        }
+        if (orgId) {
+          query = query.eq('organization_id', orgId);
+        }
+        // Se ainda sem org, RLS do Supabase filtra pelo usuário
       }
 
       const { data, error } = await query;
@@ -130,7 +206,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!orgData?.organization_id) return;
 
@@ -162,13 +238,32 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
     }
   }
 
+  // IDs de projetos vinculados ao artista selecionado
+  const artistProjectIds = filterArtistId
+    ? [...projectArtistMap.entries()]
+        .filter(([, aid]) => aid === filterArtistId)
+        .map(([pid]) => pid)
+    : [];
+
   const getTasksByStatus = (status: string) => {
     let filtered = tasks.filter(task => task.status === status);
+    // Filtro por artista: só aplica se existirem projetos vinculados ao artista
+    // Se não houver projetos vinculados, exibe todas as tarefas (com banner explicativo)
+    if (filterArtistId && artistProjectIds.length > 0) {
+      filtered = filtered.filter(task =>
+        task.project_id != null && artistProjectIds.includes(task.project_id)
+      );
+    }
     if (filterWorkstream !== 'all') {
       filtered = filtered.filter(task => task.workstream === filterWorkstream);
     }
     return filtered;
   };
+
+  // Mapa para exibir nome do projeto no card (modo global)
+  const projectNameMap = new Map<string, string>(
+    (availableProjects || []).map(p => [p.id, p.name])
+  );
 
   const getMemberName = (assigneeId?: string): string | null => {
     if (!assigneeId) return null;
@@ -207,7 +302,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!orgData?.organization_id) {
         toast.error('Você precisa estar vinculado a uma organização');
@@ -325,15 +420,85 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         </div>
       )}
 
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tarefas</h2>
-          <p className="text-gray-600">
-            {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}
-            {tasks.length}{planLimits.maxTasks !== -1 ? ` / ${planLimits.maxTasks}` : ''} tarefas
-          </p>
+      <div className="mb-6">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Tarefas</h2>
+            <p className="text-gray-600">
+              {project?.id ? `Projeto: ${project.name || project.title} · ` : ''}
+              {tasks.length}{planLimits.maxTasks !== -1 ? ` / ${planLimits.maxTasks}` : ''} tarefas
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (planLimits.maxTasks !== -1 && tasks.length >= planLimits.maxTasks) {
+                setTaskLimitModal(true);
+                return;
+              }
+              setShowCreateModal(true);
+            }}
+            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Tarefa
+          </button>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Filtros + view toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filtro por artista (só em modo global, quando há artistas cadastrados) */}
+          {!project?.id && artists.length > 0 && (
+            <select
+              value={filterArtistId}
+              onChange={(e) => {
+                setFilterArtistId(e.target.value);
+                // Limpar filtro de projeto ao mudar artista para evitar conflito
+                if (e.target.value) setFilterProjectId('');
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+            >
+              <option value="">Todos os artistas</option>
+              {artists.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Filtro por projeto (só em modo global) */}
+          {!project?.id && availableProjects.length > 0 && (
+            <select
+              value={filterProjectId}
+              onChange={(e) => {
+                setFilterProjectId(e.target.value);
+                // Limpar filtro de artista ao selecionar projeto específico
+                if (e.target.value) setFilterArtistId('');
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+            >
+              <option value="">
+                {filterArtistId ? 'Projetos do artista' : 'Todos os projetos'}
+              </option>
+              {availableProjects
+                .filter(p =>
+                  // Se artista selecionado, mostra só projetos desse artista
+                  !filterArtistId || projectArtistMap.get(p.id) === filterArtistId
+                )
+                .map(p => {
+                  // Se nenhum artista selecionado, mostra o artista do projeto entre parênteses
+                  const artistId = projectArtistMap.get(p.id);
+                  const artistName = !filterArtistId && artistId
+                    ? artists.find(a => a.id === artistId)?.name
+                    : null;
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{artistName ? ` (${artistName})` : ''}
+                    </option>
+                  );
+                })}
+            </select>
+          )}
+
+          {/* Filtro por área */}
           <select
             value={filterWorkstream}
             onChange={(e) => setFilterWorkstream(e.target.value)}
@@ -343,23 +508,139 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
               <option key={ws.id} value={ws.id}>{ws.label}</option>
             ))}
           </select>
-          <button
-            onClick={() => {
-              if (planLimits.maxTasks !== -1 && tasks.length >= planLimits.maxTasks) {
-                setTaskLimitModal(true);
-                return;
-              }
-              setShowCreateModal(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFAD85] text-white rounded-lg hover:bg-[#FF9B6A] transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Nova Tarefa
-          </button>
+
+          {/* Toggle Kanban / Por Área */}
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden ml-auto">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'kanban' ? 'bg-[#FFAD85] text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+              title="Visão Kanban"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="hidden sm:inline">Kanban</span>
+            </button>
+            <button
+              onClick={() => setViewMode('departments')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+                viewMode === 'departments' ? 'bg-[#FFAD85] text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+              title="Visão por Área"
+            >
+              <List className="w-4 h-4" />
+              <span className="hidden sm:inline">Por Área</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {/* ── Visão Por Área ─────────────────────────────────────────────────── */}
+      {viewMode === 'departments' && (() => {
+        const allFiltered = tasks.filter(t => {
+          if (filterArtistId && !(t.project_id && projectArtistMap.get(t.project_id) === filterArtistId)) return false;
+          if (filterWorkstream !== 'all' && t.workstream !== filterWorkstream) return false;
+          return true;
+        });
+        const activeWorkstreams = workstreams.filter(ws =>
+          ws.id !== 'all' && allFiltered.some(t => t.workstream === ws.id || (!t.workstream && ws.id === 'geral'))
+        );
+        if (allFiltered.length === 0) {
+          return (
+            <div className="text-center py-16 text-gray-400">
+              <p className="text-lg font-medium">Nenhuma tarefa encontrada</p>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-6">
+            {activeWorkstreams.map(ws => {
+              const wsTasks = allFiltered.filter(t =>
+                ws.id === 'geral' ? (!t.workstream || t.workstream === 'geral') : t.workstream === ws.id
+              );
+              if (wsTasks.length === 0) return null;
+              return (
+                <div key={ws.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">{ws.label}</h3>
+                    <span className="text-xs text-gray-500">{wsTasks.length} tarefa{wsTasks.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {wsTasks.map(task => {
+                      const assigneeName = getMemberName(task.assignee_id);
+                      const statusColors: Record<string, string> = {
+                        todo: 'bg-gray-100 text-gray-600',
+                        in_progress: 'bg-blue-100 text-blue-700',
+                        blocked: 'bg-red-100 text-red-700',
+                        done: 'bg-green-100 text-green-700',
+                      };
+                      const statusLabels: Record<string, string> = {
+                        todo: 'A Fazer',
+                        in_progress: 'Em Progresso',
+                        blocked: 'Bloqueado',
+                        done: 'Concluído',
+                      };
+                      return (
+                        <div key={task.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
+                            {task.description && (
+                              <p className="text-xs text-gray-500 truncate mt-0.5">{task.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {task.due_date && (
+                              <span className="text-xs text-gray-500 hidden sm:block">
+                                {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                              </span>
+                            )}
+                            {assigneeName && (
+                              <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-[10px] font-bold" title={assigneeName}>
+                                {getInitials(assigneeName)}
+                              </span>
+                            )}
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[task.status] || 'bg-gray-100 text-gray-600'}`}>
+                              {statusLabels[task.status] || task.status}
+                            </span>
+                            <button
+                              onClick={() => { setSelectedTask(task); setShowEditModal(true); }}
+                              className="p-1 text-gray-400 hover:text-[#FFAD85] transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* ── Aviso: artista sem projetos vinculados → mostra todas as tarefas ── */}
+      {filterArtistId && !loading && artistProjectIds.length === 0 && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          Este artista não tem projetos vinculados — exibindo todas as tarefas da organização. Para filtrar por artista, crie um projeto para este artista pelo Copilot (Planejamento IA).
+        </div>
+      )}
+      {/* ── Aviso: artista tem projetos mas sem tarefas ──────────────────────── */}
+      {filterArtistId && !loading && artistProjectIds.length > 0 && columns.every(col => getTasksByStatus(col.id).length === 0) && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          Os projetos deste artista ainda não têm tarefas cadastradas.
+        </div>
+      )}
+
+      {/* ── Visão Kanban ────────────────────────────────────────────────────── */}
+      {viewMode === 'kanban' && <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {columns.map(column => {
             const columnTasks = getTasksByStatus(column.id);
@@ -429,6 +710,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                     </p>
                                   )}
 
+                                  {/* Badge de projeto (modo global) */}
+                                  {!project?.id && task.project_id && (projectNamesMap.has(task.project_id) || projectNameMap.has(task.project_id)) && (
+                                    <div className="mb-1.5">
+                                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 font-medium border border-orange-100 truncate max-w-full">
+                                        <Briefcase className="w-2.5 h-2.5 flex-shrink-0" />
+                                        {projectNamesMap.get(task.project_id) || projectNameMap.get(task.project_id)}
+                                      </span>
+                                    </div>
+                                  )}
+
                                   {/* Badges: prioridade, workstream, prazo */}
                                   <div className="flex items-center gap-2 flex-wrap mb-2">
                                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${getPriorityColor(task)}`}>
@@ -485,7 +776,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             );
           })}
         </div>
-      </DragDropContext>
+      </DragDropContext>}
 
       {/* Modal de Criação */}
       {showCreateModal && (
@@ -548,14 +839,15 @@ function TaskFormModal({
 }) {
   const showProjectSelector = availableProjects.length > 0;
   const workstreams = [
-    { id: 'conteudo',   label: 'Conteúdo' },
-    { id: 'marketing',  label: 'Marketing' },
-    { id: 'shows',      label: 'Shows' },
-    { id: 'logistica',  label: 'Logística' },
-    { id: 'estrategia', label: 'Estratégia' },
-    { id: 'financeiro', label: 'Financeiro' },
-    { id: 'lancamento', label: 'Lançamento' },
-    { id: 'geral',      label: 'Geral' },
+    { id: 'producao_musical',  label: 'Produção Musical' },
+    { id: 'conteudo',          label: 'Conteúdo' },
+    { id: 'marketing',         label: 'Marketing' },
+    { id: 'shows',             label: 'Shows' },
+    { id: 'logistica',         label: 'Logística' },
+    { id: 'estrategia',        label: 'Estratégia' },
+    { id: 'financeiro',        label: 'Financeiro' },
+    { id: 'lancamento',        label: 'Lançamento' },
+    { id: 'geral',             label: 'Geral' },
   ];
 
   return (

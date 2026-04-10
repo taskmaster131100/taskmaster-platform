@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Plus, Loader2 } from 'lucide-react';
+import { Music, Search, Plus, Loader2, Archive } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './auth/AuthProvider';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
   const loadArtists = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('artists').select('*').order('name');
+      let query = supabase.from('artists').select('*').order('name').neq('status', 'archived');
       if (organizationId) {
         query = query.eq('organization_id', organizationId);
       }
@@ -43,15 +43,18 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
       console.error('Erro ao carregar artistas:', error);
       toast.error('Erro ao carregar lista de artistas');
     } finally {
+      // Garantir que o loading sempre termina, mesmo sem organizationId
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!organizationId) return;
+    // Carregar sempre — sem organizationId, RLS do Supabase filtra pelo usuário logado
     loadArtists();
 
-    // Inscrever para mudanças em tempo real, filtrado pela organização
+    if (!organizationId) return;
+
+    // Subscription em tempo real só quando temos o org ID
     const channel = supabase
       .channel(`artists_changes_${organizationId}`)
       .on('postgres_changes', {
@@ -185,15 +188,30 @@ const ArtistManager: React.FC<ArtistManagerProps> = ({
                   </div>
                 </div>
 
-                <button
-                  className="w-full mt-4 px-4 py-2 text-[#FFAD85] hover:bg-[#FFF8F3] rounded-lg transition-colors text-sm font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectArtist?.(artist.id);
-                  }}
-                >
-                  Ver Detalhes
-                </button>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    className="flex-1 px-4 py-2 text-[#FFAD85] hover:bg-[#FFF8F3] rounded-lg transition-colors text-sm font-medium"
+                    onClick={(e) => { e.stopPropagation(); onSelectArtist?.(artist.id); }}
+                  >
+                    Ver Detalhes
+                  </button>
+                  <button
+                    className="px-3 py-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+                    title="Arquivar artista"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!window.confirm(`Arquivar "${artist.name}"? Ele não aparecerá mais na lista, mas os dados ficam salvos.`)) return;
+                      const { error } = await supabase.from('artists').update({ status: 'archived' }).eq('id', artist.id);
+                      if (error) { toast.error('Erro ao arquivar artista.'); return; }
+                      // Cascata: arquivar todos os projetos vinculados ao artista
+                      await supabase.from('projects').update({ status: 'archived' }).eq('artist_id', artist.id);
+                      toast.success(`"${artist.name}" arquivado.`);
+                      loadArtists();
+                    }}
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             );
           })}

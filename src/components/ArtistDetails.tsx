@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase, TrendingUp, Star, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase, TrendingUp, Star, ChevronRight, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -87,7 +87,7 @@ const GENRES = [
   'Folk', 'Clássica', 'Outro'
 ];
 
-const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
+const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelectProject }) => {
   const navigate = useNavigate();
   const [artist, setArtist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -335,13 +335,30 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              Editar
-            </button>
+            <>
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Arquivar "${artist.name}"? Ele não aparecerá mais na lista, mas os dados ficam salvos.`)) return;
+                  const { error } = await supabase.from('artists').update({ status: 'archived' }).eq('id', artistId);
+                  if (error) { toast.error('Erro ao arquivar artista.'); return; }
+                  // Cascata: arquivar todos os projetos vinculados ao artista
+                  await supabase.from('projects').update({ status: 'archived' }).eq('artist_id', artistId);
+                  toast.success(`"${artist.name}" arquivado.`);
+                  onBack();
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-colors"
+              >
+                <Archive className="w-4 h-4" />
+                Arquivar
+              </button>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                Editar
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -794,7 +811,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack }) => {
                   {artistProjects.map(proj => (
                     <li
                       key={proj.id}
-                      onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                      onClick={() => onSelectProject ? onSelectProject(proj.id) : navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                       className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
                     >
                       <div className="min-w-0">

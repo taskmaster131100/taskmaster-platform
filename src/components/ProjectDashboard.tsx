@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Briefcase, CheckCircle2, Clock, AlertTriangle, ArrowRight,
   User, Calendar, DollarSign, BarChart2, Tag, Layers, Plus,
-  Circle, AlertCircle, Loader2, FileText
+  Circle, AlertCircle, Loader2, FileText, Archive, Sparkles,
+  Send, Bot, X, ChevronDown, ChevronUp, Music
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface Task {
   id: string;
@@ -29,17 +31,21 @@ interface ProjectDashboardProps {
   onTaskUpdate?: (task: any) => void;
   onAddTask?: () => void;
   onNavigateToTasks?: () => void;
+  onArchive?: () => void;
 }
 
+interface AiMessage { role: 'user' | 'assistant'; content: string; }
+
 const WORKSTREAMS: { id: string; label: string; color: string; bg: string }[] = [
-  { id: 'conteudo',   label: 'Conteúdo',   color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-200' },
-  { id: 'marketing',  label: 'Marketing',  color: 'text-pink-700',   bg: 'bg-pink-50 border-pink-200' },
-  { id: 'shows',      label: 'Shows',      color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-200' },
-  { id: 'logistica',  label: 'Logística',  color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
-  { id: 'estrategia', label: 'Estratégia', color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
-  { id: 'financeiro', label: 'Financeiro', color: 'text-green-700',  bg: 'bg-green-50 border-green-200' },
-  { id: 'lancamento', label: 'Lançamento', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
-  { id: 'geral',      label: 'Geral',      color: 'text-gray-700',   bg: 'bg-gray-50 border-gray-200' },
+  { id: 'conteudo',          label: 'Conteúdo',          color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-200' },
+  { id: 'marketing',         label: 'Marketing',          color: 'text-pink-700',   bg: 'bg-pink-50 border-pink-200' },
+  { id: 'shows',             label: 'Shows',              color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-200' },
+  { id: 'logistica',         label: 'Logística',          color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+  { id: 'estrategia',        label: 'Estratégia',         color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
+  { id: 'financeiro',        label: 'Financeiro',         color: 'text-green-700',  bg: 'bg-green-50 border-green-200' },
+  { id: 'lancamento',        label: 'Lançamento',         color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
+  { id: 'producao_musical',  label: 'Produção Musical',   color: 'text-rose-700',   bg: 'bg-rose-50 border-rose-200' },
+  { id: 'geral',             label: 'Geral',              color: 'text-gray-700',   bg: 'bg-gray-50 border-gray-200' },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -83,10 +89,20 @@ export default function ProjectDashboard({
   tasks = [],
   onNavigateToTasks,
   onAddTask,
+  onArchive,
 }: ProjectDashboardProps) {
   const [artist, setArtist] = useState<{ name: string; stage_name?: string } | null>(null);
   const [loadingArtist, setLoadingArtist] = useState(false);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
+  const [songs, setSongs] = useState<{ id: string; title: string; status: string }[]>([]);
+
+  // ── AI Chat no projeto ────────────────────────────────────────────────────
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null);
+  const aiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!project?.artist_id) return;
@@ -102,6 +118,19 @@ export default function ProjectDashboard({
       });
   }, [project?.artist_id]);
 
+  // Carrega músicas do artista vinculado ao projeto (para exibir repertório criado via IA)
+  useEffect(() => {
+    if (!project?.artist_id) { setSongs([]); return; }
+    supabase
+      .from('songs')
+      .select('id, title, status')
+      .eq('artist_id', project.artist_id)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setSongs(data || []));
+  }, [project?.artist_id, project?.id]);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
@@ -109,7 +138,7 @@ export default function ProjectDashboard({
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
         .then(({ data: orgData }) => {
           if (!orgData?.organization_id) return;
           supabase
@@ -139,6 +168,223 @@ export default function ProjectDashboard({
 
   const getMemberName = (id?: string) =>
     id ? (orgMembers.find(m => m.id === id)?.name || null) : null;
+
+  // ── Archive ───────────────────────────────────────────────────────────────
+  const handleArchive = async () => {
+    if (!window.confirm(`Arquivar o projeto "${project?.name}"? Ele não aparecerá mais na lista, mas os dados ficam salvos.`)) return;
+    const { error } = await supabase.from('projects').update({ status: 'archived' }).eq('id', project.id);
+    if (error) { toast.error('Erro ao arquivar projeto.'); return; }
+    toast.success(`Projeto "${project.name}" arquivado.`);
+    onArchive?.();
+  };
+
+  // ── AI Chat helpers ────────────────────────────────────────────────────────
+  const buildAiContext = () => {
+    const total = tasks.length;
+    const done = tasks.filter(t => t.status === 'done').length;
+    const overdueTasks = tasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date + 'T23:59:59') < new Date());
+    const blockedTasks = tasks.filter(t => t.status === 'blocked');
+    const byWs: Record<string, Task[]> = {};
+    tasks.forEach(t => { const ws = t.workstream || 'geral'; if (!byWs[ws]) byWs[ws] = []; byWs[ws].push(t); });
+
+    let ctx = `PROJETO: "${project?.name}" | Status: ${project?.status} | Progresso: ${total > 0 ? Math.round(done / total * 100) : 0}% (${done}/${total})\n`;
+    if (overdueTasks.length) ctx += `ATRASADAS (${overdueTasks.length}): ${overdueTasks.map(t => `"${t.title}"`).join(', ')}\n`;
+    if (blockedTasks.length) ctx += `BLOQUEADAS (${blockedTasks.length}): ${blockedTasks.map(t => `"${t.title}"`).join(', ')}\n`;
+    Object.entries(byWs).forEach(([ws, wsTasks]) => {
+      const wsDone = wsTasks.filter(t => t.status === 'done').length;
+      ctx += `${ws.toUpperCase()}: ${wsDone}/${wsTasks.length} — `;
+      ctx += wsTasks.slice(0, 4).map(t => `[${t.status}] "${t.title}"`).join(' | ');
+      if (wsTasks.length > 4) ctx += ` +${wsTasks.length - 4}`;
+      ctx += '\n';
+    });
+    return ctx;
+  };
+
+  const handleAiSend = async () => {
+    if (!aiInput.trim() || aiLoading) return;
+    const userMsg = aiInput.trim();
+    setAiInput('');
+    const history: AiMessage[] = [...aiMessages, { role: 'user', content: userMsg }];
+    setAiMessages(history);
+    setAiLoading(true);
+    setTimeout(() => { if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight; }, 50);
+
+    const systemPrompt = `Você é o Copiloto IA do projeto "${project?.name}" na plataforma TaskMaster.
+Você tem acesso ao estado atual do projeto e responde de forma direta e prática.
+
+CONTEXTO DO PROJETO:
+${buildAiContext()}
+
+QUANDO SUGERIR ADICIONAR TAREFA SIMPLES:
+Use a tag abaixo (só quando o usuário pedir ou aceitar uma sugestão concreta):
+[ADICIONAR_TAREFA]{"title":"...","workstream":"marketing","priority":"medium","description":"...","days_from_start":7}[/ADICIONAR_TAREFA]
+Workstreams válidos: conteudo, marketing, shows, logistica, estrategia, financeiro, lancamento, producao_musical, geral
+
+QUANDO DETECTAR PRODUÇÃO MUSICAL (álbum, DVD, EP, gravação, repertório, pré-produção musical):
+Use a tag abaixo para criar a estrutura operacional completa de produção:
+[CRIAR_PRODUCAO_MUSICAL]{"song_count":12,"songs":["Título 1","Título 2"],"responsible":"Nome","description":"contexto","tipo":"DVD"}[/CRIAR_PRODUCAO_MUSICAL]
+- song_count: número de músicas informado (padrão 1 se não informado)
+- songs: lista de títulos se o usuário mencionou nomes específicos, senão lista vazia []
+- responsible: responsável técnico se mencionado, senão ""
+- tipo: "DVD", "Álbum", "EP", "Single" ou "Produção"
+Isso cria automaticamente: tarefas estruturadas (repertório → arranjos → ensaios → gravação) no TaskBoard sob o workstream "Produção Musical", mais uma entrada de songs no banco para cada música.
+
+REGRA: Pergunte "Quer que eu estruture isso no projeto?" antes de incluir qualquer tag de ação.
+Responda em português. Seja direto e prático.`;
+
+    try {
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...history.slice(-10).map(m => ({ role: m.role, content: m.content }))
+          ],
+          temperature: 0.7,
+          max_tokens: 700
+        })
+      });
+      const data = await res.json();
+      const aiText: string = data.choices?.[0]?.message?.content || 'Sem resposta.';
+
+      // Detectar ações na resposta da IA
+      const musicProdMatch = aiText.match(/\[CRIAR_PRODUCAO_MUSICAL\]([\s\S]*?)\[\/CRIAR_PRODUCAO_MUSICAL\]/);
+      const taskMatch = aiText.match(/\[ADICIONAR_TAREFA\]([\s\S]*?)\[\/ADICIONAR_TAREFA\]/);
+
+      if (musicProdMatch) {
+        try { setPendingAction({ type: 'create_music_production', data: JSON.parse(musicProdMatch[1].trim()) }); } catch {}
+      } else if (taskMatch) {
+        try { setPendingAction({ type: 'add_task', data: JSON.parse(taskMatch[1].trim()) }); } catch {}
+      }
+
+      const cleanText = aiText
+        .replace(/\[CRIAR_PRODUCAO_MUSICAL\][\s\S]*?\[\/CRIAR_PRODUCAO_MUSICAL\]/, '')
+        .replace(/\[ADICIONAR_TAREFA\][\s\S]*?\[\/ADICIONAR_TAREFA\]/, '')
+        .trim();
+      setAiMessages(prev => [...prev, { role: 'assistant', content: cleanText || aiText }]);
+    } catch {
+      setAiMessages(prev => [...prev, { role: 'assistant', content: 'Erro ao conectar com a IA. Tente novamente.' }]);
+    } finally {
+      setAiLoading(false);
+      setTimeout(() => { if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight; }, 50);
+    }
+  };
+
+  const handleApplyAction = async () => {
+    if (!pendingAction) return;
+    const { data: d } = pendingAction;
+
+    if (pendingAction.type === 'add_task') {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const today = new Date();
+        const dueDate = d.days_from_start
+          ? new Date(today.setDate(today.getDate() + Number(d.days_from_start))).toISOString().split('T')[0]
+          : null;
+        const { error } = await supabase.from('tasks').insert({
+          title: d.title,
+          description: d.description || '',
+          status: 'todo',
+          priority: d.priority || 'medium',
+          workstream: d.workstream || 'geral',
+          project_id: project.id,
+          organization_id: project.organization_id,
+          reporter_id: user?.id,
+          ...(dueDate ? { due_date: dueDate } : {})
+        });
+        if (error) throw error;
+        setPendingAction(null);
+        setAiMessages(prev => [...prev, { role: 'assistant', content: `✅ Tarefa **"${d.title}"** adicionada ao projeto! Veja no TaskBoard.` }]);
+        toast.success(`Tarefa "${d.title}" adicionada!`);
+      } catch { toast.error('Erro ao adicionar tarefa.'); }
+      return;
+    }
+
+    if (pendingAction.type === 'create_music_production') {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const songCount: number = d.song_count || 1;
+        const tipo: string = d.tipo || 'Produção';
+        const responsible: string = d.responsible || '';
+        const songTitles: string[] = Array.isArray(d.songs) && d.songs.length > 0
+          ? d.songs
+          : Array.from({ length: songCount }, (_, i) => `Música ${i + 1}`);
+
+        // Estrutura de tarefas para produção musical
+        const productionTasks = [
+          { title: `Definir repertório — ${tipo} (${songCount} músicas)`, priority: 'high', days: 0 },
+          { title: `Arranjos — ${tipo}`, priority: 'high', days: 14 },
+          { title: `Seleção de músicos${responsible ? ` — Responsável: ${responsible}` : ''}`, priority: 'high', days: 7 },
+          { title: `Agendamento de ensaios — ${tipo}`, priority: 'medium', days: 21 },
+          { title: `Pré-gravação / ensaio geral`, priority: 'medium', days: 35 },
+          { title: `Gravação — ${tipo}`, priority: 'high', days: 45 },
+          { title: `Edição e mixagem`, priority: 'medium', days: 60 },
+          { title: `Masterização`, priority: 'medium', days: 75 },
+        ];
+
+        const today = new Date();
+        const taskInserts = productionTasks.map(t => ({
+          title: t.title,
+          description: d.description || '',
+          status: 'todo',
+          priority: t.priority,
+          workstream: 'producao_musical',
+          project_id: project.id,
+          organization_id: project.organization_id,
+          reporter_id: user?.id,
+          due_date: new Date(today.getTime() + t.days * 86400000).toISOString().split('T')[0],
+        }));
+
+        const { error: tasksError } = await supabase.from('tasks').insert(taskInserts);
+        if (tasksError) throw tasksError;
+
+        // Criar songs no banco (uma entrada por música do repertório)
+        const songInserts = songTitles.map(title => ({
+          title,
+          organization_id: project.organization_id,
+          artist_id: project.artist_id || null,
+          status: 'draft',
+          notes: `Criado automaticamente via Copiloto IA — ${tipo}`,
+          created_by: user?.id,
+          // project_id: pode não existir na tabela dependendo da migração — falha silenciosa no catch
+        }));
+
+        // Tenta criar songs (falha silenciosa se tabela não existir ainda)
+        await supabase.from('songs').insert(songInserts).then(({ error }) => {
+          if (error) console.warn('songs insert ignorado:', error.message);
+        });
+
+        // Recarregar songs após criação para exibir imediatamente na seção Repertório
+        if (project?.artist_id) {
+          supabase
+            .from('songs')
+            .select('id, title, status')
+            .eq('artist_id', project.artist_id)
+            .neq('status', 'archived')
+            .order('created_at', { ascending: false })
+            .limit(20)
+            .then(({ data }) => setSongs(data || []));
+        }
+
+        setPendingAction(null);
+        const confirmMsg = `✅ **Estrutura de ${tipo} criada!**\n\n` +
+          `**${productionTasks.length} tarefas** adicionadas ao workstream *Produção Musical*:\n` +
+          productionTasks.map(t => `• ${t.title}`).join('\n') +
+          `\n\n**${songTitles.length} músicas** no repertório:\n` +
+          songTitles.slice(0, 6).map(s => `• ${s}`).join('\n') +
+          (songTitles.length > 6 ? `\n• ...e mais ${songTitles.length - 6}` : '') +
+          `\n\nAbra o TaskBoard para ver e gerenciar o fluxo completo.`;
+        setAiMessages(prev => [...prev, { role: 'assistant', content: confirmMsg }]);
+        toast.success(`${tipo}: ${productionTasks.length} tarefas e ${songTitles.length} músicas criadas!`);
+      } catch (err) {
+        console.error('Erro ao criar produção musical:', err);
+        toast.error('Erro ao criar estrutura de produção. Tente novamente.');
+      }
+      return;
+    }
+  };
 
   if (!project) {
     return (
@@ -229,14 +475,31 @@ export default function ProjectDashboard({
                 )}
               </div>
             </div>
-            <button
-              onClick={onNavigateToTasks}
-              className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition-all shadow-sm shadow-purple-100 shrink-0"
-            >
-              <Layers className="w-4 h-4" />
-              Ver no TaskBoard
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setAiOpen(o => !o)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 ${aiOpen ? 'bg-[#FFAD85] text-white shadow-orange-100' : 'bg-orange-50 text-[#FF9B6A] border border-orange-200 hover:bg-orange-100'}`}
+              >
+                <Sparkles className="w-4 h-4" />
+                {aiOpen ? 'Fechar IA' : 'Perguntar à IA'}
+                {aiOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+              </button>
+              <button
+                onClick={onNavigateToTasks}
+                className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition-all shadow-sm shadow-purple-100 shrink-0"
+              >
+                <Layers className="w-4 h-4" />
+                TaskBoard
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleArchive}
+                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-400 rounded-xl text-sm hover:text-gray-600 hover:bg-gray-50 transition-all shrink-0"
+                title="Arquivar projeto"
+              >
+                <Archive className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Barra de progresso */}
@@ -466,6 +729,34 @@ export default function ProjectDashboard({
           </div>
         )}
 
+        {/* ── REPERTÓRIO (songs da produção musical) ──────────────────────── */}
+        {songs.length > 0 && (
+          <div className="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Music className="w-4 h-4 text-rose-600" />
+                <h3 className="font-bold text-gray-800 text-sm">Repertório</h3>
+                <span className="text-xs font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">
+                  {songs.length} {songs.length === 1 ? 'música' : 'músicas'}
+                </span>
+              </div>
+            </div>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {songs.map(song => (
+                <div key={song.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-100">
+                  <Music className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span className="text-sm text-gray-800 truncate font-medium">{song.title}</span>
+                  {song.status && song.status !== 'draft' && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white text-rose-600 border border-rose-200 shrink-0 ml-auto">
+                      {song.status === 'approved' ? 'Aprovada' : song.status === 'review' ? 'Revisão' : song.status}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── ESTADO VAZIO (sem tarefas) ──────────────────────────────────── */}
         {total === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
@@ -479,6 +770,80 @@ export default function ProjectDashboard({
               <Plus className="w-4 h-4 inline mr-1" />
               Criar Tarefa
             </button>
+          </div>
+        )}
+
+        {/* ── IA DO PROJETO ────────────────────────────────────────────────── */}
+        {aiOpen && (
+          <div className="bg-white rounded-2xl border border-orange-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 flex items-center gap-2">
+              <Bot className="w-4 h-4 text-[#FF9B6A]" />
+              <h3 className="font-bold text-gray-800 text-sm">Copiloto do Projeto</h3>
+              <span className="text-xs text-gray-400 ml-1">— converse sobre "{project.name}"</span>
+            </div>
+
+            {/* Histórico */}
+            <div ref={aiScrollRef} className="h-64 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50/40">
+              {aiMessages.length === 0 && (
+                <p className="text-sm text-gray-400 text-center pt-8">
+                  Pergunte sobre este projeto — tarefas atrasadas, gargalos, o que priorizar, ou peça para criar uma tarefa nova.
+                </p>
+              )}
+              {aiMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap ${
+                    msg.role === 'user'
+                      ? 'bg-[#FFAD85] text-white rounded-br-none'
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {aiLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-gray-200 rounded-xl rounded-bl-none px-3 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ação pendente */}
+            {pendingAction && (
+              <div className="px-5 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-between gap-3">
+                <p className="text-sm text-amber-800 font-medium">
+                  {pendingAction.type === 'create_music_production'
+                    ? <>Criar estrutura de <strong>{pendingAction.data.tipo || 'Produção Musical'}</strong> — {pendingAction.data.song_count || 1} músicas + tarefas operacionais</>
+                    : <>Adicionar tarefa: <strong>"{pendingAction.data.title}"</strong> ({pendingAction.data.workstream})</>
+                  }
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setPendingAction(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Cancelar</button>
+                  <button onClick={handleApplyAction} className="px-3 py-1.5 text-xs bg-[#FFAD85] text-white font-bold rounded-lg hover:bg-[#FF9B6A] transition-colors">Aplicar</button>
+                </div>
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+              <input
+                type="text"
+                value={aiInput}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAiSend(); } }}
+                placeholder="O que precisa de atenção agora? Qual tarefa adicionar?"
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent outline-none"
+                disabled={aiLoading}
+              />
+              <button
+                onClick={handleAiSend}
+                disabled={aiLoading || !aiInput.trim()}
+                className="p-2 bg-[#FFAD85] text-white rounded-xl hover:bg-[#FF9B6A] transition-colors disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 

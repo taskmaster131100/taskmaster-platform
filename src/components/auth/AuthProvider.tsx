@@ -20,27 +20,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Verificar sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let mounted = true;
+
+    // 1. Verificar sessão inicial — aguarda organização antes de liberar loading
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
         checkSingleSession(session.user.id);
-        ensureOrganization();
+        await ensureOrganization(); // AGUARDA — loading só false depois da org resolver
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    // 2. Ouvir mudanças na autenticação
+    // 2. Ouvir mudanças na autenticação (sign in / sign out após carga inicial)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
         checkSingleSession(session.user.id);
-        ensureOrganization();
+        setLoading(true); // reabrir loading enquanto resolve org
+        ensureOrganization().then(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setOrganizationId(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Função para garantir que o usuário tem uma organização
@@ -62,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Chamar a função bootstrap_organization para criar automaticamente
-      const { data, error } = await supabase.rpc('bootstrap_organization', {
+      const { error } = await supabase.rpc('bootstrap_organization', {
         org_name: 'Minha Organização'
       });
 
@@ -71,16 +83,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (data?.success) {
-        // Re-buscar o organization_id após bootstrap
-        const { data: newOrg } = await supabase
-          .from('user_organizations')
-          .select('organization_id')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-        if (newOrg?.organization_id) {
-          setOrganizationId(newOrg.organization_id);
-        }
+      // Re-buscar sempre — independente do retorno do bootstrap (org pode já existir)
+      const { data: newOrg } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      if (newOrg?.organization_id) {
+        setOrganizationId(newOrg.organization_id);
       }
     } catch (err) {
       console.error('Erro ao verificar/criar organização:', err);
