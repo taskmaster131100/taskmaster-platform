@@ -139,7 +139,10 @@ export default function OrganizationProfile() {
   };
 
   const handleSave = async () => {
-    if (!orgId) return;
+    if (!orgId) {
+      toast.error('Organização não encontrada. Recarregue a página e tente novamente.');
+      return;
+    }
     
     try {
       setSaving(true);

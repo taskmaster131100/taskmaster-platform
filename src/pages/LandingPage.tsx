@@ -196,7 +196,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Usado por profissionais da música no Brasil
+              Usado por profissionais da música no mundo todo
             </h2>
             <p className="text-xl text-gray-600">
               O que quem já está na plataforma tem a dizer

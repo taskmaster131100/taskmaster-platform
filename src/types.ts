@@ -2,16 +2,30 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
-  project_type: 'artist_management' | 'dvd' | 'show' | 'release' | 'custom';
+  project_type?: 'artist_management' | 'dvd' | 'show' | 'release' | 'custom' | string;
   status: 'active' | 'planning' | 'completed' | 'archived';
-  startDate: string;
+  // Datas — banco retorna snake_case; código legado usa camelCase
+  start_date?: string;
+  startDate?: string;
+  end_date?: string;
   budget?: number;
+  total_cost?: number;
   totalCost?: number;
-  ownerId: string;
-  members: string[];
+  // Owner
+  owner_id?: string;
+  ownerId?: string;
+  members?: string[];
   phases?: Phase[];
+  whatsapp_group?: string;
   whatsappGroup?: string;
+  // Vínculo com artista — banco: artist_id; legado: artistId
+  artist_id?: string;
   artistId?: string;
+  // Organização e auditoria
+  organization_id?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
   tasks?: string[];
 }
 

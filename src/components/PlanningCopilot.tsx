@@ -100,47 +100,54 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
   return context;
 }
 
-// Formatar contexto para o system prompt
+// Formatar contexto para o system prompt — compacto para reduzir tokens
 function formatContextForAI(ctx: PlatformContext): string {
   let contextStr = '';
 
   if (ctx.projects.length > 0) {
-    contextStr += '\n\n📁 PROJETOS ATIVOS (use o ID exato ao atualizar):\n';
-    ctx.projects.forEach(p => {
-      const artistLabel = p.artist_id ? ` | artista_id: ${p.artist_id}` : '';
-      contextStr += `- ID: "${p.id}" | Nome: "${p.title || p.name}"${artistLabel} | ${p.description || 'Sem descrição'}\n`;
+    // Limitar a 10 projetos mais recentes; descrição truncada em 60 chars
+    contextStr += '\nPROJETOS ATIVOS:\n';
+    ctx.projects.slice(0, 10).forEach(p => {
+      const desc = (p.description || '').slice(0, 60);
+      contextStr += `ID:"${p.id}" Nome:"${p.title || p.name}"${desc ? ` Desc:"${desc}"` : ''}\n`;
     });
   }
 
   if (ctx.shows.length > 0) {
-    contextStr += '\n\n🎤 SHOWS PRÓXIMOS:\n';
-    ctx.shows.forEach(s => {
-      contextStr += `- "${s.title || s.venue}" em ${s.show_date} - Status: ${s.status || 'pendente'} - Local: ${s.venue || s.city || 'A definir'}\n`;
+    contextStr += '\nSHOWS PRÓXIMOS:\n';
+    ctx.shows.slice(0, 5).forEach(s => {
+      contextStr += `"${s.title || s.venue}" ${s.show_date} ${s.status || 'pendente'}\n`;
     });
   }
 
   if (ctx.tasks.length > 0) {
-    contextStr += '\n\n📋 TAREFAS PENDENTES:\n';
-    ctx.tasks.forEach(t => {
-      contextStr += `- "${t.title || t.description}" - Prazo: ${t.due_date || 'Sem prazo'} - Responsável: ${t.assigned_to || 'Não atribuído'} - Status: ${t.status}\n`;
-    });
+    // Só tarefas com prazo definido ou alta prioridade para economizar tokens
+    const relevantTasks = ctx.tasks
+      .filter(t => t.due_date || t.priority === 'high' || t.priority === 'urgent')
+      .slice(0, 10);
+    if (relevantTasks.length > 0) {
+      contextStr += '\nTAREFAS PENDENTES (com prazo/urgentes):\n';
+      relevantTasks.forEach(t => {
+        contextStr += `"${t.title}" prazo:${t.due_date || 'sem'} prioridade:${t.priority || 'normal'}\n`;
+      });
+    }
   }
 
   if (ctx.teamMembers.length > 0) {
-    contextStr += '\n\n👥 EQUIPE:\n';
-    ctx.teamMembers.forEach(m => {
-      contextStr += `- ${m.name || m.email} - Função: ${m.role || 'Membro'}\n`;
+    contextStr += '\nEQUIPE:\n';
+    ctx.teamMembers.slice(0, 10).forEach(m => {
+      contextStr += `${m.name || m.email} (${m.role || 'Membro'})\n`;
     });
   }
 
   if (ctx.artists.length > 0) {
-    contextStr += '\n\n🎵 ARTISTAS:\n';
-    ctx.artists.forEach(a => {
-      contextStr += `- "${a.name || a.artist_name}" - Gênero: ${a.genre || 'Não definido'} - Estágio: ${a.stage || a.career_stage || 'Não avaliado'}\n`;
+    contextStr += '\nARTISTAS:\n';
+    ctx.artists.slice(0, 10).forEach(a => {
+      contextStr += `"${a.name || a.artist_name}" gênero:${a.genre || '?'}\n`;
     });
   }
 
-  return contextStr || '\n\nNenhum dado cadastrado ainda na plataforma.';
+  return contextStr || '\nNenhum dado cadastrado ainda.';
 }
 
 // Chamar OpenAI com contexto completo
@@ -322,9 +329,7 @@ ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
 
   const response = await fetch('/api/ai-chat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: apiMessages,
@@ -340,7 +345,7 @@ ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
       throw new Error('Chave da API OpenAI inválida ou expirada. Entre em contato com o suporte.');
     }
     if (response.status === 429) {
-      throw new Error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.');
+      throw new Error('A IA está sobrecarregada no momento. Aguarde cerca de 30 segundos e tente novamente.');
     }
     if (response.status === 500 || response.status === 503) {
       throw new Error('Serviço de IA temporariamente indisponível. Tente novamente em instantes.');
@@ -479,6 +484,8 @@ export default function PlanningCopilot() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conversationHistory = useRef<{ role: string; content: string }[]>([]);
+  // Lock de criação de projeto — evita execução dupla por clique rápido / Enter+botão simultâneos
+  const isCreatingProjectRef = useRef(false);
 
   // Carregar contexto da plataforma ao montar — sem bloquear o UI com chamada de IA
   useEffect(() => {
@@ -545,7 +552,8 @@ export default function PlanningCopilot() {
       if (!text?.trim()) throw new Error('Não foi possível entender o áudio');
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: `🎤 "${text}"` } : m));
       conversationHistory.current.push({ role: 'user', content: text });
-      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext!);
+      if (!platformContext) throw new Error('Contexto ainda carregando. Aguarde um momento e tente novamente.');
+      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext);
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
@@ -897,6 +905,11 @@ export default function PlanningCopilot() {
 
     // Se detectou projeto, criar silenciosamente e mostrar mensagem amigável
     if (projectData && projectData.name) {
+      // Deduplication: impede execução dupla por clique rápido / Enter+botão simultâneos
+      if (isCreatingProjectRef.current) {
+        return { role: 'assistant' as const, content: 'O projeto já está sendo criado, aguarde...' };
+      }
+      isCreatingProjectRef.current = true;
       try {
         // Garantir organization_id — fallback via resolveOrgId (maybeSingle + bootstrap)
         const resolvedOrgId = await resolveOrgId();
@@ -954,11 +967,11 @@ export default function PlanningCopilot() {
 
         if (projectError) throw projectError;
 
-        // Criar tarefas para cada fase
+        // Criar tarefas para cada fase — atomicidade: se qualquer lote falhar, desfaz o projeto
         if (projectData.phases && newProject) {
+          const today = new Date();
           for (const phase of projectData.phases) {
             if (phase.tasks) {
-              const today = new Date();
               const taskRows = phase.tasks.map((task: any, taskIndex: number) => {
                 let dueDate: string | null = null;
                 if (task.days_from_start != null && Number.isFinite(task.days_from_start)) {
@@ -982,7 +995,12 @@ export default function PlanningCopilot() {
                   ...(dueDate ? { due_date: dueDate } : {}),
                 };
               });
-              await supabase.from('tasks').insert(taskRows);
+              const { error: taskError } = await supabase.from('tasks').insert(taskRows);
+              if (taskError) {
+                // Rollback: apagar o projeto criado para evitar projeto sem tarefas
+                await supabase.from('projects').delete().eq('id', newProject.id);
+                throw new Error(`Falha ao criar tarefas da fase "${phase.name}": ${taskError.message}`);
+              }
             }
           }
         }
@@ -1021,13 +1039,16 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
           role: 'assistant' as const,
           content: friendlyMessage
         };
-      } catch (createErr) {
+      } catch (createErr: any) {
         console.error('Erro ao criar projeto:', createErr);
-        toast.error('Erro ao criar o projeto. Tente novamente.');
+        const errMsg = createErr?.message || 'Tente novamente.';
+        toast.error(`Erro ao criar o projeto: ${errMsg}`);
         return {
           role: 'assistant' as const,
-          content: 'Desculpe, tive um problema ao criar o projeto na plataforma. Pode tentar novamente?'
+          content: `Desculpe, tive um problema ao criar o projeto na plataforma. ${errMsg} Pode tentar novamente?`
         };
+      } finally {
+        isCreatingProjectRef.current = false;
       }
     }
 
@@ -1226,8 +1247,8 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
               className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFAD85] outline-none text-sm"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              disabled={contextLoading}
+              onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSend()}
+              disabled={isLoading || contextLoading}
             />
             <button 
               onClick={handleSend}

@@ -25,7 +25,7 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
     venue: show?.venue || '',
     city: show?.city || (show?.venue_address?.split(',')?.[0]?.trim()) || '',
     state: '',
-    country: 'Brasil',
+    country: show?.country || '',
     contractor_name: show?.venue_contact_name || '',
     contractor_contact: show?.venue_contact_phone || '',
     value: show?.deal_value ?? show?.value ?? 0,
