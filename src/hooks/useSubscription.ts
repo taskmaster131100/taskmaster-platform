@@ -63,11 +63,6 @@ export function useSubscription(organizationId?: string): SubscriptionStatus {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-      return;
-    }
-
     loadSubscription();
   }, [organizationId]);
 
@@ -76,10 +71,14 @@ export function useSubscription(organizationId?: string): SubscriptionStatus {
       setLoading(true);
       setError(null);
 
+      // A tabela subscriptions usa user_id — busca pelo usuário autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
       const { data, error: fetchError } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('organization_id', organizationId)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (fetchError) throw fetchError;

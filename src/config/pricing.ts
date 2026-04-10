@@ -224,7 +224,7 @@ export const PLAN_LIMITS = {
     hasFinance: true,
     hasTeam: true,
     hasTours: true,
-    hasAI: false,            // IA avançada — quando o backend estiver pronto
+    hasAI: false,
     hasAIAdvanced: false,
 
     aiPlanning: true,
@@ -236,6 +236,24 @@ export const PLAN_LIMITS = {
     consulting: true,
 
     displayName: 'Plano Pro',
+  },
+
+  // Aliases dos plan_ids reais do banco (enterprise / plan_enterprise → ilimitado)
+  enterprise: {
+    maxArtists: -1, maxProjects: -1, maxTasks: -1, maxShows: -1,
+    maxReleases: -1, maxKPIs: -1, maxStorage: 500 * 1024 * 1024 * 1024,
+    hasFinance: true, hasTeam: true, hasTours: true, hasAI: false, hasAIAdvanced: false,
+    aiPlanning: true, advancedAnalytics: true, customBranding: true, apiAccess: true,
+    musicProduction: true, financeFull: true, consulting: true,
+    displayName: 'Admin',
+  },
+  plan_enterprise: {
+    maxArtists: -1, maxProjects: -1, maxTasks: -1, maxShows: -1,
+    maxReleases: -1, maxKPIs: -1, maxStorage: 500 * 1024 * 1024 * 1024,
+    hasFinance: true, hasTeam: true, hasTours: true, hasAI: false, hasAIAdvanced: false,
+    aiPlanning: true, advancedAnalytics: true, customBranding: true, apiAccess: true,
+    musicProduction: true, financeFull: true, consulting: true,
+    displayName: 'Admin',
   },
 };
 
