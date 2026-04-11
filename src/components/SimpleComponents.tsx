@@ -180,7 +180,20 @@ const ParentTaskCard = ({
   const toggleSubTaskStatus = async (st: SubTask) => {
     const next = st.status === 'done' ? 'todo' : st.status === 'todo' ? 'in_progress' : 'done';
     await supabase.from('tasks').update({ status: next }).eq('id', st.id);
-    setSubTasks(prev => prev.map(s => s.id === st.id ? { ...s, status: next } : s));
+
+    const updatedSubTasks = subTasks.map(s => s.id === st.id ? { ...s, status: next } : s);
+    setSubTasks(updatedSubTasks);
+
+    // Auto-update status da tarefa pai com base nas sub-tarefas
+    const allDone = updatedSubTasks.every(s => s.status === 'done');
+    const anyInProgress = updatedSubTasks.some(s => s.status === 'in_progress');
+    const parentNext = allDone ? 'done' : anyInProgress ? 'in_progress' : 'todo';
+
+    if (parentNext !== task.status) {
+      await supabase.from('tasks').update({ status: parentNext }).eq('id', task.id);
+      if (allDone) toast.success('Tarefa concluída automaticamente!');
+    }
+
     window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
     onStatusChange();
   };
@@ -386,6 +399,10 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [parentTasks, setParentTasks] = useState<ParentTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDue, setNewTaskDue] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -444,6 +461,32 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
     } finally {
       setStatsLoading(false);
       setTasksLoading(false);
+    }
+  };
+
+  const addTask = async () => {
+    if (!newTaskTitle.trim()) { toast.error('Informe o título da tarefa'); return; }
+    setAdding(true);
+    try {
+      const { error } = await supabase.from('tasks').insert({
+        title: newTaskTitle.trim(),
+        status: 'todo',
+        workstream,
+        due_date: newTaskDue || null,
+        priority: 'medium',
+      });
+      if (error) throw error;
+      setNewTaskTitle('');
+      setNewTaskDue('');
+      setShowAddForm(false);
+      await loadData();
+      window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+      toast.success('Tarefa criada!');
+    } catch (e) {
+      console.error('[SectorTaskView] erro ao criar tarefa:', e);
+      toast.error('Erro ao criar tarefa');
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -559,26 +602,79 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
               <div key={i} className="h-20 bg-white rounded-xl animate-pulse border border-gray-100" />
             ))}
           </div>
-        ) : parentTasks.length === 0 ? (
+        ) : parentTasks.length === 0 && !showAddForm ? (
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
               <Icon className={`w-6 h-6 ${meta.color} opacity-50`} />
             </div>
             <p className="text-sm font-medium text-gray-500">Nenhuma tarefa neste setor</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Crie um projeto pelo Copilot e as tarefas aparecerão aqui.
+            <p className="text-xs text-gray-400 mt-1 mb-4">
+              Crie um projeto pelo Copilot ou adicione uma tarefa manualmente.
             </p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 px-4 py-2 rounded-xl border border-indigo-200 hover:bg-indigo-50 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Nova tarefa
+            </button>
           </div>
         ) : (
-          parentTasks.map(task => (
-            <ParentTaskCard
-              key={task.id}
-              task={task}
-              workstream={workstream}
-              today={today}
-              onStatusChange={loadData}
-            />
-          ))
+          <>
+            {parentTasks.map(task => (
+              <ParentTaskCard
+                key={task.id}
+                task={task}
+                workstream={workstream}
+                today={today}
+                onStatusChange={loadData}
+              />
+            ))}
+
+            {/* Formulário inline de nova tarefa */}
+            {showAddForm ? (
+              <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-4 space-y-3">
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Nova tarefa — {meta.label}</div>
+                <input
+                  type="text"
+                  placeholder="Título da tarefa…"
+                  value={newTaskTitle}
+                  onChange={e => setNewTaskTitle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addTask()}
+                  autoFocus
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={newTaskDue}
+                    onChange={e => setNewTaskDue(e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 text-gray-600"
+                  />
+                  <button
+                    onClick={addTask}
+                    disabled={adding || !newTaskTitle.trim()}
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                  >
+                    {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    {adding ? 'Salvando…' : 'Criar'}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddForm(false); setNewTaskTitle(''); setNewTaskDue(''); }}
+                    className="px-3 py-2 text-sm text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-400 hover:text-indigo-600 py-3 rounded-xl border border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Nova tarefa
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
