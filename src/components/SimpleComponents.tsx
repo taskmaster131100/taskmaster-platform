@@ -138,11 +138,13 @@ const ParentTaskCard = ({
         ? new Date(task.due_date + 'T12:00:00')
         : new Date();
 
-      // P1: dedup por título — filtra templates já existentes no banco
-      const existingTitles = new Set(existing.map((s: SubTask) => s.title.toLowerCase()));
+      // P1: dedup por título normalizado (lowercase + trim + colapsar espaços)
+      // Cobre variações de digitação, cópia com espaços extras, etc.
+      const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+      const existingTitles = new Set(existing.map((s: SubTask) => normalize(s.title)));
       const newRows = template
         .slice(0, 12)
-        .filter(st => !existingTitles.has(st.title.toLowerCase()))
+        .filter(st => !existingTitles.has(normalize(st.title)))
         .map(st => {
           const dueDate = new Date(baseDate);
           dueDate.setDate(dueDate.getDate() - (st.days_from_parent || 0));
@@ -402,6 +404,8 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDue, setNewTaskDue] = useState('');
+  const [newTaskProjectId, setNewTaskProjectId] = useState('');
+  const [activeProjects, setActiveProjects] = useState<{ id: string; name: string }[]>([]);
   const [adding, setAdding] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
@@ -426,6 +430,23 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
         project_name: t.projects?.name || null,
       }));
       setParentTasks(mapped);
+
+      // Carregar projetos ativos para o seletor do quick-add
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name');
+      const projectList = (projects || []) as { id: string; name: string }[];
+      setActiveProjects(projectList);
+
+      // Auto-selecionar projeto: se o setor já tem tarefas de um único projeto → pre-selecionar
+      const projectIds = [...new Set(mapped.filter(t => t.project_id).map(t => t.project_id!))];
+      if (projectIds.length === 1) {
+        setNewTaskProjectId(prev => prev || projectIds[0]);
+      } else if (projectList.length === 1) {
+        setNewTaskProjectId(prev => prev || projectList[0].id);
+      }
 
       // Stats: todas as tarefas do setor (pai + sub)
       const { data: allTasks } = await supabase
@@ -465,13 +486,20 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   };
 
   const addTask = async () => {
-    if (!newTaskTitle.trim()) { toast.error('Informe o título da tarefa'); return; }
+    const title = newTaskTitle.trim();
+    if (!title) { toast.error('Informe o título da tarefa'); return; }
+    // Projeto é obrigatório — regra: artista → projeto → tarefa
+    if (!newTaskProjectId) {
+      toast.error('Selecione um projeto antes de criar a tarefa');
+      return;
+    }
     setAdding(true);
     try {
       const { error } = await supabase.from('tasks').insert({
-        title: newTaskTitle.trim(),
+        title,
         status: 'todo',
         workstream,
+        project_id: newTaskProjectId,
         due_date: newTaskDue || null,
         priority: 'medium',
       });
@@ -634,6 +662,8 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
             {showAddForm ? (
               <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-4 space-y-3">
                 <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Nova tarefa — {meta.label}</div>
+
+                {/* Título */}
                 <input
                   type="text"
                   placeholder="Título da tarefa…"
@@ -643,6 +673,33 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
                   autoFocus
                   className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
                 />
+
+                {/* Projeto — obrigatório */}
+                {activeProjects.length === 0 ? (
+                  <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <p className="text-xs text-amber-700">
+                      Nenhum projeto ativo. Crie um projeto pelo Copilot antes de adicionar tarefas.
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    value={newTaskProjectId}
+                    onChange={e => setNewTaskProjectId(e.target.value)}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-1 bg-white ${
+                      !newTaskProjectId
+                        ? 'border-amber-300 focus:border-amber-400 focus:ring-amber-200 text-gray-400'
+                        : 'border-gray-200 focus:border-indigo-400 focus:ring-indigo-200 text-gray-700'
+                    }`}
+                  >
+                    <option value="">Selecione o projeto *</option>
+                    {activeProjects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Prazo + botões */}
                 <div className="flex items-center gap-2">
                   <input
                     type="date"
@@ -652,7 +709,7 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
                   />
                   <button
                     onClick={addTask}
-                    disabled={adding || !newTaskTitle.trim()}
+                    disabled={adding || !newTaskTitle.trim() || !newTaskProjectId || activeProjects.length === 0}
                     className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
                   >
                     {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
