@@ -361,6 +361,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           .from('user_organizations')
           .select('organization_id')
           .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
           .maybeSingle();
         resolvedOrgId = orgRow?.organization_id || null;
       }
@@ -369,15 +371,56 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         return;
       }
 
+      // P1 — dedup: bloquear se projeto com mesmo nome foi criado nos últimos 5 minutos
+      const projectName = (projectData.name || 'Novo Projeto').trim();
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('organization_id', resolvedOrgId)
+        .ilike('name', projectName)
+        .gte('created_at', fiveMinAgo)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        toast.warning(`Projeto "${projectName}" já foi criado há pouco. Verifique sua lista de projetos.`);
+        setShowCreateProject(false);
+        return;
+      }
+
+      // P2 — resolver artist_id a partir do artistName informado no Wizard
+      let resolvedArtistId: string | null = null;
+      if (projectData.artistName?.trim()) {
+        const { data: artistRow } = await supabase
+          .from('artists')
+          .select('id')
+          .eq('organization_id', resolvedOrgId)
+          .eq('status', 'active')
+          .ilike('name', projectData.artistName.trim())
+          .limit(1)
+          .maybeSingle();
+        resolvedArtistId = artistRow?.id || null;
+        if (!resolvedArtistId) {
+          // Artista não encontrado — bloquear e avisar
+          toast.error(`Artista "${projectData.artistName}" não encontrado. Crie o artista antes de criar o projeto.`);
+          return;
+        }
+      } else {
+        // P2 — campo artista é obrigatório
+        toast.error('Todo projeto precisa estar vinculado a um artista. Informe o nome do artista.');
+        return;
+      }
+
       const { data: newProject, error } = await supabase
         .from('projects')
         .insert({
-          name: projectData.name || 'Novo Projeto',
+          name: projectName,
           description: projectData.description || '',
           status: projectData.status || 'active',
           organization_id: resolvedOrgId,
           created_by: user?.id,
           budget: Number(projectData.budget) || 0,
+          artist_id: resolvedArtistId,
         })
         .select('*')
         .single();

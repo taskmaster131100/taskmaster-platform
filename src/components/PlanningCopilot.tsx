@@ -1176,8 +1176,34 @@ export default function PlanningCopilot() {
           console.info('[Copilot] Nenhum artista associado ao projeto — criando sem artist_id');
         }
 
+        // P1 — dedup: bloquear se projeto com mesmo nome foi criado nos últimos 5 minutos
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: recentDuplicate } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('organization_id', resolvedOrgId)
+          .ilike('name', (projectData.name || '').trim())
+          .gte('created_at', fiveMinAgo)
+          .limit(1)
+          .maybeSingle();
+        if (recentDuplicate) {
+          console.warn(`[Copilot] Dedup bloqueou criação duplicada de "${projectData.name}"`);
+          return {
+            role: 'assistant' as const,
+            content: `⚠️ O projeto **"${projectData.name}"** já foi criado há pouco. Acesse **Tarefas** para ver o projeto existente. Se quiser criar um projeto diferente, use outro nome.`
+          };
+        }
+
+        // P2 — bloquear se não há artista vinculado
+        if (!resolvedArtistId) {
+          return {
+            role: 'assistant' as const,
+            content: `❌ Todo projeto precisa estar vinculado a um artista. Me diga para qual artista é este projeto antes de criar.`
+          };
+        }
+
         // Criar o projeto no Supabase
-        console.info(`[Copilot] Criando projeto "${projectData.name}" | org: ${resolvedOrgId} | artist_id: ${resolvedArtistId ?? 'nenhum'}`);
+        console.info(`[Copilot] Criando projeto "${projectData.name}" | org: ${resolvedOrgId} | artist_id: ${resolvedArtistId}`);
         const { data: newProject, error: projectError } = await supabase
           .from('projects')
           .insert({
