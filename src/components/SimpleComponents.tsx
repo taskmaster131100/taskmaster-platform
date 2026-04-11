@@ -394,6 +394,15 @@ const ParentTaskCard = ({
 // ────────────────────────────────────────────────────────────
 // SectorTaskView principal
 // ────────────────────────────────────────────────────────────
+interface FocusSubTask {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+  phase: string | null;
+  parent_title: string | null;
+}
+
 export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const meta = SECTOR_META[workstream] || SECTOR_META.geral;
   const Icon = meta.icon;
@@ -401,6 +410,8 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [parentTasks, setParentTasks] = useState<ParentTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const [focusTasks, setFocusTasks] = useState<FocusSubTask[]>([]);
+  const [currentPhaseName, setCurrentPhaseName] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDue, setNewTaskDue] = useState('');
@@ -409,6 +420,7 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const [adding, setAdding] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+  const phases = getPhasesForWorkstream(workstream);
 
   const loadData = async () => {
     try {
@@ -446,6 +458,49 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
         setNewTaskProjectId(prev => prev || projectIds[0]);
       } else if (projectList.length === 1) {
         setNewTaskProjectId(prev => prev || projectList[0].id);
+      }
+
+      // Modo Foco: sub-tarefas pendentes do setor, ordenadas por prazo
+      // Query separada e lightweight (limit 6) para identificar fase atual + próximas ações
+      const { data: subRaw } = await supabase
+        .from('tasks')
+        .select('id, title, status, due_date, phase, parent_task_id, tasks!tasks_parent_task_id_fkey(title)')
+        .eq('workstream', workstream)
+        .not('status', 'eq', 'done')
+        .not('parent_task_id', 'is', null)
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(6);
+
+      if (subRaw && subRaw.length > 0) {
+        // Identificar fase atual: fase com menor ordem que tenha pendências
+        const phaseOrder = phases.map(p => p.id);
+        const phaseGroups: Record<string, typeof subRaw> = {};
+        subRaw.forEach(t => {
+          const key = t.phase || 'sem_fase';
+          if (!phaseGroups[key]) phaseGroups[key] = [];
+          phaseGroups[key].push(t);
+        });
+        // Fase atual = primeiro grupo na ordem do template
+        const sortedPhaseKeys = Object.keys(phaseGroups).sort((a, b) => {
+          const ia = phaseOrder.indexOf(a);
+          const ib = phaseOrder.indexOf(b);
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        });
+        const currentPhaseKey = sortedPhaseKeys[0];
+        const phaseTasksForFocus = (phaseGroups[currentPhaseKey] || []).slice(0, 3);
+        const phaseMeta = phases.find(p => p.id === currentPhaseKey);
+        setCurrentPhaseName(phaseMeta?.label || currentPhaseKey.replace(/_/g, ' '));
+        setFocusTasks(phaseTasksForFocus.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          due_date: t.due_date,
+          phase: t.phase,
+          parent_title: (t.tasks as any)?.title || null,
+        })));
+      } else {
+        setFocusTasks([]);
+        setCurrentPhaseName(null);
       }
 
       // Stats: todas as tarefas do setor (pai + sub)
@@ -516,6 +571,16 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
     } finally {
       setAdding(false);
     }
+  };
+
+  // P3: marcar sub-tarefa do Modo Foco como concluída diretamente
+  const toggleFocusTask = async (ft: FocusSubTask) => {
+    const next = ft.status === 'done' ? 'todo' : ft.status === 'todo' ? 'in_progress' : 'done';
+    await supabase.from('tasks').update({ status: next }).eq('id', ft.id);
+    setFocusTasks(prev => prev.map(t => t.id === ft.id ? { ...t, status: next } : t));
+    window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+    // Recarregar para atualizar stats e verificar mudança de fase
+    await loadData();
   };
 
   useEffect(() => {
@@ -597,8 +662,69 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
           )}
         </div>
 
-        {/* Próximo passo */}
-        {stats?.nextStep && (
+        {/* Modo Foco — bloco fixo de próximas ações */}
+        {focusTasks.length > 0 && (
+          <div className="mx-4 mb-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-hidden">
+            {/* Header do Modo Foco */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-indigo-100">
+              <span className="text-sm">🎯</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Próximas ações</span>
+                {currentPhaseName && (
+                  <span className="ml-2 text-[10px] text-indigo-400">· Fase atual: {currentPhaseName}</span>
+                )}
+              </div>
+            </div>
+            {/* Lista de ações */}
+            <div className="divide-y divide-indigo-100">
+              {focusTasks.map(ft => {
+                const isOverdueFt = ft.status !== 'done' && ft.due_date && ft.due_date < today;
+                return (
+                  <div key={ft.id} className="flex items-center gap-3 px-4 py-2.5">
+                    {/* Checkbox — P3: marcar diretamente */}
+                    <button
+                      onClick={() => toggleFocusTask(ft)}
+                      className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        ft.status === 'done'
+                          ? 'bg-green-500 border-green-500'
+                          : ft.status === 'in_progress'
+                          ? 'bg-blue-400 border-blue-400'
+                          : 'border-indigo-300 hover:border-indigo-500 bg-white'
+                      }`}
+                    >
+                      {ft.status === 'done' && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+                          <path d="M1.5 5l3 3 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {ft.status === 'in_progress' && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                      )}
+                    </button>
+                    {/* Título + contexto */}
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm ${ft.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800 font-medium'}`}>
+                        {ft.title}
+                      </span>
+                      {ft.parent_title && (
+                        <div className="text-[10px] text-indigo-400 truncate mt-0.5">{ft.parent_title}</div>
+                      )}
+                    </div>
+                    {/* Prazo */}
+                    {ft.due_date && (
+                      <span className={`text-[10px] font-medium flex-shrink-0 ${isOverdueFt ? 'text-red-600' : 'text-gray-400'}`}>
+                        {isOverdueFt ? '⚠ ' : ''}{new Date(ft.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Fallback: Próximo passo (pai) quando não há sub-tarefas geradas */}
+        {focusTasks.length === 0 && stats?.nextStep && (
           <div className="mx-6 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
             <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-white text-[10px] font-bold">→</span>

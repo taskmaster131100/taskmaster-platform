@@ -500,42 +500,87 @@ function buildStaticGreeting(artistName?: string): string {
   return `Olá! Sou o **Copiloto TaskMaster** — sua IA de planejamento musical.\n\nPosso te ajudar a:\n• 📁 Criar projetos completos com fases, tarefas e prazos\n• 📎 Analisar documentos e transformar em fluxo de trabalho\n• 🎤 Vincular projetos aos seus artistas, shows e lançamentos\n• 📅 Organizar entregáveis por fase com datas automáticas\n\n**Me conta: o que você quer estruturar hoje?** Pode descrever a ideia ou anexar um documento.`;
 }
 
+// Mapa de label legível por workstream (usado na mensagem orientativa)
+const WS_LABEL: Record<string, string> = {
+  producao_musical: 'Produção Musical', conteudo: 'Conteúdo',
+  marketing: 'Marketing', shows: 'Shows', logistica: 'Logística',
+  estrategia: 'Estratégia', financeiro: 'Financeiro', lancamento: 'Lançamento', geral: 'Geral',
+};
+
 /**
  * Detecção proativa baseada em regras — sem chamar a IA.
- * Retorna uma mensagem do assistente se houver tarefas atrasadas ou bloqueadas.
- * Custo: zero tokens. A IA só entra se o usuário responder pedindo detalhes.
+ * P2: formata como mensagem orientativa "Você está na fase de [X]. O próximo passo é [Y]."
+ * Custo: zero tokens. A IA real só entra se o usuário responder.
  */
 function detectProactiveAlerts(ctx: PlatformContext): string | null {
   const today = new Date().toISOString().split('T')[0];
+  const pending = ctx.tasks.filter(t => t.status !== 'done');
 
-  const overdue = ctx.tasks.filter(t =>
-    t.status !== 'done' && t.due_date && t.due_date < today
-  );
-  const blocked = ctx.tasks.filter(t => t.status === 'blocked');
+  if (pending.length === 0) return null;
 
-  if (overdue.length === 0 && blocked.length === 0) return null;
+  const lines: string[] = [];
 
-  const lines: string[] = ['Analisei seus projetos e encontrei pontos de atenção:'];
+  // Orientação por setor: identificar workstream mais ativo e fase atual
+  const byWorkstream: Record<string, typeof pending> = {};
+  pending.forEach(t => {
+    const ws = t.workstream || 'geral';
+    if (!byWorkstream[ws]) byWorkstream[ws] = [];
+    byWorkstream[ws].push(t);
+  });
 
+  // Setor principal = que tem mais tarefas pendentes
+  const mainWs = Object.entries(byWorkstream)
+    .sort((a, b) => b[1].length - a[1].length)[0];
+
+  if (mainWs) {
+    const [ws, wsTasks] = mainWs;
+    const wsLabel = WS_LABEL[ws] || ws.replace(/_/g, ' ');
+
+    // Fase atual: tarefa com phase definida, mais urgente
+    const withPhase = wsTasks.filter(t => t.phase).sort((a, b) =>
+      (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1
+    );
+    const currentPhase = withPhase[0]?.phase;
+
+    // Próximo passo: tarefa mais urgente do setor
+    const next = wsTasks.sort((a, b) =>
+      (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1
+    )[0];
+
+    if (currentPhase) {
+      lines.push(`Você está na fase de **${currentPhase.replace(/_/g, ' ')}** (${wsLabel}).`);
+    } else {
+      lines.push(`Setor com mais atividade: **${wsLabel}**.`);
+    }
+
+    if (next) {
+      lines.push(`O próximo passo é **"${next.title}"**${next.due_date ? ` — prazo: ${new Date(next.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}` : ''}.`);
+    }
+  }
+
+  // Alertas de atraso
+  const overdue = pending.filter(t => t.due_date && t.due_date < today);
   if (overdue.length > 0) {
-    lines.push(`\n**${overdue.length} tarefa${overdue.length > 1 ? 's atrasadas' : ' atrasada'}:**`);
+    lines.push(`\n⚠ **${overdue.length} tarefa${overdue.length > 1 ? 's atrasadas' : ' atrasada'}:**`);
     overdue.slice(0, 3).forEach(t => {
       const days = Math.floor(
         (new Date(today).getTime() - new Date(t.due_date + 'T12:00:00').getTime()) / 86400000
       );
-      lines.push(`• "${t.title}" — ${days} dia${days > 1 ? 's' : ''} em atraso${t.workstream ? ` (${t.workstream.replace('_', ' ')})` : ''}`);
+      lines.push(`• "${t.title}" — ${days} dia${days > 1 ? 's' : ''} em atraso`);
     });
-    if (overdue.length > 3) lines.push(`• ...e mais ${overdue.length - 3} tarefa${overdue.length - 3 > 1 ? 's' : ''}`);
+    if (overdue.length > 3) lines.push(`• ...e mais ${overdue.length - 3}`);
   }
 
+  // Bloqueadas
+  const blocked = ctx.tasks.filter(t => t.status === 'blocked');
   if (blocked.length > 0) {
-    lines.push(`\n**${blocked.length} tarefa${blocked.length > 1 ? 's bloqueadas' : ' bloqueada'}:**`);
+    lines.push(`\n🔴 **${blocked.length} tarefa${blocked.length > 1 ? 's bloqueadas' : ' bloqueada'}:**`);
     blocked.slice(0, 2).forEach(t => {
-      lines.push(`• "${t.title}"${t.workstream ? ` (${t.workstream.replace('_', ' ')})` : ''}`);
+      lines.push(`• "${t.title}"${t.workstream ? ` (${WS_LABEL[t.workstream] || t.workstream})` : ''}`);
     });
   }
 
-  lines.push('\nQuer que eu te ajude a resolver alguma dessas situações?');
+  lines.push('\nQuer que eu te ajude com algum desses pontos?');
   return lines.join('\n');
 }
 
