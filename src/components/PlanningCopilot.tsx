@@ -239,7 +239,8 @@ async function callAIWithContext(
   messages: { role: string; content: string }[],
   platformContext: PlatformContext,
   fileContent?: string,
-  maxTokens = 1500
+  maxTokens = 1500,
+  artistContext?: { id?: string; name?: string }
 ): Promise<string> {
   const contextStr = formatContextForAI(platformContext);
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -276,37 +277,43 @@ Se o nome (ou parte dele) corresponder a qualquer projeto listado em PROJETOS AT
 Se o projeto não constar na lista de PROJETOS ATIVOS → use [CRIAR_PROJETO]
 Esta regra tem prioridade sobre qualquer outra instrução deste prompt.
 
-VINCULAÇÃO DE ARTISTA (OBRIGATÓRIO):
+${artistContext?.name
+  ? `ARTISTA CONFIRMADO: "${artistContext.name}"
+O usuário já está no contexto deste artista. NÃO pergunte "para qual artista?" — a resposta já é "${artistContext.name}".
+Todos os projetos, tarefas e ações criados nesta sessão devem ser vinculados a "${artistContext.name}".
+Quando criar um projeto, inclua obrigatoriamente "artist_name": "${artistContext.name}" no JSON.`
+  : `VINCULAÇÃO DE ARTISTA (OBRIGATÓRIO):
 Sempre que o usuário discutir um projeto, ideia ou anexar um documento:
 - Pergunte DIRETAMENTE: "Esse projeto é para qual artista?"
 ${platformContext.artists.length > 0
-  ? `- Artistas cadastrados: ${platformContext.artists.map((a: any) => `"${a.name || a.stage_name}"`).join(', ')}`
-  : '- Nenhum artista cadastrado ainda.'}
+    ? `- Artistas cadastrados: ${platformContext.artists.map((a: any) => `"${a.name || a.stage_name}"`).join(', ')}`
+    : '- Nenhum artista cadastrado ainda.'}
 - Se o artista não estiver na lista, ofereça: "Quer que eu crie um novo artista para esse projeto?"
-- Quando o usuário confirmar criar o artista, pergunte o nome artístico e o gênero musical (apenas essas duas informações)
-- Após ter nome e gênero, responda EXCLUSIVAMENTE com o JSON abaixo e nada mais:
+- Quando o usuário confirmar criar o artista, pergunte APENAS o nome artístico e o gênero musical
+- Após ter nome e gênero: se já houver informação suficiente para o projeto, inclua AMBAS as ações na MESMA resposta — primeiro [CRIAR_ARTISTA], depois [CRIAR_PROJETO]:
 
 [CRIAR_ARTISTA]
 {"name":"Nome do Artista","genre":"Gênero"}
 [/CRIAR_ARTISTA]
 
-- Só avance para o fluxo de criação do projeto DEPOIS de confirmar o artista
+[CRIAR_PROJETO]
+{"action":"create_project","project":{...}}
+[/CRIAR_PROJETO]
+
+- Se ainda não há dados suficientes para o projeto, envie apenas [CRIAR_ARTISTA] e continue coletando informações`}
 
 ANÁLISE DE LACUNAS (ao receber documento ou ideia):
-Antes de criar o projeto, identifique e mencione explicitamente:
+Antes de criar o projeto, identifique rapidamente:
 - O que está bem definido no material
 - O que está faltando (orçamento, datas, equipe, distribuição, etc.)
-- Riscos ou pontos de atenção
-Diga: "Vi algumas lacunas no material que podem travar o projeto mais pra frente. Quer que eu aponte?" e aguarde resposta.
+Aponte as lacunas de forma direta e continue — não espere confirmação para apontar lacunas, apenas mencione-as e pergunte o que falta para poder criar o projeto.
 
 FLUXO DE CRIAÇÃO DE PROJETO (MUITO IMPORTANTE):
 Quando o usuário conversar sobre uma ideia, projeto ou anexar um documento:
 1. PRIMEIRO: Confirmar o artista (ver VINCULAÇÃO DE ARTISTA acima)
 2. SEGUNDO: Apontar lacunas no material (ver ANÁLISE DE LACUNAS acima)
-3. TERCEIRO: Faça perguntas naturais para preencher o que falta (tipo, prazos, orçamento, equipe)
-4. QUARTO: Quando tiver informação suficiente, SEMPRE pergunte:
-   "Entendi tudo! Quer que eu transforme isso em um fluxo de trabalho completo dentro da plataforma? Vou criar o projeto com todas as tarefas organizadas por fase."
-3. TERCEIRO: Quando o usuário aceitar (sim, ok, pode criar, bora, etc.), responda com um JSON estruturado no formato abaixo:
+3. TERCEIRO: Se precisar de mais informações (tipo, prazos, orçamento), faça perguntas objetivas
+4. QUARTO: Quando tiver informação suficiente OU quando o usuário já disser "sim", "ok", "pode criar", "bora", "quero", "vai", "cria", ou similar → crie IMEDIATAMENTE sem pedir nova confirmação. Responda com o JSON no formato abaixo:
 
 [CRIAR_PROJETO]
 {"action":"create_project","project":{"name":"Nome do Projeto","description":"Descrição completa","project_type":"single_release","artist_name":"Nome Exato do Artista Confirmado","budget":0,"phases":[{"name":"Fase 1 - Pré-Produção","tasks":[{"title":"Tarefa 1","category":"conteudo","priority":"high","description":"Detalhes","days_from_start":3},{"title":"Tarefa 2","category":"marketing","priority":"medium","description":"Detalhes","days_from_start":7}]},{"name":"Fase 2 - Produção","tasks":[...]}]}}
@@ -385,6 +392,14 @@ REGRAS:
 - Seja proativo: "Vi que você tem um show em 5 dias e o rider técnico não está pronto. Quer que eu ajude?"
 - Sugira contatar pessoas da equipe: "O ${platformContext.teamMembers[0]?.name || 'responsável de marketing'} precisa saber sobre isso. Quer que eu mande uma mensagem?"
 - NUNCA responda só com análise sem oferecer ação concreta. Sempre pergunte se quer criar o fluxo de trabalho.
+
+REGRA ANTI-BLOQUEIO — EXECUÇÃO COMPLETA (CRÍTICO):
+- NUNCA quebre o fluxo em múltiplas etapas quando a intenção já está clara
+- NUNCA peça confirmação se o usuário já disse "sim", "ok", "pode criar", "bora", "quero", "vai", "cria", "manda ver"
+- Quando precisar criar artista E projeto: inclua [CRIAR_ARTISTA] E [CRIAR_PROJETO] na MESMA resposta
+- NUNCA envie [CRIAR_ARTISTA] e espere o usuário responder para então criar o projeto — faça tudo de uma vez
+- PROIBIDO resposta parcial: se a intenção for criar projeto completo, gere o JSON completo de uma vez
+- Se o usuário anexou um documento com informações suficientes e disse para criar → crie diretamente
 
 ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
 
@@ -623,7 +638,7 @@ export default function PlanningCopilot() {
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: `🎤 "${text}"` } : m));
       conversationHistory.current.push({ role: 'user', content: text });
       if (!platformContext) throw new Error('Contexto ainda carregando. Aguarde um momento e tente novamente.');
-      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext);
+      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext, undefined, 1500, artistFromNav);
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
@@ -694,9 +709,11 @@ export default function PlanningCopilot() {
 
       // Chamar IA com contexto completo
       const aiResponse = await callAIWithContext(
-        conversationHistory.current.slice(-12), // Últimas 12 mensagens para contexto
+        conversationHistory.current.slice(-12),
         platformContext,
-        fileContent || undefined
+        fileContent || undefined,
+        1500,
+        artistFromNav
       );
 
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
@@ -785,22 +802,35 @@ export default function PlanningCopilot() {
         const artistGenre = artistData.genre || '';
 
         if (artistName) {
-          // AWAIT obrigatório: mensagem só é exibida DEPOIS de saber o resultado real
           const success = await createArtistInSupabase(artistName, artistGenre);
 
           if (success) {
             toast.success(`Artista "${artistName}" criado com sucesso!`);
-            // Recarregar contexto para novo artista aparecer nas próximas mensagens
             const resolvedForCtx = await resolveOrgId();
+
+            // Se a resposta também contém [CRIAR_PROJETO], executar em sequência
+            // sem interromper o fluxo para pedir confirmação ao usuário
+            const hasProjectTag = /\[CRIAR_PROJETO\]/.test(aiResponse);
+            if (hasProjectTag) {
+              // Recarregar contexto aguardando para que o artista recém-criado esteja disponível
+              const freshCtx = await loadPlatformContext(resolvedForCtx);
+              setPlatformContext(freshCtx);
+              // Processar o restante da resposta (CRIAR_PROJETO) com contexto atualizado
+              // O campo artist_name no JSON será resolvido via lookup no banco (artista acabou de ser criado)
+              return processAIResponse(
+                aiResponse.replace(/\[CRIAR_ARTISTA\][\s\S]*?\[\/CRIAR_ARTISTA\]/, '').trim()
+              );
+            }
+
             loadPlatformContext(resolvedForCtx).then(ctx => setPlatformContext(ctx));
             return {
               role: 'assistant' as const,
-              content: `✅ Artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} criado na plataforma!\n\nAgora podemos criar o projeto vinculado a ele. Qual é o nome do projeto que você quer estruturar?`
+              content: `✅ Artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} criado!\n\nAgora me descreva o projeto que quer criar para ${artistName}.`
             };
           } else {
             return {
               role: 'assistant' as const,
-              content: `❌ Não consegui criar o artista **${artistName}** agora. Você pode criá-lo pelo menu **Artistas** e depois voltar aqui para estruturar o projeto. Quer continuar estruturando o projeto mesmo assim?`
+              content: `❌ Não consegui criar o artista **${artistName}**. Você pode criá-lo pelo menu **Artistas** e voltar aqui para estruturar o projeto.`
             };
           }
         }
@@ -1011,10 +1041,13 @@ export default function PlanningCopilot() {
           });
         }
 
-        // Resolver artist_id via query direta no banco — não depende de platformContext
-        // Garante vínculo mesmo quando contexto ainda não foi atualizado após criação do artista
+        // Resolver artist_id — prioridade: (1) artistFromNav.id, (2) query por nome no banco
         let resolvedArtistId: string | null = null;
-        if (projectData.artist_name) {
+        if (artistFromNav?.id) {
+          // Veio de ArtistDetails: usar o id diretamente sem precisar de nome
+          resolvedArtistId = artistFromNav.id;
+          console.info(`[Copilot] artist_id via navigationState: ${resolvedArtistId}`);
+        } else if (projectData.artist_name) {
           const artistNameNormalized = projectData.artist_name.trim();
           console.info(`[Copilot] Buscando artista no banco: "${artistNameNormalized}" | org: ${resolvedOrgId}`);
 
@@ -1181,7 +1214,8 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
         conversationHistory.current.slice(-14),
         platformContext,
         undefined,
-        4000
+        4000,
+        artistFromNav
       );
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);
