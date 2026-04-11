@@ -427,11 +427,13 @@ export default function PlanningCopilot() {
         return null;
       }
 
-      // Tentativa 1: buscar registro existente
+      // Tentativa 1: buscar registro existente — limit(1) evita erro com múltiplas orgs
       const { data: orgRow, error: orgErr } = await supabase
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (orgRow?.organization_id) {
@@ -450,6 +452,8 @@ export default function PlanningCopilot() {
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (newOrg?.organization_id) {

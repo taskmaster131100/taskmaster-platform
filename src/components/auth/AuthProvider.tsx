@@ -61,11 +61,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) return;
 
-      // Verificar se já tem organização
+      // Verificar se já tem organização — limit(1) evita erro com múltiplas orgs
       const { data: existingOrg } = await supabase
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (existingOrg?.organization_id) {
@@ -73,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Chamar a função bootstrap_organization para criar automaticamente
+      // Sem org encontrada — chamar bootstrap para criar (idempotente)
       const { error } = await supabase.rpc('bootstrap_organization', {
         org_name: 'Minha Organização'
       });
@@ -83,11 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Re-buscar sempre — independente do retorno do bootstrap (org pode já existir)
+      // Re-buscar após bootstrap — limit(1) garante 1 resultado sempre
       const { data: newOrg } = await supabase
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       if (newOrg?.organization_id) {
         setOrganizationId(newOrg.organization_id);

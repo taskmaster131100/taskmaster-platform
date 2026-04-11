@@ -76,12 +76,14 @@ export async function createTransaction(data: Partial<FinancialTransaction>): Pr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
-  // Resolve organization_id do usuário
+  // Resolve organization_id do usuário — limit(1) evita erro com múltiplas orgs
   const { data: orgData } = await supabase
     .from('user_organizations')
     .select('organization_id')
     .eq('user_id', user.id)
-    .single();
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
   const orgId = orgData?.organization_id || null;
 
   // Embute referência nas notas quando fornecida (colunas reference_* não existem no banco)

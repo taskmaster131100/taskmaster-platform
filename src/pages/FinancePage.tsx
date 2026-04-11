@@ -72,12 +72,14 @@ export default function FinancePage() {
     try {
       setLoading(true);
 
-      // Resolve organization_id do usuário
+      // Resolve organization_id do usuário — limit(1) evita erro com múltiplas orgs
       const { data: orgData } = await supabase
         .from('user_organizations')
         .select('organization_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       const resolvedOrgId = orgData?.organization_id || null;
       setOrgId(resolvedOrgId);

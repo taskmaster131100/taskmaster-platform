@@ -50,7 +50,9 @@ async function getUserOrgId(): Promise<string> {
     .from('user_organizations')
     .select('organization_id')
     .eq('user_id', user.id)
-    .single();
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (!data?.organization_id) throw new Error('Organização não encontrada');
   return data.organization_id;
 }

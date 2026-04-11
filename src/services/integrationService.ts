@@ -367,12 +367,14 @@ async function getTeamUserIds(): Promise<string[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // Buscar organização do usuário
+  // Buscar organização do usuário — limit(1) evita erro com múltiplas orgs
   const { data: orgData } = await supabase
     .from('user_organizations')
     .select('organization_id')
     .eq('user_id', user.id)
-    .single();
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
   if (!orgData) return [user.id];
 
