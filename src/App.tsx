@@ -120,7 +120,9 @@ function App() {
   const [defaultTaskView, setDefaultTaskView] = useState<'kanban' | 'departments'>('kanban');
 
   // Plano e limites
-  const { limits: planLimits } = useSubscription(organizationId || undefined);
+  // VITE_FEATURE_SUBSCRIPTIONS=false → sem enforcement de limites (modo teste/beta)
+  const subscriptionsEnabled = import.meta.env.VITE_FEATURE_SUBSCRIPTIONS === 'true';
+  const { limits: planLimits, loading: planLoading } = useSubscription(organizationId || undefined);
   const [planLimitModal, setPlanLimitModal] = useState<{ resource: string; limit: number } | null>(null);
 
   // Importar componentes necessários
@@ -345,8 +347,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const handleProjectSubmit = async (projectData: any) => {
-    // Verificar limite do plano
-    if (planLimits.maxProjects !== -1 && projects.length >= planLimits.maxProjects) {
+    // Verificar limite do plano — só quando subscriptions estão ativas e carregadas
+    if (subscriptionsEnabled && !planLoading && planLimits.maxProjects !== -1 && projects.length >= planLimits.maxProjects) {
       setPlanLimitModal({ resource: 'projetos', limit: planLimits.maxProjects });
       setShowCreateProject(false);
       return;
@@ -397,8 +399,8 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const handleArtistSubmit = async (artistData: any) => {
-    // Verificar limite do plano
-    if (planLimits.maxArtists !== -1 && artists.length >= planLimits.maxArtists) {
+    // Verificar limite do plano — só quando subscriptions estão ativas e carregadas
+    if (subscriptionsEnabled && !planLoading && planLimits.maxArtists !== -1 && artists.length >= planLimits.maxArtists) {
       setPlanLimitModal({ resource: 'artistas', limit: planLimits.maxArtists });
       return;
     }
