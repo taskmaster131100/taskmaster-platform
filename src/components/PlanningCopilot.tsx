@@ -68,13 +68,15 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
       .limit(10);
     context.shows = shows || [];
 
-    // Tarefas pendentes — filtrado pela organização
+    // Tarefas pai pendentes — só nível 1 (sem parent_task_id) para não explodir tokens
+    // Sub-tarefas são contexto operacional e ficam nas telas de setor
     let tasksQuery = supabase
       .from('tasks')
-      .select('id, title, status, priority, due_date, project_id, workstream')
+      .select('id, title, status, priority, due_date, project_id, workstream, phase')
       .not('status', 'eq', 'done')
+      .is('parent_task_id', null)
       .order('due_date', { ascending: true })
-      .limit(20);
+      .limit(30);
     if (organizationId) tasksQuery = tasksQuery.eq('organization_id', organizationId);
     const { data: tasks } = await tasksQuery;
     context.tasks = tasks || [];
@@ -121,16 +123,25 @@ function formatContextForAI(ctx: PlatformContext): string {
   }
 
   if (ctx.tasks.length > 0) {
-    // Só tarefas com prazo definido ou alta prioridade para economizar tokens
-    const relevantTasks = ctx.tasks
-      .filter(t => t.due_date || t.priority === 'high' || t.priority === 'urgent')
-      .slice(0, 10);
-    if (relevantTasks.length > 0) {
-      contextStr += '\nTAREFAS PENDENTES (com prazo/urgentes):\n';
-      relevantTasks.forEach(t => {
-        contextStr += `"${t.title}" prazo:${t.due_date || 'sem'} prioridade:${t.priority || 'normal'}\n`;
+    // Agrupar por workstream; mostrar apenas as 3 próximas ações por setor
+    // (sub-tarefas ficam nas telas de setor — não enviadas aqui para economizar tokens)
+    const byWorkstream: Record<string, typeof ctx.tasks> = {};
+    ctx.tasks.forEach(t => {
+      const ws = t.workstream || 'geral';
+      if (!byWorkstream[ws]) byWorkstream[ws] = [];
+      byWorkstream[ws].push(t);
+    });
+
+    contextStr += '\nTAREFAS PENDENTES (próximas ações por setor):\n';
+    Object.entries(byWorkstream).forEach(([ws, tasks]) => {
+      const top3 = tasks.slice(0, 3);
+      contextStr += `[${ws.toUpperCase()}] `;
+      top3.forEach(t => {
+        contextStr += `"${t.title}"${t.due_date ? ` até ${t.due_date}` : ''}${t.priority === 'high' || t.priority === 'urgent' ? ' (!!)' : ''}; `;
       });
-    }
+      if (tasks.length > 3) contextStr += `+${tasks.length - 3} mais`;
+      contextStr += '\n';
+    });
   }
 
   if (ctx.teamMembers.length > 0) {
