@@ -1,17 +1,15 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen, Guitar, Mic2, Package, DollarSign, Compass, Rocket, LayoutGrid } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen, Guitar, Mic2, Package, DollarSign, Compass, Rocket, LayoutGrid, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import AIMarketingAssistant from './AIMarketingAssistant';
 import InviteManager from './InviteManager';
 import { supabase } from '../lib/supabase';
+import { getSubTasksForWorkstream, getPhasesForWorkstream, OPERATIONAL_TEMPLATES } from '../services/operationalTemplates';
 import { toast } from 'sonner';
 
-// Lazy import do TaskBoard para evitar circular dependency
-const TaskBoard = lazy(() => import('./TaskBoard'));
-
 // ============================================================
-// SectorTaskView — View filtrada do TaskBoard por workstream
-// Regra de negócio: as telas de setor NÃO têm dados próprios.
-// São views filtradas do TaskBoard pela chave workstream.
+// SectorTaskView — Telas de setor com tarefas pai + sub-tarefas
+// Regra: tarefas pai mostradas como cards expandíveis;
+// sub-tarefas geradas on-demand via OPERATIONAL_TEMPLATES.
 // ============================================================
 const SECTOR_META: Record<string, { label: string; description: string; icon: React.ComponentType<any>; color: string }> = {
   producao_musical: { label: 'Produção Musical', description: 'Gravação, mixagem, masterização, arranjo e estúdio', icon: Guitar, color: 'text-purple-600' },
@@ -34,66 +32,372 @@ interface SectorStats {
   nextStep: { title: string; project: string; due_date: string | null } | null;
 }
 
+// ────────────────────────────────────────────────────────────
+// Tipos internos do SectorTaskView
+// ────────────────────────────────────────────────────────────
+interface ParentTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+  project_id: string | null;
+  project_name: string | null;
+}
+
+interface SubTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+  phase: string | null;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  todo: 'Pendente',
+  in_progress: 'Em andamento',
+  done: 'Concluído',
+  blocked: 'Bloqueado',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  todo: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  done: 'bg-green-100 text-green-700',
+  blocked: 'bg-red-100 text-red-700',
+};
+
+const PRIORITY_COLOR: Record<string, string> = {
+  high: 'text-red-500',
+  medium: 'text-amber-500',
+  low: 'text-gray-400',
+};
+
+// ────────────────────────────────────────────────────────────
+// ParentTaskCard — tarefa pai com expand/collapse de sub-tasks
+// ────────────────────────────────────────────────────────────
+const ParentTaskCard = ({
+  task,
+  workstream,
+  today,
+  onStatusChange,
+}: {
+  task: ParentTask;
+  workstream: string;
+  today: string;
+  onStatusChange: () => void;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const [subTasks, setSubTasks] = useState<SubTask[]>([]);
+  const [generating, setGenerating] = useState(false);
+  const phases = getPhasesForWorkstream(workstream);
+  const isOverdue = task.status !== 'done' && task.due_date && task.due_date < today;
+
+  const loadSubTasks = async () => {
+    const { data } = await supabase
+      .from('tasks')
+      .select('id, title, status, priority, due_date, phase')
+      .eq('parent_task_id', task.id)
+      .order('due_date', { ascending: true, nullsFirst: false });
+    return data || [];
+  };
+
+  const handleExpand = async () => {
+    if (!expanded) {
+      const existing = await loadSubTasks();
+      if (existing.length > 0) {
+        setSubTasks(existing);
+        setExpanded(true);
+        return;
+      }
+
+      // Gerar sub-tarefas on-demand
+      const template = getSubTasksForWorkstream(workstream);
+      if (template.length === 0) {
+        setExpanded(true);
+        return;
+      }
+
+      setGenerating(true);
+      try {
+        const baseDate = task.due_date
+          ? new Date(task.due_date + 'T12:00:00')
+          : new Date();
+
+        const rows = template.slice(0, 12).map(st => {
+          const dueDate = new Date(baseDate);
+          dueDate.setDate(dueDate.getDate() - (st.days_from_parent || 0));
+          return {
+            title: st.title,
+            status: 'todo',
+            priority: st.priority,
+            phase: st.phase,
+            workstream,
+            parent_task_id: task.id,
+            project_id: task.project_id,
+            due_date: dueDate.toISOString().split('T')[0],
+          };
+        });
+
+        const { error } = await supabase.from('tasks').insert(rows);
+        if (error) throw error;
+
+        const created = await loadSubTasks();
+        setSubTasks(created);
+        toast.success(`${created.length} sub-tarefas geradas`);
+        window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+      } catch (e) {
+        console.error('[SectorTaskView] erro ao gerar sub-tarefas:', e);
+        toast.error('Erro ao gerar sub-tarefas');
+      } finally {
+        setGenerating(false);
+      }
+    }
+    setExpanded(v => !v);
+  };
+
+  const toggleSubTaskStatus = async (st: SubTask) => {
+    const next = st.status === 'done' ? 'todo' : st.status === 'todo' ? 'in_progress' : 'done';
+    await supabase.from('tasks').update({ status: next }).eq('id', st.id);
+    setSubTasks(prev => prev.map(s => s.id === st.id ? { ...s, status: next } : s));
+    window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+    onStatusChange();
+  };
+
+  // Agrupar sub-tarefas por fase
+  const byPhase: Record<string, SubTask[]> = {};
+  subTasks.forEach(st => {
+    const key = st.phase || 'sem_fase';
+    if (!byPhase[key]) byPhase[key] = [];
+    byPhase[key].push(st);
+  });
+
+  const phaseOrder = phases.map(p => p.id);
+  const sortedPhaseKeys = Object.keys(byPhase).sort((a, b) => {
+    const ia = phaseOrder.indexOf(a);
+    const ib = phaseOrder.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+  const phaseLabel = (key: string) =>
+    phases.find(p => p.id === key)?.label || key.replace(/_/g, ' ');
+
+  return (
+    <div className={`bg-white rounded-xl border ${isOverdue ? 'border-red-200' : 'border-gray-100'} shadow-sm overflow-hidden`}>
+      {/* Cabeçalho da tarefa pai */}
+      <div className="px-4 py-3 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLOR[task.status] || STATUS_COLOR.todo}`}>
+              {STATUS_LABEL[task.status] || task.status}
+            </span>
+            {task.priority && (
+              <span className={`text-[10px] font-bold uppercase ${PRIORITY_COLOR[task.priority] || ''}`}>
+                {task.priority === 'high' ? '↑ Alta' : task.priority === 'medium' ? '→ Média' : '↓ Baixa'}
+              </span>
+            )}
+            {isOverdue && (
+              <span className="text-[10px] font-bold text-red-600">⚠ Atrasado</span>
+            )}
+          </div>
+          <div className="text-sm font-semibold text-gray-800 truncate">{task.title}</div>
+          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+            {task.project_name && <span className="truncate">{task.project_name}</span>}
+            {task.due_date && (
+              <>
+                {task.project_name && <span>·</span>}
+                <span className={task.due_date < today && task.status !== 'done' ? 'text-red-500' : ''}>
+                  {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={handleExpand}
+          disabled={generating}
+          className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 flex-shrink-0 mt-0.5 px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+        >
+          {generating ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : expanded ? (
+            <ChevronDown className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5" />
+          )}
+          {generating ? 'Gerando…' : expanded ? 'Recolher' : 'Expandir operação'}
+        </button>
+      </div>
+
+      {/* Sub-tarefas expandidas */}
+      {expanded && (
+        <div className="border-t border-gray-50 bg-gray-50 px-4 py-3 space-y-4">
+          {subTasks.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-2">
+              {OPERATIONAL_TEMPLATES[workstream]
+                ? 'Clique em "Expandir operação" para gerar o plano operacional.'
+                : 'Nenhum template disponível para este setor.'}
+            </p>
+          ) : (
+            sortedPhaseKeys.map(phaseKey => {
+              const phaseTasks = byPhase[phaseKey];
+              const phaseDone = phaseTasks.filter(t => t.status === 'done').length;
+              const phasePct = Math.round((phaseDone / phaseTasks.length) * 100);
+              return (
+                <div key={phaseKey}>
+                  {/* Header da fase */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Layers className="w-3 h-3 text-indigo-400" />
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                        {phaseLabel(phaseKey)}
+                      </span>
+                    </div>
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-[10px] text-gray-400 font-medium">{phaseDone}/{phaseTasks.length}</span>
+                    <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-400 rounded-full transition-all"
+                        style={{ width: `${phasePct}%` }}
+                      />
+                    </div>
+                  </div>
+                  {/* Sub-tarefas da fase */}
+                  <div className="space-y-1.5">
+                    {phaseTasks.map(st => (
+                      <div
+                        key={st.id}
+                        className="flex items-start gap-2.5 bg-white rounded-lg px-3 py-2 border border-gray-100"
+                      >
+                        <button
+                          onClick={() => toggleSubTaskStatus(st)}
+                          className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
+                            st.status === 'done'
+                              ? 'bg-green-500 border-green-500'
+                              : st.status === 'in_progress'
+                              ? 'bg-blue-400 border-blue-400'
+                              : 'border-gray-300 hover:border-indigo-400'
+                          }`}
+                        >
+                          {st.status === 'done' && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+                              <path d="M1.5 5l3 3 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                          {st.status === 'in_progress' && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-xs ${st.status === 'done' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                            {st.title}
+                          </span>
+                          {st.due_date && (
+                            <div className={`text-[10px] mt-0.5 ${
+                              st.status !== 'done' && st.due_date < today
+                                ? 'text-red-500 font-medium'
+                                : 'text-gray-400'
+                            }`}>
+                              {new Date(st.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </div>
+                          )}
+                        </div>
+                        {st.priority && st.priority !== 'low' && (
+                          <span className={`text-[10px] font-bold flex-shrink-0 ${PRIORITY_COLOR[st.priority] || ''}`}>
+                            {st.priority === 'high' ? '↑' : '→'}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────────────────
+// SectorTaskView principal
+// ────────────────────────────────────────────────────────────
 export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const meta = SECTOR_META[workstream] || SECTOR_META.geral;
   const Icon = meta.icon;
   const [stats, setStats] = useState<SectorStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [parentTasks, setParentTasks] = useState<ParentTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
 
-  useEffect(() => {
-    const loadStats = async () => {
-      setStatsLoading(true);
-      try {
-        const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
 
-        // Buscar todas as tarefas do setor com dados do projeto
-        const { data: tasks } = await supabase
-          .from('tasks')
-          .select('id, title, status, due_date, project_id, projects(name)')
-          .eq('workstream', workstream)
-          .order('due_date', { ascending: true, nullsFirst: false });
+  const loadData = async () => {
+    try {
+      // Tarefas pai (sem parent_task_id) do setor, com nome do projeto
+      const { data: parents } = await supabase
+        .from('tasks')
+        .select('id, title, status, priority, due_date, project_id, projects(name)')
+        .eq('workstream', workstream)
+        .is('parent_task_id', null)
+        .order('due_date', { ascending: true, nullsFirst: false });
 
-        if (!tasks) { setStatsLoading(false); return; }
+      const mapped: ParentTask[] = (parents || []).map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        due_date: t.due_date,
+        project_id: t.project_id,
+        project_name: t.projects?.name || null,
+      }));
+      setParentTasks(mapped);
 
+      // Stats: todas as tarefas do setor (pai + sub)
+      const { data: allTasks } = await supabase
+        .from('tasks')
+        .select('id, status, due_date, project_id, projects(name)')
+        .eq('workstream', workstream)
+        .order('due_date', { ascending: true, nullsFirst: false });
+
+      if (allTasks) {
         const s: SectorStats = {
-          total: tasks.length,
-          todo: tasks.filter(t => t.status === 'todo').length,
-          in_progress: tasks.filter(t => t.status === 'in_progress').length,
-          done: tasks.filter(t => t.status === 'done').length,
-          overdue: tasks.filter(t =>
+          total: allTasks.length,
+          todo: allTasks.filter(t => t.status === 'todo').length,
+          in_progress: allTasks.filter(t => t.status === 'in_progress').length,
+          done: allTasks.filter(t => t.status === 'done').length,
+          overdue: allTasks.filter(t =>
             t.status !== 'done' && t.due_date && t.due_date < today
           ).length,
           nextStep: null,
         };
-
-        // Próximo passo: tarefa pendente mais urgente (menor prazo, ou sem prazo por último)
-        const pending = tasks.filter(t => t.status !== 'done');
+        const pending = (parents || []).filter((t: any) => t.status !== 'done');
         if (pending.length > 0) {
-          const next = pending[0];
+          const next = pending[0] as any;
           s.nextStep = {
             title: next.title,
-            project: (next.projects as any)?.name || 'Sem projeto',
+            project: next.projects?.name || 'Sem projeto',
             due_date: next.due_date,
           };
         }
-
         setStats(s);
-      } catch (e) {
-        console.error('[SectorTaskView] erro ao carregar stats:', e);
-      } finally {
-        setStatsLoading(false);
       }
-    };
+    } catch (e) {
+      console.error('[SectorTaskView] erro ao carregar dados:', e);
+    } finally {
+      setStatsLoading(false);
+      setTasksLoading(false);
+    }
+  };
 
-    loadStats();
-
-    // Recarregar quando TaskBoard atualizar tarefas
-    const handler = () => loadStats();
+  useEffect(() => {
+    loadData();
+    const handler = () => loadData();
     window.addEventListener('taskmaster:task-updated', handler);
     return () => window.removeEventListener('taskmaster:task-updated', handler);
   }, [workstream]);
 
-  const today = new Date().toISOString().split('T')[0];
   const progress = stats && stats.total > 0
     ? Math.round((stats.done / stats.total) * 100)
     : 0;
@@ -191,15 +495,35 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
         )}
       </div>
 
-      {/* TaskBoard filtrado — ocupa o restante da tela */}
-      <div className="flex-1 overflow-hidden">
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      {/* Lista de tarefas pai com expand/collapse */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {tasksLoading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-20 bg-white rounded-xl animate-pulse border border-gray-100" />
+            ))}
           </div>
-        }>
-          <TaskBoard defaultWorkstream={workstream} defaultView="departments" />
-        </Suspense>
+        ) : parentTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <Icon className={`w-6 h-6 ${meta.color} opacity-50`} />
+            </div>
+            <p className="text-sm font-medium text-gray-500">Nenhuma tarefa neste setor</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Crie um projeto pelo Copilot e as tarefas aparecerão aqui.
+            </p>
+          </div>
+        ) : (
+          parentTasks.map(task => (
+            <ParentTaskCard
+              key={task.id}
+              task={task}
+              workstream={workstream}
+              today={today}
+              onStatusChange={loadData}
+            />
+          ))
+        )}
       </div>
     </div>
   );
