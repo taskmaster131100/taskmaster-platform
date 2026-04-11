@@ -150,7 +150,69 @@ function formatContextForAI(ctx: PlatformContext): string {
   return contextStr || '\nNenhum dado cadastrado ainda.';
 }
 
-// Chamar OpenAI com contexto completo
+// Valores válidos de workstream no TaskBoard
+const VALID_WORKSTREAMS = [
+  'producao_musical', 'conteudo', 'marketing', 'shows',
+  'logistica', 'estrategia', 'financeiro', 'lancamento', 'geral'
+];
+
+// Mapa de normalização: termos que a IA pode produzir → valor canônico
+const WORKSTREAM_MAP: Record<string, string> = {
+  // producao_musical
+  'producao': 'producao_musical', 'producao musical': 'producao_musical',
+  'production': 'producao_musical', 'music production': 'producao_musical',
+  'studio': 'producao_musical', 'gravacao': 'producao_musical',
+  'recording': 'producao_musical', 'mixagem': 'producao_musical',
+  'masterizacao': 'producao_musical',
+  // conteudo
+  'conteudo': 'conteudo', 'content': 'conteudo', 'conteúdo': 'conteudo',
+  'video': 'conteudo', 'foto': 'conteudo', 'redes sociais': 'conteudo',
+  'social media': 'conteudo', 'design': 'conteudo',
+  // marketing
+  'marketing': 'marketing', 'divulgacao': 'marketing',
+  'publicidade': 'marketing', 'ads': 'marketing', 'midia': 'marketing',
+  'pr': 'marketing', 'imprensa': 'marketing',
+  // shows
+  'shows': 'shows', 'show': 'shows', 'apresentacao': 'shows',
+  'performance': 'shows', 'live': 'shows', 'apresentações': 'shows',
+  'turnê': 'shows', 'turne': 'shows', 'tour': 'shows',
+  // logistica
+  'logistica': 'logistica', 'logística': 'logistica',
+  'logistics': 'logistica', 'rider': 'logistica',
+  'transporte': 'logistica', 'hospedagem': 'logistica',
+  // estrategia
+  'estrategia': 'estrategia', 'estratégia': 'estrategia',
+  'strategy': 'estrategia', 'planejamento': 'estrategia',
+  'planning': 'estrategia', 'business': 'estrategia',
+  // financeiro
+  'financeiro': 'financeiro', 'finance': 'financeiro',
+  'financeira': 'financeiro', 'contratos': 'financeiro',
+  'budget': 'financeiro', 'orcamento': 'financeiro',
+  'pagamento': 'financeiro', 'cachê': 'financeiro',
+  // lancamento
+  'lancamento': 'lancamento', 'lançamento': 'lancamento',
+  'release': 'lancamento', 'single': 'lancamento',
+  'album': 'lancamento', 'ep': 'lancamento', 'drop': 'lancamento',
+};
+
+/**
+ * Normaliza o campo category/workstream vindo da IA para um valor
+ * válido do TaskBoard. Nunca retorna valor inválido.
+ */
+function normalizeWorkstream(raw: string | undefined | null): string {
+  if (!raw) return 'geral';
+  const normalized = raw.toLowerCase().trim();
+  // Já é um valor válido
+  if (VALID_WORKSTREAMS.includes(normalized)) return normalized;
+  // Tentar match exato no mapa
+  if (WORKSTREAM_MAP[normalized]) return WORKSTREAM_MAP[normalized];
+  // Tentar match parcial (ex: "marketing digital" → "marketing")
+  for (const [key, value] of Object.entries(WORKSTREAM_MAP)) {
+    if (normalized.includes(key) || key.includes(normalized)) return value;
+  }
+  return 'geral';
+}
+
 /**
  * Remove TODAS as tags internas e payloads JSON da resposta da IA
  * antes de exibir ao usuário. Última linha de defesa contra vazamento de payload.
@@ -254,14 +316,18 @@ O campo "days_from_start" indica em quantos dias a partir de hoje essa tarefa de
 
 IMPORTANTE: o campo "artist_name" deve conter exatamente o nome do artista confirmado na conversa. Use o nome da lista de artistas cadastrados. Se nenhum artista foi confirmado, omita o campo.
 
-CATEGORIAS DE TAREFAS (use nos campos category):
-- conteudo: Gravação, mixagem, masterização, produção musical
-- marketing: Divulgação, redes sociais, press release, conteúdo visual
-- shows: Booking, rider técnico, logística de shows
-- logistica: Transporte, hospedagem, equipamentos
-- estrategia: Posicionamento, parcerias, distribuição
-- financeiro: Orçamento, pagamentos, contratos
-- lancamento: Distribuição digital, data de lançamento, playlists
+CATEGORIAS DE TAREFAS — USE EXATAMENTE ESSES VALORES no campo "category":
+- producao_musical: Gravação, mixagem, masterização, arranjo, estúdio
+- conteudo: Vídeo, foto, clipe, arte, design, redes sociais
+- marketing: Divulgação, press release, ads, imprensa, promoção
+- shows: Booking, rider técnico, contrato de show, apresentação, live
+- logistica: Transporte, hospedagem, equipamentos, estrutura
+- estrategia: Posicionamento, parcerias, distribuição, planejamento
+- financeiro: Orçamento, pagamentos, contratos, cachê
+- lancamento: Distribuição digital, data de lançamento, playlists, pitching
+
+ATENÇÃO: Nunca use valores diferentes dos acima no campo category.
+Nunca use "geral" — distribua sempre para o setor correto.
 
 TIPOS DE PROJETO (use em project_type):
 - single_release: Lançamento de single
@@ -780,7 +846,7 @@ export default function PlanningCopilot() {
               description: task.description || '',
               status: 'todo',
               priority: task.priority || 'medium',
-              workstream: task.category || 'geral',
+              workstream: normalizeWorkstream(task.category || task.workstream),
               project_id: updateData.project_id,
               organization_id: updateOrgId,
               reporter_id: user?.id,
@@ -1017,7 +1083,7 @@ export default function PlanningCopilot() {
                   description: task.description || '',
                   status: 'todo',
                   priority: task.priority || 'medium',
-                  workstream: task.category || 'geral',
+                  workstream: normalizeWorkstream(task.category || task.workstream),
                   project_id: newProject.id,
                   organization_id: resolvedOrgId,
                   reporter_id: user?.id,
