@@ -76,6 +76,8 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 // ────────────────────────────────────────────────────────────
 // ParentTaskCard — tarefa pai com expand/collapse de sub-tasks
+// P1: lock via useRef previne double-click; dedup por título
+// P2: badges de fase (Concluída / Fase atual / Próxima fase)
 // ────────────────────────────────────────────────────────────
 const ParentTaskCard = ({
   task,
@@ -91,41 +93,57 @@ const ParentTaskCard = ({
   const [expanded, setExpanded] = useState(false);
   const [subTasks, setSubTasks] = useState<SubTask[]>([]);
   const [generating, setGenerating] = useState(false);
+  // P1: lock para evitar dupla geração por clique rápido
+  const generatingRef = React.useRef(false);
   const phases = getPhasesForWorkstream(workstream);
   const isOverdue = task.status !== 'done' && task.due_date && task.due_date < today;
 
-  const loadSubTasks = async () => {
+  const loadSubTasks = async (): Promise<SubTask[]> => {
     const { data } = await supabase
       .from('tasks')
       .select('id, title, status, priority, due_date, phase')
       .eq('parent_task_id', task.id)
       .order('due_date', { ascending: true, nullsFirst: false });
-    return data || [];
+    return (data || []) as SubTask[];
   };
 
   const handleExpand = async () => {
-    if (!expanded) {
-      const existing = await loadSubTasks();
-      if (existing.length > 0) {
-        setSubTasks(existing);
-        setExpanded(true);
-        return;
-      }
+    // Recolher se já expandido
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
 
-      // Gerar sub-tarefas on-demand
-      const template = getSubTasksForWorkstream(workstream);
-      if (template.length === 0) {
-        setExpanded(true);
-        return;
-      }
+    // P1: prevenir duplo-clique durante geração
+    if (generatingRef.current) return;
 
-      setGenerating(true);
-      try {
-        const baseDate = task.due_date
-          ? new Date(task.due_date + 'T12:00:00')
-          : new Date();
+    const existing = await loadSubTasks();
+    if (existing.length > 0) {
+      setSubTasks(existing);
+      setExpanded(true);
+      return;
+    }
 
-        const rows = template.slice(0, 12).map(st => {
+    // Gerar sub-tarefas on-demand
+    const template = getSubTasksForWorkstream(workstream);
+    if (template.length === 0) {
+      setExpanded(true);
+      return;
+    }
+
+    generatingRef.current = true;
+    setGenerating(true);
+    try {
+      const baseDate = task.due_date
+        ? new Date(task.due_date + 'T12:00:00')
+        : new Date();
+
+      // P1: dedup por título — filtra templates já existentes no banco
+      const existingTitles = new Set(existing.map((s: SubTask) => s.title.toLowerCase()));
+      const newRows = template
+        .slice(0, 12)
+        .filter(st => !existingTitles.has(st.title.toLowerCase()))
+        .map(st => {
           const dueDate = new Date(baseDate);
           dueDate.setDate(dueDate.getDate() - (st.days_from_parent || 0));
           return {
@@ -140,21 +158,23 @@ const ParentTaskCard = ({
           };
         });
 
-        const { error } = await supabase.from('tasks').insert(rows);
+      if (newRows.length > 0) {
+        const { error } = await supabase.from('tasks').insert(newRows);
         if (error) throw error;
-
-        const created = await loadSubTasks();
-        setSubTasks(created);
-        toast.success(`${created.length} sub-tarefas geradas`);
-        window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
-      } catch (e) {
-        console.error('[SectorTaskView] erro ao gerar sub-tarefas:', e);
-        toast.error('Erro ao gerar sub-tarefas');
-      } finally {
-        setGenerating(false);
       }
+
+      const created = await loadSubTasks();
+      setSubTasks(created);
+      toast.success(`${created.length} sub-tarefas geradas`);
+      window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+    } catch (e) {
+      console.error('[SectorTaskView] erro ao gerar sub-tarefas:', e);
+      toast.error('Erro ao gerar sub-tarefas');
+    } finally {
+      setGenerating(false);
+      generatingRef.current = false;
     }
-    setExpanded(v => !v);
+    setExpanded(true);
   };
 
   const toggleSubTaskStatus = async (st: SubTask) => {
@@ -181,6 +201,33 @@ const ParentTaskCard = ({
   });
   const phaseLabel = (key: string) =>
     phases.find(p => p.id === key)?.label || key.replace(/_/g, ' ');
+
+  // P2: calcular estado de cada fase (concluída / atual / próxima / futura)
+  const phaseStates: Record<string, 'done' | 'current' | 'next' | 'future'> = {};
+  let foundCurrent = false;
+  let foundNext = false;
+  sortedPhaseKeys.forEach((key, idx) => {
+    const pTasks = byPhase[key];
+    const allDone = pTasks.every(t => t.status === 'done');
+    if (allDone) {
+      phaseStates[key] = 'done';
+    } else if (!foundCurrent) {
+      phaseStates[key] = 'current';
+      foundCurrent = true;
+    } else if (!foundNext) {
+      phaseStates[key] = 'next';
+      foundNext = true;
+    } else {
+      phaseStates[key] = 'future';
+    }
+  });
+
+  const PHASE_BADGE: Record<string, { label: string; cls: string }> = {
+    done:    { label: 'Concluída',   cls: 'bg-green-100 text-green-700' },
+    current: { label: 'Fase atual',  cls: 'bg-blue-100 text-blue-700' },
+    next:    { label: 'Próxima',     cls: 'bg-indigo-100 text-indigo-600' },
+    future:  { label: 'Futura',      cls: 'bg-gray-100 text-gray-400' },
+  };
 
   return (
     <div className={`bg-white rounded-xl border ${isOverdue ? 'border-red-200' : 'border-gray-100'} shadow-sm overflow-hidden`}>
@@ -235,7 +282,7 @@ const ParentTaskCard = ({
           {subTasks.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-2">
               {OPERATIONAL_TEMPLATES[workstream]
-                ? 'Clique em "Expandir operação" para gerar o plano operacional.'
+                ? 'Nenhum template disponível para este setor.'
                 : 'Nenhum template disponível para este setor.'}
             </p>
           ) : (
@@ -243,21 +290,28 @@ const ParentTaskCard = ({
               const phaseTasks = byPhase[phaseKey];
               const phaseDone = phaseTasks.filter(t => t.status === 'done').length;
               const phasePct = Math.round((phaseDone / phaseTasks.length) * 100);
+              const phaseState = phaseStates[phaseKey] || 'future';
+              const badge = PHASE_BADGE[phaseState];
+              const isCurrentPhase = phaseState === 'current';
               return (
                 <div key={phaseKey}>
-                  {/* Header da fase */}
+                  {/* Header da fase — P2: badge de estado */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex items-center gap-1.5">
-                      <Layers className="w-3 h-3 text-indigo-400" />
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                      <Layers className={`w-3 h-3 ${isCurrentPhase ? 'text-blue-500' : 'text-indigo-300'}`} />
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${isCurrentPhase ? 'text-blue-700' : 'text-indigo-400'}`}>
                         {phaseLabel(phaseKey)}
                       </span>
                     </div>
+                    {/* Badge de estado da fase */}
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badge.cls}`}>
+                      {badge.label}
+                    </span>
                     <div className="flex-1 h-px bg-gray-200" />
                     <span className="text-[10px] text-gray-400 font-medium">{phaseDone}/{phaseTasks.length}</span>
                     <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-400 rounded-full transition-all"
+                        className={`h-full rounded-full transition-all ${phaseState === 'done' ? 'bg-green-400' : 'bg-indigo-400'}`}
                         style={{ width: `${phasePct}%` }}
                       />
                     </div>
@@ -267,7 +321,9 @@ const ParentTaskCard = ({
                     {phaseTasks.map(st => (
                       <div
                         key={st.id}
-                        className="flex items-start gap-2.5 bg-white rounded-lg px-3 py-2 border border-gray-100"
+                        className={`flex items-start gap-2.5 bg-white rounded-lg px-3 py-2 border ${
+                          isCurrentPhase && st.status !== 'done' ? 'border-blue-100' : 'border-gray-100'
+                        }`}
                       >
                         <button
                           onClick={() => toggleSubTaskStatus(st)}

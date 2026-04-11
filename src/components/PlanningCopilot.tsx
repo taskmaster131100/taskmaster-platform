@@ -500,6 +500,45 @@ function buildStaticGreeting(artistName?: string): string {
   return `Olá! Sou o **Copiloto TaskMaster** — sua IA de planejamento musical.\n\nPosso te ajudar a:\n• 📁 Criar projetos completos com fases, tarefas e prazos\n• 📎 Analisar documentos e transformar em fluxo de trabalho\n• 🎤 Vincular projetos aos seus artistas, shows e lançamentos\n• 📅 Organizar entregáveis por fase com datas automáticas\n\n**Me conta: o que você quer estruturar hoje?** Pode descrever a ideia ou anexar um documento.`;
 }
 
+/**
+ * Detecção proativa baseada em regras — sem chamar a IA.
+ * Retorna uma mensagem do assistente se houver tarefas atrasadas ou bloqueadas.
+ * Custo: zero tokens. A IA só entra se o usuário responder pedindo detalhes.
+ */
+function detectProactiveAlerts(ctx: PlatformContext): string | null {
+  const today = new Date().toISOString().split('T')[0];
+
+  const overdue = ctx.tasks.filter(t =>
+    t.status !== 'done' && t.due_date && t.due_date < today
+  );
+  const blocked = ctx.tasks.filter(t => t.status === 'blocked');
+
+  if (overdue.length === 0 && blocked.length === 0) return null;
+
+  const lines: string[] = ['Analisei seus projetos e encontrei pontos de atenção:'];
+
+  if (overdue.length > 0) {
+    lines.push(`\n**${overdue.length} tarefa${overdue.length > 1 ? 's atrasadas' : ' atrasada'}:**`);
+    overdue.slice(0, 3).forEach(t => {
+      const days = Math.floor(
+        (new Date(today).getTime() - new Date(t.due_date + 'T12:00:00').getTime()) / 86400000
+      );
+      lines.push(`• "${t.title}" — ${days} dia${days > 1 ? 's' : ''} em atraso${t.workstream ? ` (${t.workstream.replace('_', ' ')})` : ''}`);
+    });
+    if (overdue.length > 3) lines.push(`• ...e mais ${overdue.length - 3} tarefa${overdue.length - 3 > 1 ? 's' : ''}`);
+  }
+
+  if (blocked.length > 0) {
+    lines.push(`\n**${blocked.length} tarefa${blocked.length > 1 ? 's bloqueadas' : ' bloqueada'}:**`);
+    blocked.slice(0, 2).forEach(t => {
+      lines.push(`• "${t.title}"${t.workstream ? ` (${t.workstream.replace('_', ' ')})` : ''}`);
+    });
+  }
+
+  lines.push('\nQuer que eu te ajude a resolver alguma dessas situações?');
+  return lines.join('\n');
+}
+
 export default function PlanningCopilot() {
   const { organizationId, user } = useAuth();
 
@@ -591,6 +630,7 @@ export default function PlanningCopilot() {
   const isCreatingProjectRef = useRef(false);
 
   // Carregar contexto da plataforma ao montar — sem bloquear o UI com chamada de IA
+  // P3: após carregar, detectar alertas proativos via regras (zero tokens)
   useEffect(() => {
     const init = async () => {
       setContextLoading(true);
@@ -598,6 +638,12 @@ export default function PlanningCopilot() {
       setPlatformContext(ctx);
       setContextLoading(false);
       conversationHistory.current = [];
+
+      // Injetar alerta proativo se houver tarefas atrasadas ou bloqueadas
+      const alert = detectProactiveAlerts(ctx);
+      if (alert) {
+        setMessages(prev => [...prev, { role: 'assistant', content: alert }]);
+      }
     };
     init();
   }, [organizationId]);
