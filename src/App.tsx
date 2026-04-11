@@ -16,6 +16,7 @@ const Schedule = React.lazy(() => import('./components/SimpleComponents').then(m
 const WhatsAppManager = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.WhatsAppManager })));
 const GoogleIntegration = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.GoogleIntegration })));
 const MeetingsManager = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.MeetingsManager })));
+const SectorTaskView = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.SectorTaskView })));
 const MarketingManager = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.MarketingManager })));
 const ProductionManager = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.ProductionManager })));
 const PreProductionManager = React.lazy(() => import('./components/SimpleComponents').then(m => ({ default: m.PreProductionManager })));
@@ -876,9 +877,10 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
     if (activeTab === 'google') return <GoogleIntegration />;
     if (activeTab === 'meetings') return <MeetingsManager project={selectedProject} />;
-    if (activeTab === 'marketing') return <MarketingManager project={selectedProject} />;
-    if (activeTab === 'production') return <ProductionManager project={selectedProject} />;
-    if (activeTab === 'preproduction') return <PreProductionManager project={selectedProject} />;
+    // Telas de setor = views filtradas do TaskBoard por workstream (sem dados próprios)
+    if (activeTab === 'marketing') return <SectorTaskView workstream="marketing" />;
+    if (activeTab === 'production') return <SectorTaskView workstream="producao_musical" />;
+    if (activeTab === 'preproduction') return <SectorTaskView workstream="producao_musical" />;
     if (activeTab === 'ai') return (
       <ComingSoon
         title="IA Insights"
@@ -958,7 +960,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     }
     if (activeTab === 'shows') return <ShowsManager />;
     if (activeTab === 'releases') return <ReleasesManager />;
-    if (activeTab === 'music') return <MusicHub />;
+    if (activeTab === 'music') return <SectorTaskView workstream="producao_musical" />;
 
     return null;
   };
@@ -1085,7 +1087,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
         <Route path="/producao-musical" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
-            <MusicProduction />
+            <SectorTaskView workstream="producao_musical" />
           </React.Suspense>
         } />
 

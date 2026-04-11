@@ -1,9 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen, Guitar, Mic2, Package, DollarSign, Compass, Rocket, LayoutGrid } from 'lucide-react';
 import AIMarketingAssistant from './AIMarketingAssistant';
 import InviteManager from './InviteManager';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+
+// Lazy import do TaskBoard para evitar circular dependency
+const TaskBoard = lazy(() => import('./TaskBoard'));
+
+// ============================================================
+// SectorTaskView — View filtrada do TaskBoard por workstream
+// Regra de negócio: as telas de setor NÃO têm dados próprios.
+// São views filtradas do TaskBoard pela chave workstream.
+// ============================================================
+const SECTOR_META: Record<string, { label: string; description: string; icon: React.ComponentType<any>; color: string }> = {
+  producao_musical: { label: 'Produção Musical', description: 'Gravação, mixagem, masterização, arranjo e estúdio', icon: Guitar, color: 'text-purple-600' },
+  conteudo:         { label: 'Conteúdo',          description: 'Vídeo, foto, clipe, arte, design e redes sociais',   icon: Video,   color: 'text-blue-600' },
+  marketing:        { label: 'Marketing',          description: 'Divulgação, press release, ads e imprensa',          icon: Megaphone, color: 'text-pink-600' },
+  shows:            { label: 'Shows',              description: 'Booking, rider técnico, contratos e apresentações',  icon: Mic2,    color: 'text-green-600' },
+  logistica:        { label: 'Logística',          description: 'Transporte, hospedagem, equipamentos e estrutura',   icon: Package, color: 'text-orange-600' },
+  estrategia:       { label: 'Estratégia',         description: 'Posicionamento, parcerias e planejamento',           icon: Compass, color: 'text-indigo-600' },
+  financeiro:       { label: 'Financeiro',         description: 'Orçamento, pagamentos, contratos e cachê',          icon: DollarSign, color: 'text-emerald-600' },
+  lancamento:       { label: 'Lançamento',         description: 'Distribuição digital, playlists e pitching',        icon: Rocket,  color: 'text-red-600' },
+  geral:            { label: 'Geral',              description: 'Tarefas diversas sem categorização específica',      icon: LayoutGrid, color: 'text-gray-600' },
+};
+
+export const SectorTaskView = ({ workstream }: { workstream: string }) => {
+  const meta = SECTOR_META[workstream] || SECTOR_META.geral;
+  const Icon = meta.icon;
+  return (
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Header do setor */}
+      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+            <Icon className={`w-5 h-5 ${meta.color}`} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{meta.label}</h1>
+            <p className="text-sm text-gray-500">{meta.description}</p>
+          </div>
+        </div>
+      </div>
+      {/* TaskBoard filtrado pelo workstream deste setor */}
+      <div className="flex-1 overflow-hidden">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          </div>
+        }>
+          <TaskBoard defaultWorkstream={workstream} defaultView="departments" />
+        </Suspense>
+      </div>
+    </div>
+  );
+};
 
 // ============================================================
 // WhatsApp Manager - Gerenciamento de contatos e comunicação

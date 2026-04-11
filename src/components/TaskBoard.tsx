@@ -45,6 +45,8 @@ interface TaskBoardProps {
   availableProjects?: AvailableProject[];
   onTasksChange?: (tasks: Task[]) => void;
   defaultView?: 'kanban' | 'departments';
+  /** Pré-seleciona um workstream e abre na view de departamentos */
+  defaultWorkstream?: string;
 }
 
 const TaskBoard: React.FC<TaskBoardProps> = ({
@@ -53,7 +55,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   project,
   availableProjects = [],
   onTasksChange,
-  defaultView = 'kanban'
+  defaultView = 'kanban',
+  defaultWorkstream
 }) => {
   const { organizationId } = useAuth();
   const { limits: planLimits } = useSubscription(organizationId || undefined);
@@ -63,9 +66,12 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [filterWorkstream, setFilterWorkstream] = useState<string>('all');
+  // Se defaultWorkstream vier, pré-filtra e abre na view de departamentos
+  const [filterWorkstream, setFilterWorkstream] = useState<string>(defaultWorkstream || 'all');
   const [filterProjectId, setFilterProjectId] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'kanban' | 'departments'>(defaultView);
+  const [viewMode, setViewMode] = useState<'kanban' | 'departments'>(
+    defaultWorkstream ? 'departments' : defaultView
+  );
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [taskLimitModal, setTaskLimitModal] = useState(false);
 
