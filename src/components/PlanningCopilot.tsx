@@ -563,6 +563,13 @@ export default function PlanningCopilot() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [readyToCreate, setReadyToCreate] = useState(false);
+  // Conflito de nome de artista — exige decisão explícita do usuário antes de continuar
+  const [artistConflict, setArtistConflict] = useState<{
+    name: string;
+    genre: string;
+    matches: Array<{ id: string; name: string; status: string; genre?: string }>;
+    pendingProjectResponse?: string; // resposta da IA a re-processar após resolução
+  } | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -733,12 +740,25 @@ export default function PlanningCopilot() {
     }
   };
 
-  // Criar artista real no Supabase
-  const createArtistInSupabase = async (name: string, genre: string): Promise<boolean> => {
+  /**
+   * Cria artista no Supabase com detecção de conflito de nome.
+   * Regra de negócio: nome não é chave única — múltiplos artistas com o mesmo nome são permitidos,
+   * mas o usuário deve decidir explicitamente quando há homônimos (ativos ou arquivados).
+   *
+   * @param pendingProjectResponse - resposta da IA a re-processar após resolução do conflito
+   * Returns:
+   *   { status: 'created'; id }        → artista criado, pode continuar
+   *   { status: 'conflict' }           → conflito detectado, setArtistConflict foi chamado, aguardar decisão
+   *   { status: 'error' }              → erro técnico
+   */
+  const createArtistInSupabase = async (
+    name: string,
+    genre: string,
+    pendingProjectResponse?: string
+  ): Promise<{ status: 'created'; id: string } | { status: 'conflict' } | { status: 'error' }> => {
     try {
       const resolvedOrgId = await resolveOrgId();
       if (!resolvedOrgId) {
-        // Importar Sentry para diagnóstico real em produção
         import('../lib/sentry').then(({ captureError }) =>
           captureError(new Error('createArtistInSupabase: resolveOrgId retornou null'), {
             artistName: name,
@@ -747,47 +767,89 @@ export default function PlanningCopilot() {
         );
         console.error('[createArtistInSupabase] resolveOrgId falhou — organizationId contexto:', organizationId);
         toast.error('Organização não encontrada. Verifique sua conexão e recarregue a página.');
-        return false;
+        return { status: 'error' };
       }
 
-      // Verificar se já existe artista com mesmo nome (ativo ou arquivado)
+      // Buscar TODOS os artistas com esse nome (sem limit — precisamos de todos para detectar múltiplos)
       const { data: existing } = await supabase
         .from('artists')
-        .select('id, name, status')
+        .select('id, name, status, genre')
         .eq('organization_id', resolvedOrgId)
-        .ilike('name', name.trim())
-        .limit(1);
+        .ilike('name', name.trim());
 
       if (existing && existing.length > 0) {
-        const found = existing[0];
-        if (found.status === 'archived') {
-          // Artista arquivado com mesmo nome: perguntar ao usuário
-          const reactivate = window.confirm(
-            `Existe um artista arquivado chamado "${found.name}".\n\nDeseja reativar esse artista, ou criar um novo artista independente?` +
-            `\n\nOK = Reativar artista existente\nCancelar = Criar novo artista`
-          );
-          if (reactivate) {
-            await supabase.from('artists').update({ status: 'active' }).eq('id', found.id);
-            return true;
-          }
-          // Caso contrário, prossegue criando um novo (abaixo)
-        } else {
-          // Artista ativo com mesmo nome: avisar sem criar duplicata
-          toast.warning(`Já existe um artista ativo chamado "${found.name}". Use-o ou escolha outro nome.`);
-          return false;
-        }
+        // Há homônimos — exigir decisão explícita. NUNCA resolver silenciosamente.
+        console.info(`[createArtistInSupabase] Conflito de nome: ${existing.length} artista(s) com "${name}"`, existing.map(a => `${a.name} (${a.status})`));
+        setArtistConflict({ name, genre, matches: existing, pendingProjectResponse });
+        return { status: 'conflict' };
       }
 
-      const { error } = await supabase.from('artists').insert({
-        name,
-        genre: genre || null,
-        organization_id: resolvedOrgId,
-      });
+      // Sem conflito — criar normalmente
+      const { data: newArtist, error } = await supabase
+        .from('artists')
+        .insert({ name, genre: genre || null, organization_id: resolvedOrgId })
+        .select('id')
+        .single();
       if (error) throw error;
-      return true;
+      return { status: 'created', id: newArtist.id };
     } catch (err) {
       console.error('Erro ao criar artista:', err);
-      return false;
+      return { status: 'error' };
+    }
+  };
+
+  /**
+   * Resolve conflito de nome de artista com a escolha explícita do usuário.
+   * Após resolução, continua o fluxo pendente (ex: criação de projeto).
+   */
+  const handleArtistConflictResolution = async (
+    choice: 'reactivate' | 'use_existing' | 'create_new',
+    chosenArtistId?: string
+  ) => {
+    if (!artistConflict) return;
+    const { name, genre, pendingProjectResponse } = artistConflict;
+    setArtistConflict(null);
+    setIsLoading(true);
+    try {
+      if (choice === 'reactivate' && chosenArtistId) {
+        const { error } = await supabase.from('artists').update({ status: 'active' }).eq('id', chosenArtistId);
+        if (error) throw error;
+        toast.success(`Artista "${name}" reativado!`);
+      } else if (choice === 'use_existing' && chosenArtistId) {
+        toast.success(`Usando artista "${name}" existente.`);
+      } else if (choice === 'create_new') {
+        const orgId = await resolveOrgId();
+        const { error } = await supabase
+          .from('artists')
+          .insert({ name, genre: genre || null, organization_id: orgId });
+        if (error) throw error;
+        toast.success(`Novo artista "${name}" criado!`);
+      }
+
+      // Recarregar contexto com o artista atualizado
+      const orgId = await resolveOrgId();
+      const freshCtx = await loadPlatformContext(orgId);
+      setPlatformContext(freshCtx);
+
+      const actionLabel = choice === 'reactivate' ? 'reativado' : choice === 'use_existing' ? 'selecionado' : 'criado';
+      const confirmMsg: Message = {
+        role: 'assistant',
+        content: `✅ Artista **${name}** ${actionLabel}!${pendingProjectResponse
+          ? '\n\nContinuando com a criação do projeto...'
+          : `\n\nMe descreva o projeto que quer criar para ${name}.`}`
+      };
+      setMessages(prev => [...prev, confirmMsg]);
+
+      // Continuar fluxo pendente (ex: [CRIAR_PROJETO] que estava junto ao [CRIAR_ARTISTA])
+      if (pendingProjectResponse) {
+        const projectMsg = await processAIResponse(pendingProjectResponse);
+        setMessages(prev => [...prev, projectMsg]);
+      }
+    } catch (err) {
+      console.error('[handleArtistConflictResolution] erro:', err);
+      toast.error('Erro ao processar decisão. Tente novamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -802,24 +864,31 @@ export default function PlanningCopilot() {
         const artistGenre = artistData.genre || '';
 
         if (artistName) {
-          const success = await createArtistInSupabase(artistName, artistGenre);
+          // Calcular o restante da resposta sem a tag do artista
+          // (pode conter [CRIAR_PROJETO] que deve ser processado depois)
+          const responseRemainder = aiResponse.replace(/\[CRIAR_ARTISTA\][\s\S]*?\[\/CRIAR_ARTISTA\]/, '').trim();
 
-          if (success) {
+          const result = await createArtistInSupabase(artistName, artistGenre, responseRemainder || undefined);
+
+          if (result.status === 'conflict') {
+            // setArtistConflict já foi chamado dentro de createArtistInSupabase
+            // UI de resolução será exibida — retornar mensagem explicativa
+            return {
+              role: 'assistant' as const,
+              content: `Encontrei artistas com o nome **"${artistName}"** já cadastrados. Escolha uma das opções abaixo para continuar.`
+            };
+          }
+
+          if (result.status === 'created') {
             toast.success(`Artista "${artistName}" criado com sucesso!`);
             const resolvedForCtx = await resolveOrgId();
 
             // Se a resposta também contém [CRIAR_PROJETO], executar em sequência
-            // sem interromper o fluxo para pedir confirmação ao usuário
             const hasProjectTag = /\[CRIAR_PROJETO\]/.test(aiResponse);
             if (hasProjectTag) {
-              // Recarregar contexto aguardando para que o artista recém-criado esteja disponível
               const freshCtx = await loadPlatformContext(resolvedForCtx);
               setPlatformContext(freshCtx);
-              // Processar o restante da resposta (CRIAR_PROJETO) com contexto atualizado
-              // O campo artist_name no JSON será resolvido via lookup no banco (artista acabou de ser criado)
-              return processAIResponse(
-                aiResponse.replace(/\[CRIAR_ARTISTA\][\s\S]*?\[\/CRIAR_ARTISTA\]/, '').trim()
-              );
+              return processAIResponse(responseRemainder);
             }
 
             loadPlatformContext(resolvedForCtx).then(ctx => setPlatformContext(ctx));
@@ -827,12 +896,13 @@ export default function PlanningCopilot() {
               role: 'assistant' as const,
               content: `✅ Artista **${artistName}**${artistGenre ? ` (${artistGenre})` : ''} criado!\n\nAgora me descreva o projeto que quer criar para ${artistName}.`
             };
-          } else {
-            return {
-              role: 'assistant' as const,
-              content: `❌ Não consegui criar o artista **${artistName}**. Você pode criá-lo pelo menu **Artistas** e voltar aqui para estruturar o projeto.`
-            };
           }
+
+          // status === 'error'
+          return {
+            role: 'assistant' as const,
+            content: `❌ Não consegui criar o artista **${artistName}**. Você pode criá-lo pelo menu **Artistas** e voltar aqui para estruturar o projeto.`
+          };
         }
       } catch (e) {
         console.error('Erro ao parsear [CRIAR_ARTISTA]:', e);
@@ -1051,23 +1121,50 @@ export default function PlanningCopilot() {
           const artistNameNormalized = projectData.artist_name.trim();
           console.info(`[Copilot] Buscando artista no banco: "${artistNameNormalized}" | org: ${resolvedOrgId}`);
 
-          const { data: artistRow, error: artistLookupErr } = await supabase
+          // Buscar todos os artistas com esse nome — sem filtrar status ainda
+          // para poder detectar conflitos (arquivado, múltiplos ativos, etc.)
+          const { data: artistMatches, error: artistLookupErr } = await supabase
             .from('artists')
-            .select('id, name')
+            .select('id, name, status, genre')
             .eq('organization_id', resolvedOrgId)
             .ilike('name', artistNameNormalized)
-            .limit(1)
-            .maybeSingle();
+            .limit(10);
 
           if (artistLookupErr) {
             console.error('[Copilot] Erro ao buscar artista:', artistLookupErr.message);
           }
 
-          if (artistRow?.id) {
-            resolvedArtistId = artistRow.id;
-            console.info(`[Copilot] artist_id resolvido: ${resolvedArtistId} ("${artistRow.name}")`);
+          const activeMatches = artistMatches?.filter(a => a.status === 'active') || [];
+          const archivedMatches = artistMatches?.filter(a => a.status !== 'active') || [];
+
+          if (activeMatches.length === 1) {
+            // Caso limpo: exatamente um ativo com esse nome
+            resolvedArtistId = activeMatches[0].id;
+            console.info(`[Copilot] artist_id resolvido: ${resolvedArtistId} ("${activeMatches[0].name}")`);
+          } else if (activeMatches.length > 1) {
+            // Múltiplos ativos com o mesmo nome — exigir decisão do usuário
+            console.warn(`[Copilot] Múltiplos ativos com nome "${artistNameNormalized}":`, activeMatches.map(a => a.id));
+            setArtistConflict({ name: artistNameNormalized, genre: '', matches: activeMatches });
+            return {
+              role: 'assistant' as const,
+              content: `Encontrei **${activeMatches.length} artistas ativos** com o nome "${artistNameNormalized}". Escolha qual usar para este projeto:`
+            };
+          } else if (archivedMatches.length > 0) {
+            // Só arquivados encontrados — nunca vincular sem confirmação
+            console.warn(`[Copilot] Artista "${artistNameNormalized}" só existe arquivado:`, archivedMatches.map(a => a.id));
+            setArtistConflict({
+              name: artistNameNormalized,
+              genre: '',
+              matches: archivedMatches,
+              // Não há pendingProjectResponse aqui — o projeto já está sendo criado neste contexto
+              // e não há como re-processá-lo via tag. O usuário precisará tentar novamente após reativar.
+            });
+            return {
+              role: 'assistant' as const,
+              content: `O artista **"${artistNameNormalized}"** está arquivado. Reative-o ou crie um novo antes de criar o projeto:`
+            };
           } else {
-            // Artista informado mas não encontrado no banco — bloquear criação
+            // Não encontrado de nenhuma forma
             console.error(`[Copilot] Artista "${artistNameNormalized}" não encontrado no banco para org ${resolvedOrgId}`);
             toast.error(`Artista "${artistNameNormalized}" não encontrado na plataforma. Crie o artista primeiro e tente novamente.`);
             return {
@@ -1330,6 +1427,63 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
             >
               Confirmar e Criar
             </button>
+          </div>
+        )}
+        {artistConflict && (
+          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-amber-800">
+                Artistas com o nome &ldquo;{artistConflict.name}&rdquo; já existem
+              </span>
+            </div>
+            <div className="space-y-1.5 mb-2">
+              {artistConflict.matches.map((artist) => (
+                <div key={artist.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-100">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${artist.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <span className="text-sm font-medium text-gray-800 truncate">{artist.name}</span>
+                    {artist.genre && <span className="text-xs text-gray-400 truncate">({artist.genre})</span>}
+                    <span className={`text-xs font-bold flex-shrink-0 ${artist.status === 'active' ? 'text-green-600' : 'text-gray-400'}`}>
+                      {artist.status === 'active' ? 'Ativo' : 'Arquivado'}
+                    </span>
+                  </div>
+                  {artist.status === 'active' ? (
+                    <button
+                      onClick={() => handleArtistConflictResolution('use_existing', artist.id)}
+                      disabled={isLoading}
+                      className="ml-2 px-3 py-1 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex-shrink-0"
+                    >
+                      Usar este
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleArtistConflictResolution('reactivate', artist.id)}
+                      disabled={isLoading}
+                      className="ml-2 px-3 py-1 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 flex-shrink-0"
+                    >
+                      Reativar
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleArtistConflictResolution('create_new')}
+                disabled={isLoading}
+                className="flex-1 py-1.5 text-xs font-medium text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+              >
+                + Criar novo artista com o nome &ldquo;{artistConflict.name}&rdquo;
+              </button>
+              <button
+                onClick={() => setArtistConflict(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                title="Cancelar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
         {isRecording && (
