@@ -25,24 +25,173 @@ const SECTOR_META: Record<string, { label: string; description: string; icon: Re
   geral:            { label: 'Geral',              description: 'Tarefas diversas sem categorização específica',      icon: LayoutGrid, color: 'text-gray-600' },
 };
 
+interface SectorStats {
+  total: number;
+  todo: number;
+  in_progress: number;
+  done: number;
+  overdue: number;
+  nextStep: { title: string; project: string; due_date: string | null } | null;
+}
+
 export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const meta = SECTOR_META[workstream] || SECTOR_META.geral;
   const Icon = meta.icon;
+  const [stats, setStats] = useState<SectorStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      setStatsLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Buscar todas as tarefas do setor com dados do projeto
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id, title, status, due_date, project_id, projects(name)')
+          .eq('workstream', workstream)
+          .order('due_date', { ascending: true, nullsFirst: false });
+
+        if (!tasks) { setStatsLoading(false); return; }
+
+        const s: SectorStats = {
+          total: tasks.length,
+          todo: tasks.filter(t => t.status === 'todo').length,
+          in_progress: tasks.filter(t => t.status === 'in_progress').length,
+          done: tasks.filter(t => t.status === 'done').length,
+          overdue: tasks.filter(t =>
+            t.status !== 'done' && t.due_date && t.due_date < today
+          ).length,
+          nextStep: null,
+        };
+
+        // Próximo passo: tarefa pendente mais urgente (menor prazo, ou sem prazo por último)
+        const pending = tasks.filter(t => t.status !== 'done');
+        if (pending.length > 0) {
+          const next = pending[0];
+          s.nextStep = {
+            title: next.title,
+            project: (next.projects as any)?.name || 'Sem projeto',
+            due_date: next.due_date,
+          };
+        }
+
+        setStats(s);
+      } catch (e) {
+        console.error('[SectorTaskView] erro ao carregar stats:', e);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    loadStats();
+
+    // Recarregar quando TaskBoard atualizar tarefas
+    const handler = () => loadStats();
+    window.addEventListener('taskmaster:task-updated', handler);
+    return () => window.removeEventListener('taskmaster:task-updated', handler);
+  }, [workstream]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const progress = stats && stats.total > 0
+    ? Math.round((stats.done / stats.total) * 100)
+    : 0;
+
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Header do setor */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+    <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
+
+      {/* Header + Stats Panel */}
+      <div className="bg-white border-b border-gray-100 flex-shrink-0">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
             <Icon className={`w-5 h-5 ${meta.color}`} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{meta.label}</h1>
-            <p className="text-sm text-gray-500">{meta.description}</p>
+            <p className="text-sm text-gray-500 truncate">{meta.description}</p>
           </div>
+          {stats && stats.total > 0 && (
+            <div className="text-right flex-shrink-0">
+              <div className="text-2xl font-bold text-gray-900">{progress}%</div>
+              <div className="text-xs text-gray-400">concluído</div>
+            </div>
+          )}
         </div>
+
+        {/* Barra de progresso */}
+        {stats && stats.total > 0 && (
+          <div className="px-6 pb-1">
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stats cards */}
+        <div className="px-6 py-3">
+          {statsLoading ? (
+            <div className="flex gap-2">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="flex-1 h-14 bg-gray-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : stats && stats.total > 0 ? (
+            <div className="flex gap-2">
+              <div className="flex-1 bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100">
+                <div className="text-lg font-bold text-gray-700">{stats.todo}</div>
+                <div className="text-[10px] text-gray-400 font-medium uppercase">Pendente</div>
+              </div>
+              <div className="flex-1 bg-blue-50 rounded-xl p-2.5 text-center border border-blue-100">
+                <div className="text-lg font-bold text-blue-600">{stats.in_progress}</div>
+                <div className="text-[10px] text-blue-400 font-medium uppercase">Em andamento</div>
+              </div>
+              <div className="flex-1 bg-green-50 rounded-xl p-2.5 text-center border border-green-100">
+                <div className="text-lg font-bold text-green-600">{stats.done}</div>
+                <div className="text-[10px] text-green-400 font-medium uppercase">Concluído</div>
+              </div>
+              {stats.overdue > 0 && (
+                <div className="flex-1 bg-red-50 rounded-xl p-2.5 text-center border border-red-100">
+                  <div className="text-lg font-bold text-red-600">{stats.overdue}</div>
+                  <div className="text-[10px] text-red-400 font-medium uppercase">Atrasado</div>
+                </div>
+              )}
+            </div>
+          ) : !statsLoading && (
+            <p className="text-sm text-gray-400 text-center py-2">Nenhuma tarefa neste setor ainda.</p>
+          )}
+        </div>
+
+        {/* Próximo passo */}
+        {stats?.nextStep && (
+          <div className="mx-6 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+            <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-[10px] font-bold">→</span>
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-0.5">Próximo passo</div>
+              <div className="text-sm font-semibold text-gray-800 truncate">{stats.nextStep.title}</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                <span className="truncate">{stats.nextStep.project}</span>
+                {stats.nextStep.due_date && (
+                  <>
+                    <span>·</span>
+                    <span className={stats.nextStep.due_date < today ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                      {stats.nextStep.due_date < today ? '⚠ ' : ''}{new Date(stats.nextStep.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      {/* TaskBoard filtrado pelo workstream deste setor */}
+
+      {/* TaskBoard filtrado — ocupa o restante da tela */}
       <div className="flex-1 overflow-hidden">
         <Suspense fallback={
           <div className="flex items-center justify-center h-full">
