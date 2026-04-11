@@ -941,16 +941,43 @@ export default function PlanningCopilot() {
           });
         }
 
-        // Resolver artist_id a partir do nome confirmado na conversa
+        // Resolver artist_id via query direta no banco — não depende de platformContext
+        // Garante vínculo mesmo quando contexto ainda não foi atualizado após criação do artista
         let resolvedArtistId: string | null = null;
-        if (projectData.artist_name && platformContext?.artists) {
-          const matched = platformContext.artists.find((a: any) =>
-            (a.name || a.stage_name || '').toLowerCase().trim() === projectData.artist_name.toLowerCase().trim()
-          );
-          if (matched) resolvedArtistId = matched.id;
+        if (projectData.artist_name) {
+          const artistNameNormalized = projectData.artist_name.trim();
+          console.info(`[Copilot] Buscando artista no banco: "${artistNameNormalized}" | org: ${resolvedOrgId}`);
+
+          const { data: artistRow, error: artistLookupErr } = await supabase
+            .from('artists')
+            .select('id, name')
+            .eq('organization_id', resolvedOrgId)
+            .ilike('name', artistNameNormalized)
+            .limit(1)
+            .maybeSingle();
+
+          if (artistLookupErr) {
+            console.error('[Copilot] Erro ao buscar artista:', artistLookupErr.message);
+          }
+
+          if (artistRow?.id) {
+            resolvedArtistId = artistRow.id;
+            console.info(`[Copilot] artist_id resolvido: ${resolvedArtistId} ("${artistRow.name}")`);
+          } else {
+            // Artista informado mas não encontrado no banco — bloquear criação
+            console.error(`[Copilot] Artista "${artistNameNormalized}" não encontrado no banco para org ${resolvedOrgId}`);
+            toast.error(`Artista "${artistNameNormalized}" não encontrado na plataforma. Crie o artista primeiro e tente novamente.`);
+            return {
+              role: 'assistant' as const,
+              content: `❌ Não encontrei o artista **${artistNameNormalized}** na plataforma.\n\nPor favor, crie o artista primeiro (menu **Artistas** ou me peça para criar) e depois retorne para estruturar o projeto.`
+            };
+          }
+        } else {
+          console.info('[Copilot] Nenhum artista associado ao projeto — criando sem artist_id');
         }
 
         // Criar o projeto no Supabase
+        console.info(`[Copilot] Criando projeto "${projectData.name}" | org: ${resolvedOrgId} | artist_id: ${resolvedArtistId ?? 'nenhum'}`);
         const { data: newProject, error: projectError } = await supabase
           .from('projects')
           .insert({
@@ -1010,8 +1037,9 @@ export default function PlanningCopilot() {
           detail: { projectId: newProject.id, projectName: projectData.name }
         }));
 
-        // Recarregar contexto: o novo projeto deve aparecer no contexto da próxima mensagem
-        loadPlatformContext(organizationId).then(ctx => setPlatformContext(ctx));
+        // Recarregar contexto: usar resolvedOrgId (garantido) em vez de organizationId do auth
+        loadPlatformContext(resolvedOrgId).then(ctx => setPlatformContext(ctx));
+        console.info(`[Copilot] Contexto recarregado após criação do projeto | org: ${resolvedOrgId}`);
 
         // Toast com navegação direta para o TaskBoard filtrado pelo projeto
         toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas!`, {
