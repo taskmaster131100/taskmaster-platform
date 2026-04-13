@@ -59,7 +59,6 @@ export default function MainLayout({
       title: 'PRINCIPAL',
       items: [
         { id: 'organization', label: 'Início', icon: Home },
-        { id: 'org-profile', label: 'Organização', icon: TrendingUp, link: '/organization-profile' },
         { id: 'artists', label: 'Artistas', icon: Music, link: '/artists' },
         { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
         { id: 'calendar', label: 'Agenda', icon: Calendar },
@@ -69,13 +68,6 @@ export default function MainLayout({
       title: 'COPILOTO IA',
       items: [
         { id: 'planejamento', label: 'Planejamento IA', icon: Sparkles, link: '/planejamento' },
-        { id: 'marketing', label: 'Marketing', icon: Megaphone, link: '/marketing' },
-      ]
-    },
-    {
-      title: 'PRODUÇÃO MUSICAL',
-      items: [
-        { id: 'music', label: 'Produção Musical', icon: Music, link: '/music' },
       ]
     },
     {
@@ -88,24 +80,6 @@ export default function MainLayout({
       title: 'SHOWS',
       items: [
         { id: 'shows', label: 'Shows', icon: Mic2, link: '/shows' },
-        { id: 'tours', label: 'Turnês', icon: MapPin, link: '/tours' },
-        { id: 'crm', label: 'CRM / Booking', icon: TrendingUp, link: '/crm' },
-      ]
-    },
-    {
-      title: 'ANÁLISE',
-      items: [
-        { id: 'reports', label: 'Relatórios', icon: BarChart3 },
-        { id: 'kpis', label: 'KPIs', icon: TrendingUp },
-        { id: 'ia-texto', label: 'IA de Texto', icon: Sparkles, link: '/ia-texto' },
-      ]
-    },
-    {
-      title: 'ORIENTAÇÃO IA',
-      items: [
-        { id: 'mentor-chat', label: 'Assistente IA', icon: Bot, link: '/mentor-chat' },
-        { id: 'mentor-diagnosis', label: 'Diagnóstico', icon: Brain, link: '/mentor-diagnosis' },
-        { id: 'mentor-consulting', label: 'Consultoria', icon: PhoneCall, link: '/mentor-consulting' },
       ]
     },
     {
@@ -113,14 +87,11 @@ export default function MainLayout({
       items: [
         { id: 'team', label: 'Equipe', icon: UsersRound, link: '/team' },
         { id: 'finance', label: 'Financeiro', icon: DollarSign, link: '/finance' },
-        { id: 'users', label: 'Administração', icon: Shield },
       ]
     },
     {
       title: 'AJUDA',
       items: [
-        { id: 'faq', label: 'Guia de Uso', icon: BookOpen, link: '/docs/manual-usuario' },
-        { id: 'faq-perguntas', label: 'Perguntas Frequentes', icon: BookOpen, link: '/docs/faq' },
         { id: 'profile', label: 'Perfil', icon: User },
       ]
     }

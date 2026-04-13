@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Clock, CheckCircle, AlertCircle,
   Loader2, Edit2, Trash2, X, FileText, User, Briefcase,
-  LayoutGrid, List
+  LayoutGrid, List, ChevronDown, ChevronRight, CheckSquare2, Circle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -27,6 +27,8 @@ interface Task {
   assignee_id?: string;
   labels?: string[];
   order_index?: number;
+  parent_task_id?: string | null;
+  phase?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -78,6 +80,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   // Filtro por artista (modo global)
   const [filterArtistId, setFilterArtistId] = useState<string>('');
   const [artists, setArtists] = useState<{ id: string; name: string }[]>([]);
+  // Sub-tarefas: set de IDs de tarefas pai expandidas
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   // Mapa project_id → artist_id, construído uma vez no mount (modo global)
   const [projectArtistMap, setProjectArtistMap] = useState<Map<string, string>>(new Map());
   // Mapa project_id → project name, construído da query (não depende do prop availableProjects)
@@ -251,10 +255,20 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         .map(([pid]) => pid)
     : [];
 
+  // Mapa: parent_task_id → sub-tarefas
+  const subTaskMap = new Map<string, Task[]>();
+  tasks.forEach(t => {
+    if (t.parent_task_id) {
+      const list = subTaskMap.get(t.parent_task_id) || [];
+      list.push(t);
+      subTaskMap.set(t.parent_task_id, list);
+    }
+  });
+
   const getTasksByStatus = (status: string) => {
-    let filtered = tasks.filter(task => task.status === status);
+    // Mostrar apenas tarefas pai (sem parent_task_id)
+    let filtered = tasks.filter(task => task.status === status && !task.parent_task_id);
     // Filtro por artista: só aplica se existirem projetos vinculados ao artista
-    // Se não houver projetos vinculados, exibe todas as tarefas (com banner explicativo)
     if (filterArtistId && artistProjectIds.length > 0) {
       filtered = filtered.filter(task =>
         task.project_id != null && artistProjectIds.includes(task.project_id)
@@ -544,6 +558,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       {/* ── Visão Por Área ─────────────────────────────────────────────────── */}
       {viewMode === 'departments' && (() => {
         const allFiltered = tasks.filter(t => {
+          if (t.parent_task_id) return false;
           if (filterArtistId && !(t.project_id && projectArtistMap.get(t.project_id) === filterArtistId)) return false;
           if (filterWorkstream !== 'all' && t.workstream !== filterWorkstream) return false;
           return true;
@@ -742,6 +757,49 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                       </span>
                                     )}
                                   </div>
+
+                                  {/* Sub-tarefas expandíveis */}
+                                  {(() => {
+                                    const subs = subTaskMap.get(task.id) || [];
+                                    if (subs.length === 0) return null;
+                                    const isExpanded = expandedParents.has(task.id);
+                                    const doneSubs = subs.filter(s => s.status === 'done').length;
+                                    return (
+                                      <div className="mt-2">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedParents(prev => {
+                                              const next = new Set(prev);
+                                              if (next.has(task.id)) next.delete(task.id);
+                                              else next.add(task.id);
+                                              return next;
+                                            });
+                                          }}
+                                          className="flex items-center gap-1.5 w-full text-left text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors"
+                                        >
+                                          {isExpanded ? <ChevronDown className="w-3 h-3 shrink-0" /> : <ChevronRight className="w-3 h-3 shrink-0" />}
+                                          {doneSubs}/{subs.length} sub-tarefas
+                                          <div className="flex-1 h-1 bg-indigo-200 rounded-full ml-1">
+                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${subs.length > 0 ? (doneSubs / subs.length) * 100 : 0}%` }} />
+                                          </div>
+                                        </button>
+                                        {isExpanded && (
+                                          <div className="mt-1 space-y-1 pl-1">
+                                            {subs.map(sub => (
+                                              <div key={sub.id} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
+                                                {sub.status === 'done'
+                                                  ? <CheckSquare2 className="w-3 h-3 text-green-500 shrink-0" />
+                                                  : <Circle className="w-3 h-3 text-gray-300 shrink-0" />
+                                                }
+                                                <span className={`truncate ${sub.status === 'done' ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Rodapé: responsável + indicador de notas */}
                                   <div className="flex items-center justify-between mt-1">
