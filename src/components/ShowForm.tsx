@@ -34,6 +34,11 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
     artist_split: show?.artist_split ?? 80,
     status: show?.status || 'consultado',
     notes: show?.notes || '',
+    load_in_time: show?.load_in_time || '',
+    soundcheck_time: show?.soundcheck_time || '',
+    doors_open_time: show?.doors_open_time || '',
+    contract_url: show?.contract_url || '',
+    payment_terms: show?.payment_terms || '',
   });
 
   useEffect(() => {
@@ -216,8 +221,10 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
                   <input
                     type="number"
                     min="0"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: Number(e.target.value) })}
+                    value={formData.value || ''}
+                    onFocus={(e) => { if (formData.value === 0) e.target.select(); }}
+                    onChange={(e) => setFormData({ ...formData, value: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    placeholder="0,00"
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
                   />
                 </div>
@@ -248,6 +255,76 @@ export default function ShowForm({ show, onClose, onSave, initialArtistName }: S
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
                   </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Cronograma Operacional */}
+            <div className="md:col-span-2 border-t border-gray-100 pt-4">
+              <h4 className="text-sm font-bold text-blue-600 mb-3">Cronograma do Dia</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Load-in</label>
+                  <input
+                    type="time"
+                    value={formData.load_in_time}
+                    onChange={(e) => setFormData({ ...formData, load_in_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Soundcheck</label>
+                  <input
+                    type="time"
+                    value={formData.soundcheck_time}
+                    onChange={(e) => setFormData({ ...formData, soundcheck_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Abertura</label>
+                  <input
+                    type="time"
+                    value={formData.doors_open_time}
+                    onChange={(e) => setFormData({ ...formData, doors_open_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Início Show</label>
+                  <input
+                    type="time"
+                    value={formData.show_time}
+                    onChange={(e) => setFormData({ ...formData, show_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Contrato */}
+            <div className="md:col-span-2 border-t border-gray-100 pt-4">
+              <h4 className="text-sm font-bold text-gray-600 mb-3">Contrato</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">URL do Contrato</label>
+                  <input
+                    type="url"
+                    value={formData.contract_url}
+                    onChange={(e) => setFormData({ ...formData, contract_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                    placeholder="https://drive.google.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Condições de Pagamento</label>
+                  <input
+                    type="text"
+                    value={formData.payment_terms}
+                    onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                    placeholder="Ex: 50% adiantado, 50% no dia"
+                  />
                 </div>
               </div>
             </div>

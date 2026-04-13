@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download, Truck } from 'lucide-react';
+import { Plus, Calendar, MapPin, DollarSign, Filter, Search, Eye, Edit, Trash2, FileText, Download, Truck, CheckCircle2, Clock, Circle, ExternalLink, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import PlanLimitModal from '../components/PlanLimitModal';
@@ -110,6 +111,34 @@ export default function ShowsManager() {
     e.stopPropagation();
     setSelectedShow(show);
     setShowFormModal(true);
+  };
+
+  const STAGE_LABELS: Record<string, string> = {
+    lead: 'Lead', proposal: 'Proposta', contract: 'Contrato',
+    payment: 'Pagamento', executed: 'Realizado', cancelled: 'Cancelado'
+  };
+  const STAGES = ['lead', 'proposal', 'contract', 'payment', 'executed'];
+
+  const handleMarkContractSigned = async (show: Show) => {
+    const { error } = await (supabase as any)
+      .from('shows')
+      .update({ contract_signed_at: new Date().toISOString(), stage: 'contract' })
+      .eq('id', show.id);
+    if (error) { toast.error('Erro ao atualizar contrato.'); return; }
+    toast.success('Contrato marcado como assinado!');
+    loadShows();
+    setSelectedShow({ ...show, contract_signed_at: new Date().toISOString(), stage: 'contract' });
+  };
+
+  const handleAdvanceStage = async (show: Show, newStage: string) => {
+    const { error } = await (supabase as any)
+      .from('shows')
+      .update({ stage: newStage })
+      .eq('id', show.id);
+    if (error) { toast.error('Erro ao avançar etapa.'); return; }
+    toast.success(`Etapa avançada para: ${STAGE_LABELS[newStage] || newStage}`);
+    loadShows();
+    setSelectedShow({ ...show, stage: newStage });
   };
 
   const handleGenerateContract = async (show: Show) => {
@@ -296,18 +325,24 @@ export default function ShowsManager() {
                     )}
                   </div>
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateContract(show);
-                      }}
-                      className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Contrato
-                    </button>
-                  </div>
+                  {/* Pipeline de etapas */}
+                  {show.stage && (
+                    <div className="mt-4 flex items-center gap-1">
+                      {STAGES.map((s, i) => {
+                        const stageIndex = STAGES.indexOf(show.stage || 'lead');
+                        const isDone = i < stageIndex;
+                        const isCurrent = i === stageIndex;
+                        return (
+                          <React.Fragment key={s}>
+                            <div className={`flex-1 h-1.5 rounded-full transition-all ${isDone ? 'bg-green-400' : isCurrent ? 'bg-purple-500' : 'bg-gray-200'}`} />
+                          </React.Fragment>
+                        );
+                      })}
+                      <span className="text-[10px] font-bold text-gray-500 ml-2 shrink-0">
+                        {STAGE_LABELS[show.stage || 'lead']}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
@@ -398,65 +433,164 @@ export default function ShowsManager() {
 
             <div className="max-h-[70vh] overflow-y-auto">
               {activeView === 'details' ? (
-                <div className="p-6 sm:p-8">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600">
-                      <Calendar className="w-8 h-8" />
+                <div className="p-6 sm:p-8 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                      <Calendar className="w-7 h-7" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">{selectedShow.title}</h2>
-                      <p className="text-purple-600 font-medium">{selectedShow.artist_name}</p>
+                      <h2 className="text-xl font-bold text-gray-900">{selectedShow.title}</h2>
+                      <p className="text-purple-600 font-medium text-sm">{selectedShow.artist_name}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <Calendar className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase font-bold">Data</p>
-                          <p className="font-medium">{formatDate(selectedShow.show_date)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <MapPin className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase font-bold">Local</p>
-                          <p className="font-medium">{selectedShow.venue || 'A definir'}, {selectedShow.city}</p>
-                        </div>
+                  {/* Pipeline de etapas */}
+                  {selectedShow.stage && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-3">Pipeline</p>
+                      <div className="flex items-center gap-1">
+                        {STAGES.map((s, i) => {
+                          const stageIndex = STAGES.indexOf(selectedShow.stage || 'lead');
+                          const isDone = i < stageIndex;
+                          const isCurrent = i === stageIndex;
+                          return (
+                            <React.Fragment key={s}>
+                              <button
+                                onClick={() => handleAdvanceStage(selectedShow, s)}
+                                className="flex flex-col items-center flex-1 gap-1 group"
+                                title={`Avançar para ${STAGE_LABELS[s]}`}
+                              >
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isDone ? 'bg-green-400 text-white' : isCurrent ? 'bg-purple-600 text-white ring-2 ring-purple-200' : 'bg-gray-200 text-gray-400 group-hover:bg-gray-300'}`}>
+                                  {isDone ? <CheckCheck className="w-3 h-3" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                                </div>
+                                <span className={`text-[9px] font-bold ${isCurrent ? 'text-purple-600' : isDone ? 'text-green-600' : 'text-gray-400'}`}>{STAGE_LABELS[s]}</span>
+                              </button>
+                              {i < STAGES.length - 1 && (
+                                <div className={`flex-1 h-0.5 mb-4 ${i < stageIndex ? 'bg-green-400' : 'bg-gray-200'}`} />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <DollarSign className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase font-bold">Cachê</p>
-                          <p className="font-medium">{formatCurrency(selectedShow.value || 0, selectedShow.currency)}</p>
-                        </div>
+                  )}
+
+                  {/* Dados principais */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase font-bold">Data</p>
+                        <p className="font-medium text-sm">{formatDate(selectedShow.show_date)}</p>
                       </div>
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <div className={`w-3 h-3 rounded-full ${getStatusBadgeColor(selectedShow.status).split(' ')[0]}`} />
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase font-bold">Status</p>
-                          <p className="font-medium uppercase">{selectedShow.status}</p>
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase font-bold">Local</p>
+                        <p className="font-medium text-sm">{selectedShow.venue || 'A definir'}{selectedShow.city ? `, ${selectedShow.city}` : ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <DollarSign className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase font-bold">Cachê</p>
+                        <p className="font-medium text-sm">{formatCurrency(selectedShow.value || 0, selectedShow.currency)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${getStatusBadgeColor(selectedShow.status).split(' ')[0]}`} />
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase font-bold">Status</p>
+                        <p className="font-medium text-sm capitalize">{selectedShow.status}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+                  {/* Cronograma operacional */}
+                  {(selectedShow.load_in_time || selectedShow.soundcheck_time || selectedShow.doors_open_time || selectedShow.show_time) && (
+                    <div className="bg-blue-50 rounded-xl p-4">
+                      <p className="text-xs font-bold text-blue-700 uppercase mb-3">Cronograma do Dia</p>
+                      <div className="space-y-2">
+                        {selectedShow.load_in_time && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-blue-600 w-16">{selectedShow.load_in_time}</span>
+                            <span className="text-xs text-gray-600">Load-in / Montagem</span>
+                          </div>
+                        )}
+                        {selectedShow.soundcheck_time && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-blue-600 w-16">{selectedShow.soundcheck_time}</span>
+                            <span className="text-xs text-gray-600">Soundcheck</span>
+                          </div>
+                        )}
+                        {selectedShow.doors_open_time && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-blue-600 w-16">{selectedShow.doors_open_time}</span>
+                            <span className="text-xs text-gray-600">Abertura das portas</span>
+                          </div>
+                        )}
+                        {selectedShow.show_time && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-purple-700 w-16">{selectedShow.show_time}</span>
+                            <span className="text-xs font-bold text-gray-700">Show</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contrato */}
+                  <div className={`rounded-xl p-4 border ${selectedShow.contract_signed_at ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className={`w-4 h-4 ${selectedShow.contract_signed_at ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div>
+                          <p className="text-xs font-bold text-gray-500 uppercase">Contrato</p>
+                          <p className={`text-sm font-medium ${selectedShow.contract_signed_at ? 'text-green-700' : 'text-gray-600'}`}>
+                            {selectedShow.contract_signed_at
+                              ? `Assinado em ${new Date(selectedShow.contract_signed_at).toLocaleDateString('pt-BR')}`
+                              : 'Aguardando assinatura'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {selectedShow.contract_url && (
+                          <a href={selectedShow.contract_url} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-lg">
+                            <ExternalLink className="w-3 h-3" /> Ver
+                          </a>
+                        )}
+                        {!selectedShow.contract_signed_at && (
+                          <button
+                            onClick={() => handleMarkContractSigned(selectedShow)}
+                            className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition-all"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Marcar assinado
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {selectedShow.payment_terms && (
+                      <p className="text-xs text-gray-500 mt-2"><span className="font-semibold">Condições:</span> {selectedShow.payment_terms}</p>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100">
                     <button
                       onClick={() => handleGenerateContract(selectedShow)}
-                      className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-200 transition-all"
+                      className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 flex items-center justify-center gap-2 font-bold shadow-sm shadow-purple-200 transition-all"
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-4 h-4" />
                       Gerar Contrato PDF
                     </button>
                     <button
                       onClick={() => setActiveView('roadmap')}
                       className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 font-bold transition-all"
                     >
-                      <Truck className="w-5 h-5 text-purple-600" />
+                      <Truck className="w-4 h-4 text-purple-600" />
                       Ver Roteiro
                     </button>
                   </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen, Guitar, Mic2, Package, DollarSign, Compass, Rocket, LayoutGrid, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { MessageSquare, Calendar, Users, Megaphone, Video, Music, TrendingUp, BarChart, Map, FileText, Info, User, Settings, Plus, Clock, CheckCircle, AlertCircle, ExternalLink, Loader2, Lightbulb, Target, Eye, Zap, Shield, BookOpen, Guitar, Mic2, Package, DollarSign, Compass, Rocket, LayoutGrid, ChevronDown, ChevronRight, Layers, Filter, X } from 'lucide-react';
 import AIMarketingAssistant from './AIMarketingAssistant';
 import InviteManager from './InviteManager';
 import { supabase } from '../lib/supabase';
@@ -43,6 +43,8 @@ interface ParentTask {
   due_date: string | null;
   project_id: string | null;
   project_name: string | null;
+  subTotal?: number;
+  subDone?: number;
 }
 
 interface SubTask {
@@ -197,6 +199,7 @@ const ParentTaskCard = ({
     }
 
     window.dispatchEvent(new CustomEvent('taskmaster:task-updated'));
+    // Recarregar para atualizar os counts no card colapsado (subTotal/subDone)
     onStatusChange();
   };
 
@@ -263,7 +266,7 @@ const ParentTaskCard = ({
             )}
           </div>
           <div className="text-sm font-semibold text-gray-800 truncate">{task.title}</div>
-          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
             {task.project_name && <span className="truncate">{task.project_name}</span>}
             {task.due_date && (
               <>
@@ -271,6 +274,21 @@ const ParentTaskCard = ({
                 <span className={task.due_date < today && task.status !== 'done' ? 'text-red-500' : ''}>
                   {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                 </span>
+              </>
+            )}
+            {/* Indicador de progresso de sub-tarefas (quando já geradas) */}
+            {task.subTotal != null && task.subTotal > 0 && (
+              <>
+                <span>·</span>
+                <span className={task.subDone === task.subTotal ? 'text-green-500 font-medium' : 'text-gray-400'}>
+                  {task.subDone}/{task.subTotal} etapas
+                </span>
+                <div className="w-12 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${task.subDone === task.subTotal ? 'bg-green-400' : 'bg-indigo-400'}`}
+                    style={{ width: `${Math.round(((task.subDone || 0) / task.subTotal) * 100)}%` }}
+                  />
+                </div>
               </>
             )}
           </div>
@@ -418,6 +436,7 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
   const [newTaskProjectId, setNewTaskProjectId] = useState('');
   const [activeProjects, setActiveProjects] = useState<{ id: string; name: string }[]>([]);
   const [adding, setAdding] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
   const today = new Date().toISOString().split('T')[0];
   const phases = getPhasesForWorkstream(workstream);
@@ -441,6 +460,31 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
         project_id: t.project_id,
         project_name: t.projects?.name || null,
       }));
+
+      // Buscar contagem de sub-tarefas em lote (1 query para todos os pais)
+      if (mapped.length > 0) {
+        const parentIds = mapped.map(t => t.id);
+        const { data: subCounts } = await supabase
+          .from('tasks')
+          .select('parent_task_id, status')
+          .in('parent_task_id', parentIds);
+
+        if (subCounts && subCounts.length > 0) {
+          const countMap: Record<string, { total: number; done: number }> = {};
+          subCounts.forEach((s: any) => {
+            if (!countMap[s.parent_task_id]) countMap[s.parent_task_id] = { total: 0, done: 0 };
+            countMap[s.parent_task_id].total++;
+            if (s.status === 'done') countMap[s.parent_task_id].done++;
+          });
+          mapped.forEach(t => {
+            if (countMap[t.id]) {
+              t.subTotal = countMap[t.id].total;
+              t.subDone = countMap[t.id].done;
+            }
+          });
+        }
+      }
+
       setParentTasks(mapped);
 
       // Carregar projetos ativos para o seletor do quick-add
@@ -594,6 +638,10 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
     ? Math.round((stats.done / stats.total) * 100)
     : 0;
 
+  const visibleTasks = selectedProjectId
+    ? parentTasks.filter(t => t.project_id === selectedProjectId)
+    : parentTasks;
+
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
 
@@ -661,6 +709,31 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
             <p className="text-sm text-gray-400 text-center py-2">Nenhuma tarefa neste setor ainda.</p>
           )}
         </div>
+
+        {/* Filtro por projeto */}
+        {activeProjects.length > 1 && (
+          <div className="px-4 pb-3 flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <select
+              value={selectedProjectId}
+              onChange={e => setSelectedProjectId(e.target.value)}
+              className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 text-gray-600"
+            >
+              <option value="">Todos os projetos</option>
+              {activeProjects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {selectedProjectId && (
+              <button
+                onClick={() => setSelectedProjectId('')}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Modo Foco — bloco fixo de próximas ações */}
         {focusTasks.length > 0 && (
@@ -774,7 +847,14 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
           </div>
         ) : (
           <>
-            {parentTasks.map(task => (
+            {visibleTasks.length === 0 && selectedProjectId ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center text-sm text-gray-400">
+                <Filter className="w-5 h-5 mb-2 opacity-40" />
+                Nenhuma tarefa neste setor para o projeto selecionado.
+                <button onClick={() => setSelectedProjectId('')} className="mt-2 text-indigo-500 hover:underline text-xs">Limpar filtro</button>
+              </div>
+            ) : null}
+            {visibleTasks.map(task => (
               <ParentTaskCard
                 key={task.id}
                 task={task}

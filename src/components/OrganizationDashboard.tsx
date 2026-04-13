@@ -35,6 +35,7 @@ export default function OrganizationDashboard({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [artists, setArtists] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>(initialProjects || []);
+  const [projectTaskCounts, setProjectTaskCounts] = useState<Record<string, { total: number; done: number }>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [todayData, setTodayData] = useState<{
     tasksDueToday: any[];
@@ -115,6 +116,23 @@ export default function OrganizationDashboard({
       );
       const combinedProjects = [...filteredProjects, ...(planningsData || [])];
       setProjects(combinedProjects);
+
+      // Contar tarefas por projeto (1 query em lote)
+      const projectIds = filteredProjects.map((p: any) => p.id);
+      if (projectIds.length > 0) {
+        const { data: taskRows } = await supabase
+          .from('tasks')
+          .select('project_id, status')
+          .in('project_id', projectIds)
+          .is('parent_task_id', null);
+        const counts: Record<string, { total: number; done: number }> = {};
+        (taskRows || []).forEach((t: any) => {
+          if (!counts[t.project_id]) counts[t.project_id] = { total: 0, done: 0 };
+          counts[t.project_id].total++;
+          if (t.status === 'done') counts[t.project_id].done++;
+        });
+        setProjectTaskCounts(counts);
+      }
 
       // 3. Carregar Shows
       const { data: showsData } = await supabase
@@ -754,28 +772,70 @@ export default function OrganizationDashboard({
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Criado em</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Projeto</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">Artista</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tarefas</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {projects.map((project) => (
+              {projects.map((project) => {
+                const counts = projectTaskCounts[project.id];
+                const pct = counts && counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : null;
+                const artistObj = artists.find((a: any) => a.id === project.artist_id);
+                const artistName = artistObj ? (artistObj.stage_name || artistObj.name) : null;
+                return (
                 <tr
                   key={project.id}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="hover:bg-orange-50/30 transition-colors cursor-pointer"
                   onClick={() => onSelectProject(project.id)}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                         {(project.name || 'P').charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-gray-900">{project.name || project.title}</span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">{project.name || project.title}</p>
+                        {project.created_at && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Criado em {new Date(project.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 hidden sm:table-cell">
+                    {artistName ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded-full">
+                        {artistName}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {counts ? (
+                      <div className="min-w-[80px]">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-700">{counts.done}/{counts.total}</span>
+                          {pct !== null && (
+                            <span className={`text-xs font-bold ${pct === 100 ? 'text-green-600' : 'text-orange-500'}`}>{pct}%</span>
+                          )}
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden w-24">
+                          <div
+                            className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-400' : 'bg-[#FFAD85]'}`}
+                            style={{ width: `${pct ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300">Sem tarefas</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 hidden md:table-cell">
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                       project.status === 'active' || project.status === 'ativo'
                         ? 'bg-green-100 text-green-700'
@@ -792,12 +852,7 @@ export default function OrganizationDashboard({
                        project.status || 'Ativo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {project.created_at
-                      ? new Date(project.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                      : '—'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); onSelectProject(project.id); }}
@@ -823,7 +878,8 @@ export default function OrganizationDashboard({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

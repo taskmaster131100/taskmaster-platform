@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck } from 'lucide-react';
+import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck, ChevronDown, ChevronUp, ArrowRight, Zap } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import PlanLimitModal from '../components/PlanLimitModal';
@@ -32,6 +32,47 @@ import {
   formatDate,
   getStatusColor
 } from '../services/releaseService';
+
+// Guia contextual por nome de fase
+const PHASE_GUIDE: Record<string, { action: string; tips: string[] }> = {
+  'Pré-Produção': {
+    action: 'Grave e finalize o material musical',
+    tips: ['Grave os vocais e instrumentos definitivos', 'Contrate produtor ou arranjador se necessário', 'Defina músicos e participações especiais'],
+  },
+  'Produção': {
+    action: 'Finalize a produção e arrange as faixas',
+    tips: ['Conclua a gravação de todos os instrumentos', 'Finalize arranjos e produção eletrônica', 'Entregue ao mixador no prazo'],
+  },
+  'Mixagem': {
+    action: 'Entregue os arquivos para mixagem',
+    tips: ['Exporte stems organizados (vocais, bases, FX)', 'Alinha referências sonoras com o engenheiro', 'Aprove mix, solicite ajustes se necessário'],
+  },
+  'Masterização': {
+    action: 'Envie o mix aprovado para masterização',
+    tips: ['Entregue o arquivo WAV final do mix', 'Defina loudness alvo (streaming: -14 LUFS)', 'Verifique o master em múltiplos dispositivos'],
+  },
+  'Distribuição': {
+    action: 'Envie o lançamento para a distribuidora',
+    tips: ['Upload do master (WAV 24bit/44.1kHz)', 'Capa 3000x3000px aprovada', 'Preencha metadados: ISRC, compositores, gênero', 'Faça pitch de playlists editoriais (7+ dias antes)'],
+  },
+  'Divulgação': {
+    action: 'Execute a campanha de lançamento',
+    tips: ['Ative pré-save com pelo menos 2 semanas de antecedência', 'Envie press release para veículos e blogs', 'Grave conteúdo para redes: making of, teaser, Reels', 'Agende posts para o dia e semana do lançamento'],
+  },
+  'Pós-Lançamento': {
+    action: 'Monitore performance e consolide resultado',
+    tips: ['Acompanhe streams nas primeiras 48h', 'Responda comentários e interaja com fãs', 'Documente métricas: streams, saves, plays', 'Planeje o próximo lançamento com os aprendizados'],
+  },
+};
+
+const getPhaseGuide = (phaseName: string) => {
+  const direct = PHASE_GUIDE[phaseName];
+  if (direct) return direct;
+  for (const key of Object.keys(PHASE_GUIDE)) {
+    if (phaseName.toLowerCase().includes(key.toLowerCase())) return PHASE_GUIDE[key];
+  }
+  return { action: `Conclua as atividades de ${phaseName}`, tips: [] };
+};
 
 // Mapeamento de fases para o fluxo real de lançamento
 const PHASE_TABS = [
@@ -250,6 +291,19 @@ export default function ReleasesManager() {
       setPhases(updatedPhases);
     } catch (error) {
       console.error('Erro ao atualizar fase:', error);
+    }
+  };
+
+  const handleAdvancePhase = async (phase: ReleasePhase, nextPhase?: ReleasePhase) => {
+    try {
+      await updatePhase(phase.id, { status: 'completed' });
+      if (nextPhase && nextPhase.status === 'pending') {
+        await updatePhase(nextPhase.id, { status: 'in_progress' });
+      }
+      const updatedPhases = await listPhases(selectedRelease!.id);
+      setPhases(updatedPhases);
+    } catch (error) {
+      console.error('Erro ao avançar fase:', error);
     }
   };
 
@@ -844,234 +898,268 @@ export default function ReleasesManager() {
         </div>
       )}
 
-      {showDetailsModal && selectedRelease && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{selectedRelease.title}</h2>
-                <p className="text-gray-600">{selectedRelease.artist_name}</p>
-                <div className="mt-2">{getStatusBadge(selectedRelease.status)}</div>
+      {showDetailsModal && selectedRelease && (() => {
+        const doneCount = phases.filter(p => p.status === 'completed').length;
+        const totalPhases = phases.length;
+        const progressPct = totalPhases > 0 ? Math.round((doneCount / totalPhases) * 100) : 0;
+        const currentPhaseIdx = phases.findIndex(p => p.status !== 'completed');
+        const currentPhase = currentPhaseIdx >= 0 ? phases[currentPhaseIdx] : null;
+        const nextPhase = currentPhaseIdx >= 0 ? phases[currentPhaseIdx + 1] : null;
+        const currentGuide = currentPhase ? getPhaseGuide(currentPhase.name) : null;
+        const weeksLeft = getWeeksUntilRelease(selectedRelease.release_date);
+
+        return (
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl my-8">
+
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  {getStatusBadge(selectedRelease.status)}
+                  <span className="text-xs text-gray-400">·</span>
+                  <span className="text-xs text-gray-500">
+                    {RELEASE_TYPES.find(t => t.value === selectedRelease.release_type)?.label}
+                  </span>
+                  {selectedRelease.distributor && (
+                    <>
+                      <span className="text-xs text-gray-400">·</span>
+                      <span className="text-xs text-gray-500">{selectedRelease.distributor}</span>
+                    </>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 truncate">{selectedRelease.title}</h2>
+                <p className="text-sm text-gray-500">{selectedRelease.artist_name}</p>
               </div>
-              <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedRelease(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">{formatDate(selectedRelease.release_date)}</p>
+                  <p className={`text-xs font-bold ${weeksLeft > 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                    {weeksLeft > 0 ? `${weeksLeft} sem. restantes` : 'Lançado'}
+                  </p>
+                </div>
+                <button onClick={() => { setShowDetailsModal(false); setSelectedRelease(null); }} className="p-2 hover:bg-gray-100 rounded-full">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Data de Lançamento</p>
-                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedRelease.release_date)}</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {getWeeksUntilRelease(selectedRelease.release_date) > 0
-                      ? `${getWeeksUntilRelease(selectedRelease.release_date)} semanas restantes`
-                      : 'Já lançado'}
-                  </p>
+            {/* Progress bar */}
+            {totalPhases > 0 && (
+              <div className="px-6 pt-4 pb-2">
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                  <span className="font-medium">{doneCount}/{totalPhases} fases concluídas</span>
+                  <span className="font-bold text-gray-700">{progressPct}%</span>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Tipo</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {RELEASE_TYPES.find(t => t.value === selectedRelease.release_type)?.label}
-                  </p>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#22c55e' : '#FFAD85' }}
+                  />
                 </div>
-
-                {selectedRelease.isrc && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">ISRC</p>
-                    <p className="text-lg font-mono text-gray-900">{selectedRelease.isrc}</p>
-                  </div>
-                )}
-
-                {selectedRelease.upc && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">UPC / EAN</p>
-                    <p className="text-lg font-mono text-gray-900">{selectedRelease.upc}</p>
-                  </div>
-                )}
-
-                {selectedRelease.distributor && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">Distribuidora</p>
-                    <p className="text-lg font-bold text-gray-900">{selectedRelease.distributor}</p>
-                  </div>
-                )}
               </div>
+            )}
 
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  Timeline de Produção (12 semanas)
-                </h3>
-                <div className="space-y-3">
-                  {phases.map((phase, index) => (
-                    <div key={phase.id} className="relative">
-                      {index < phases.length - 1 && (
-                        <div className="absolute left-2.5 top-8 bottom-0 w-0.5 bg-gray-200"></div>
-                      )}
-                      <div className="flex items-start gap-4 bg-gray-50 rounded-lg p-4">
-                        <div className="flex-shrink-0 mt-0.5">
-                          {getPhaseIcon(phase.status)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-semibold text-gray-900">{phase.name}</h4>
-                            <select
-                              value={phase.status}
-                              onChange={(e) => handlePhaseStatusChange(phase.id, e.target.value as any)}
-                              className="text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-[#FFAD85]"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <option value="pending">Pendente</option>
-                              <option value="in_progress">Em Andamento</option>
-                              <option value="completed">Concluída</option>
-                            </select>
+            <div className="px-6 pb-6 space-y-5 pt-4">
+
+              {/* "Você está aqui" — O que fazer agora */}
+              {currentPhase && currentGuide && (
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl overflow-hidden">
+                  <div className="px-4 py-3 bg-orange-100/60 border-b border-orange-200 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-orange-500" />
+                    <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Você está aqui · {currentPhase.name}</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-bold text-gray-900 mb-2">{currentGuide.action}</p>
+                    {currentGuide.tips.length > 0 && (
+                      <ul className="space-y-1">
+                        {currentGuide.tips.map((tip, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-gray-600">
+                            <span className="text-orange-400 mt-0.5 flex-shrink-0">→</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {currentPhase.end_date && (
+                      <p className="text-xs text-gray-400 mt-2">Prazo desta fase: {formatDate(currentPhase.end_date)}</p>
+                    )}
+                    <button
+                      onClick={() => handleAdvancePhase(currentPhase, nextPhase || undefined)}
+                      className="mt-3 flex items-center gap-1.5 text-xs font-bold text-white bg-[#FFAD85] hover:bg-[#FF9B6A] px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Marcar fase como concluída
+                      {nextPhase && <><span className="mx-1 opacity-60">·</span>ir para {nextPhase.name}</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!currentPhase && totalPhases > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <p className="text-sm font-semibold text-green-800">Todas as fases concluídas! Lançamento finalizado.</p>
+                </div>
+              )}
+
+              {/* Timeline de fases */}
+              {totalPhases > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Cronograma completo
+                  </h3>
+                  <div className="space-y-2">
+                    {phases.map((phase, index) => {
+                      const isCurrent = index === currentPhaseIdx;
+                      const isDone = phase.status === 'completed';
+                      const isFuture = !isDone && !isCurrent;
+                      return (
+                        <div
+                          key={phase.id}
+                          className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                            isCurrent ? 'border-orange-200 bg-orange-50/50' :
+                            isDone ? 'border-green-100 bg-green-50/30' :
+                            'border-gray-100 bg-white'
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5 ${
+                            isDone ? 'bg-green-500 text-white' :
+                            isCurrent ? 'bg-[#FFAD85] text-white' :
+                            'bg-gray-100 text-gray-400'
+                          }`}>
+                            {isDone ? '✓' : index + 1}
                           </div>
-                          {phase.description && (
-                            <p className="text-sm text-gray-600 mb-2">{phase.description}</p>
-                          )}
-                          {(phase.start_date || phase.end_date) && (
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              {phase.start_date && <span>Início: {formatDate(phase.start_date)}</span>}
-                              {phase.start_date && phase.end_date && <span>•</span>}
-                              {phase.end_date && <span>Fim: {formatDate(phase.end_date)}</span>}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-sm font-semibold truncate ${isDone ? 'text-gray-400 line-through' : isCurrent ? 'text-gray-900' : 'text-gray-500'}`}>
+                                {phase.name}
+                                {isCurrent && <span className="ml-2 text-[10px] bg-orange-200 text-orange-700 px-1.5 py-0.5 rounded-full font-bold" style={{textDecoration:'none'}}>ATUAL</span>}
+                              </p>
+                              {(phase.start_date || phase.end_date) && (
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                  {phase.end_date ? formatDate(phase.end_date) : formatDate(phase.start_date!)}
+                                </span>
+                              )}
                             </div>
+                            {phase.description && !isDone && (
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">{phase.description}</p>
+                            )}
+                          </div>
+                          {isCurrent && (
+                            <button onClick={() => handlePhaseStatusChange(phase.id, 'completed')} className="flex-shrink-0 text-[10px] font-bold text-green-600 hover:text-green-800 border border-green-200 hover:bg-green-50 px-2 py-1 rounded-lg transition-colors">
+                              ✓ Concluir
+                            </button>
+                          )}
+                          {isDone && (
+                            <button onClick={() => handlePhaseStatusChange(phase.id, 'in_progress')} className="flex-shrink-0 text-[10px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                              Desfazer
+                            </button>
+                          )}
+                          {isFuture && (
+                            <button onClick={() => handlePhaseStatusChange(phase.id, 'in_progress')} className="flex-shrink-0 text-[10px] text-indigo-500 hover:text-indigo-700 border border-indigo-100 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-colors">
+                              Iniciar
+                            </button>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
                 </div>
+              )}
+
+              {totalPhases === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
+                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 mb-1">Nenhum cronograma gerado</p>
+                  <p className="text-xs text-gray-400">Edite o lançamento para gerar um cronograma com IA</p>
+                </div>
+              )}
+
+              {/* Info cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 mb-1">Data de Lançamento</p>
+                  <p className="text-sm font-bold text-gray-900">{formatDate(selectedRelease.release_date)}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 mb-1">Tipo</p>
+                  <p className="text-sm font-bold text-gray-900">{RELEASE_TYPES.find(t => t.value === selectedRelease.release_type)?.label}</p>
+                </div>
+                {selectedRelease.isrc && (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">ISRC</p>
+                    <p className="text-sm font-mono text-gray-900">{selectedRelease.isrc}</p>
+                  </div>
+                )}
+                {selectedRelease.upc && (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">UPC / EAN</p>
+                    <p className="text-sm font-mono text-gray-900">{selectedRelease.upc}</p>
+                  </div>
+                )}
+                {selectedRelease.distributor && (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">Distribuidora</p>
+                    <p className="text-sm font-bold text-gray-900">{selectedRelease.distributor}</p>
+                  </div>
+                )}
               </div>
 
-              {/* Checklist de Materiais */}
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5" />
-                  Checklist de Materiais
+              {/* Checklist */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Checklist de materiais
                 </h3>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
                   {[
                     { label: 'Áudio master finalizado', detail: 'WAV 24bit/44.1kHz ou superior', required: true },
-                    { label: 'Capa do lançamento', detail: '3000x3000px JPG/PNG, sem texto de terceiros', required: true },
+                    { label: 'Capa do lançamento', detail: '3000x3000px JPG/PNG', required: true },
                     { label: 'ISRC registrado', detail: selectedRelease.isrc ? `✓ ${selectedRelease.isrc}` : 'Ainda não informado', required: true, done: !!selectedRelease.isrc },
                     { label: 'UPC / EAN', detail: selectedRelease.upc ? `✓ ${selectedRelease.upc}` : 'Ainda não informado', required: true, done: !!selectedRelease.upc },
                     { label: 'Distribuidora definida', detail: selectedRelease.distributor ? `✓ ${selectedRelease.distributor}` : 'Ainda não informada', required: true, done: !!selectedRelease.distributor },
-                    { label: 'Press release / bio atualizada', detail: 'Texto para assessoria de imprensa e plataformas', required: false },
-                    { label: 'Autorizações de imagem / participações', detail: 'Para clipes, features e colabs', required: false },
-                    { label: 'Letras cadastradas (ECAD/distribuição)', detail: 'Para garantir royalties', required: false },
-                    { label: 'Pré-save configurado', detail: 'Link de pré-save para campanha de lançamento', required: false },
-                    { label: 'Pitch para playlists editoriais', detail: 'Enviar com 7+ dias de antecedência via distribuição', required: false },
+                    { label: 'Press release / bio atualizada', detail: 'Texto para assessoria e plataformas', required: false },
+                    { label: 'Pré-save configurado', detail: 'Link de pré-save para campanha', required: false },
+                    { label: 'Pitch para playlists editoriais', detail: 'Enviar com 7+ dias via distribuição', required: false },
                   ].map((item, idx) => (
                     <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${item.done ? 'bg-green-50' : ''}`}>
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500' : item.required ? 'border-orange-400' : 'border-gray-300'}`}>
-                        {item.done && <span className="text-white text-xs">✓</span>}
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500' : item.required ? 'border-orange-400' : 'border-gray-300'}`}>
+                        {item.done && <span className="text-white text-[9px] font-bold">✓</span>}
                       </div>
                       <div>
-                        <p className={`text-sm font-medium ${item.done ? 'text-green-800' : 'text-gray-900'}`}>
+                        <p className={`text-xs font-medium ${item.done ? 'text-green-800' : 'text-gray-800'}`}>
                           {item.label}
-                          {item.required && !item.done && <span className="ml-1 text-xs text-orange-500 font-normal">obrigatório</span>}
+                          {item.required && !item.done && <span className="ml-1 text-[10px] text-orange-500 font-normal">obrigatório</span>}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">{item.detail}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{item.detail}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Anexos
-                </h3>
-
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
-                    <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="w-6 h-6 text-gray-400" />
-                      <span className="text-sm text-gray-600">Capa</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'cover')}
-                        disabled={uploading}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
-                    <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="w-6 h-6 text-gray-400" />
-                      <span className="text-sm text-gray-600">Press Kit</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'press_kit')}
-                        disabled={uploading}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#FFAD85] transition-colors">
-                    <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="w-6 h-6 text-gray-400" />
-                      <span className="text-sm text-gray-600">Áudio</span>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'track')}
-                        disabled={uploading}
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {uploading && (
-                  <p className="text-sm text-[#FFAD85] mb-4">Enviando arquivo...</p>
-                )}
-
-                {attachments.length > 0 ? (
-                  <div className="space-y-2">
-                    {attachments.map(attachment => (
-                      <div key={attachment.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{attachment.file_name}</p>
-                            <p className="text-xs text-gray-600">
-                              {attachment.file_type} • {(attachment.file_size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <a
-                          href={attachment.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-[#FFAD85] hover:text-[#FF9B6A]"
-                        >
-                          Baixar
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-600 py-4">Nenhum anexo adicionado ainda</p>
-                )}
+              {/* Ações */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { setShowDetailsModal(false); handleEdit(selectedRelease); }}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all"
+                >
+                  Editar lançamento
+                </button>
+                <button
+                  onClick={() => { setShowDetailsModal(false); setSelectedRelease(null); }}
+                  className="flex-1 py-2.5 bg-[#FFAD85] text-white rounded-xl text-sm font-bold hover:bg-[#FF9B6A] transition-all"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
+
+      {/* placeholder — legacy modal removed */}
 
       {releaseLimitModal && (
         <PlanLimitModal

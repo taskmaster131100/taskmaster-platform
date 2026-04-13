@@ -3,7 +3,8 @@ import {
   Briefcase, CheckCircle2, Clock, AlertTriangle, ArrowRight,
   User, Calendar, DollarSign, BarChart2, Tag, Layers, Plus,
   Circle, AlertCircle, Loader2, FileText, Archive, Sparkles,
-  Send, Bot, X, ChevronDown, ChevronUp, Music
+  Send, Bot, X, ChevronDown, ChevronUp, Music, Link2, Unlink,
+  Share2, Printer
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -103,6 +104,10 @@ export default function ProjectDashboard({
   const [aiLoading, setAiLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null);
   const aiScrollRef = useRef<HTMLDivElement>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [linkSongOpen, setLinkSongOpen] = useState(false);
+  const [artistWorks, setArtistWorks] = useState<{ id: string; title: string; status: string; project_id: string | null }[]>([]);
+  const [linkingWork, setLinkingWork] = useState<string | null>(null);
 
   useEffect(() => {
     if (!project?.artist_id) return;
@@ -118,18 +123,18 @@ export default function ProjectDashboard({
       });
   }, [project?.artist_id]);
 
-  // Carrega músicas do artista vinculado ao projeto (para exibir repertório criado via IA)
+  // Carrega músicas vinculadas a este projeto (tabela works com project_id)
   useEffect(() => {
-    if (!project?.artist_id) { setSongs([]); return; }
+    if (!project?.id) { setSongs([]); return; }
     supabase
-      .from('songs')
+      .from('works')
       .select('id, title, status')
-      .eq('artist_id', project.artist_id)
+      .eq('project_id', project.id)
       .neq('status', 'archived')
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(30)
       .then(({ data }) => setSongs(data || []));
-  }, [project?.artist_id, project?.id]);
+  }, [project?.id]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -340,33 +345,28 @@ Responda em português. Seja direto e prático.`;
         const { error: tasksError } = await supabase.from('tasks').insert(taskInserts);
         if (tasksError) throw tasksError;
 
-        // Criar songs no banco (uma entrada por música do repertório)
+        // Criar músicas na tabela works vinculadas a este projeto
         const songInserts = songTitles.map(title => ({
           title,
           organization_id: project.organization_id,
           artist_id: project.artist_id || null,
+          project_id: project.id,
           status: 'draft',
-          notes: `Criado automaticamente via Copiloto IA — ${tipo}`,
-          created_by: user?.id,
-          // project_id: pode não existir na tabela dependendo da migração — falha silenciosa no catch
         }));
 
-        // Tenta criar songs (falha silenciosa se tabela não existir ainda)
-        await supabase.from('songs').insert(songInserts).then(({ error }) => {
-          if (error) console.warn('songs insert ignorado:', error.message);
+        await supabase.from('works').insert(songInserts).then(({ error }) => {
+          if (error) console.warn('works insert ignorado:', error.message);
         });
 
-        // Recarregar songs após criação para exibir imediatamente na seção Repertório
-        if (project?.artist_id) {
-          supabase
-            .from('songs')
-            .select('id, title, status')
-            .eq('artist_id', project.artist_id)
-            .neq('status', 'archived')
-            .order('created_at', { ascending: false })
-            .limit(20)
-            .then(({ data }) => setSongs(data || []));
-        }
+        // Recarregar músicas do projeto para exibir na seção Repertório
+        supabase
+          .from('works')
+          .select('id, title, status')
+          .eq('project_id', project.id)
+          .neq('status', 'archived')
+          .order('created_at', { ascending: false })
+          .limit(30)
+          .then(({ data }) => setSongs(data || []));
 
         setPendingAction(null);
         const confirmMsg = `✅ **Estrutura de ${tipo} criada!**\n\n` +
@@ -384,6 +384,42 @@ Responda em português. Seja direto e prático.`;
       }
       return;
     }
+  };
+
+  const handleOpenLinkSong = async () => {
+    if (!project?.artist_id) {
+      toast.error('Projeto sem artista vinculado.');
+      return;
+    }
+    const { data } = await supabase
+      .from('works')
+      .select('id, title, status, project_id')
+      .eq('artist_id', project.artist_id)
+      .neq('status', 'archived')
+      .order('title');
+    setArtistWorks(data || []);
+    setLinkSongOpen(true);
+  };
+
+  const handleLinkWork = async (workId: string, link: boolean) => {
+    setLinkingWork(workId);
+    const { error } = await supabase
+      .from('works')
+      .update({ project_id: link ? project.id : null })
+      .eq('id', workId);
+    if (error) { toast.error('Erro ao atualizar música.'); setLinkingWork(null); return; }
+    // Atualiza lista local do modal
+    setArtistWorks(prev => prev.map(w => w.id === workId ? { ...w, project_id: link ? project.id : null } : w));
+    // Reload das músicas do projeto
+    const { data } = await supabase
+      .from('works')
+      .select('id, title, status')
+      .eq('project_id', project.id)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    setSongs(data || []);
+    setLinkingWork(null);
   };
 
   if (!project) {
@@ -475,7 +511,7 @@ Responda em português. Seja direto e prático.`;
                 )}
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap no-print">
               <button
                 onClick={() => setAiOpen(o => !o)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 ${aiOpen ? 'bg-[#FFAD85] text-white shadow-orange-100' : 'bg-orange-50 text-[#FF9B6A] border border-orange-200 hover:bg-orange-100'}`}
@@ -491,6 +527,23 @@ Responda em português. Seja direto e prático.`;
                 <Layers className="w-4 h-4" />
                 TaskBoard
                 <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/?project=${project.id}`;
+                  navigator.clipboard.writeText(url).then(() => toast.success('Link copiado!')).catch(() => toast.error('Erro ao copiar.'));
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-400 rounded-xl text-sm hover:text-gray-600 hover:bg-gray-50 transition-all shrink-0"
+                title="Copiar link do projeto"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-400 rounded-xl text-sm hover:text-gray-600 hover:bg-gray-50 transition-all shrink-0"
+                title="Exportar / Imprimir PDF"
+              >
+                <Printer className="w-4 h-4" />
               </button>
               <button
                 onClick={handleArchive}
@@ -520,20 +573,77 @@ Responda em português. Seja direto e prático.`;
         {/* ── CARDS DE STATUS ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'A Fazer',       count: todo,       icon: Circle,        color: 'text-gray-500',  bg: 'bg-white' },
-            { label: 'Em Progresso',  count: inProgress, icon: Clock,         color: 'text-blue-600',  bg: 'bg-white' },
-            { label: 'Bloqueadas',    count: blocked,    icon: AlertCircle,   color: 'text-red-500',   bg: 'bg-white' },
-            { label: 'Concluídas',    count: done,       icon: CheckCircle2,  color: 'text-green-600', bg: 'bg-white' },
-          ].map(({ label, count, icon: Icon, color, bg }) => (
-            <div key={label} className={`${bg} rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3`}>
-              <Icon className={`w-6 h-6 ${color} shrink-0`} />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500 font-medium">{label}</p>
-              </div>
-            </div>
-          ))}
+            { label: 'A Fazer',       count: todo,       icon: Circle,        color: 'text-gray-500',  bg: 'bg-white',   status: 'todo' },
+            { label: 'Em Progresso',  count: inProgress, icon: Clock,         color: 'text-blue-600',  bg: 'bg-white',   status: 'in_progress' },
+            { label: 'Bloqueadas',    count: blocked,    icon: AlertCircle,   color: 'text-red-500',   bg: 'bg-white',   status: 'blocked' },
+            { label: 'Concluídas',    count: done,       icon: CheckCircle2,  color: 'text-green-600', bg: 'bg-white',   status: 'done' },
+          ].map(({ label, count, icon: Icon, color, bg, status }) => {
+            const isActive = statusFilter === status;
+            return (
+              <button
+                key={label}
+                onClick={() => setStatusFilter(isActive ? null : status)}
+                className={`${bg} rounded-xl border shadow-sm p-4 flex items-center gap-3 w-full text-left transition-all hover:shadow-md ${isActive ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-gray-100 hover:border-gray-200'}`}
+              >
+                <Icon className={`w-6 h-6 ${color} shrink-0`} />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                  <p className="text-xs text-gray-500 font-medium">{label}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
+
+        {/* ── FILTRO POR STATUS ─────────────────────────────────────────────── */}
+        {statusFilter && (() => {
+          const filtered = tasks.filter(t => t.status === statusFilter);
+          const labels: Record<string, string> = { todo: 'A Fazer', in_progress: 'Em Progresso', blocked: 'Bloqueadas', done: 'Concluídas' };
+          return (
+            <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-indigo-50 bg-indigo-50/40 flex items-center justify-between">
+                <h3 className="font-bold text-indigo-700 text-sm">{labels[statusFilter]} ({filtered.length})</h3>
+                <button onClick={() => setStatusFilter(null)} className="text-xs text-indigo-500 hover:underline flex items-center gap-1">
+                  <X className="w-3 h-3" /> Limpar filtro
+                </button>
+              </div>
+              {filtered.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-gray-400 text-center">Nenhuma tarefa neste status.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {filtered.map(task => {
+                    const ws = WORKSTREAMS.find(w => w.id === task.workstream);
+                    const days = daysUntil(task.due_date);
+                    const urgent = days !== null && days <= 3;
+                    return (
+                      <div key={task.id} className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors">
+                        <div className="mt-0.5 shrink-0">
+                          {task.status === 'done' ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                            : task.status === 'blocked' ? <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                            : task.status === 'in_progress' ? <Clock className="w-3.5 h-3.5 text-blue-500" />
+                            : <Circle className="w-3.5 h-3.5 text-gray-300" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {task.due_date && (
+                              <span className={`text-xs font-bold ${urgent ? 'text-orange-500' : 'text-gray-400'}`}>
+                                {formatDate(task.due_date)}
+                              </span>
+                            )}
+                            {ws && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${ws.bg} ${ws.color}`}>{ws.label}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -729,18 +839,35 @@ Responda em português. Seja direto e prático.`;
           </div>
         )}
 
-        {/* ── REPERTÓRIO (songs da produção musical) ──────────────────────── */}
-        {songs.length > 0 && (
-          <div className="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Music className="w-4 h-4 text-rose-600" />
-                <h3 className="font-bold text-gray-800 text-sm">Repertório</h3>
+        {/* ── REPERTÓRIO (músicas vinculadas ao projeto) ──────────────────── */}
+        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Music className="w-4 h-4 text-rose-600" />
+              <h3 className="font-bold text-gray-800 text-sm">Repertório do Projeto</h3>
+              {songs.length > 0 && (
                 <span className="text-xs font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">
                   {songs.length} {songs.length === 1 ? 'música' : 'músicas'}
                 </span>
-              </div>
+              )}
             </div>
+            {project.artist_id && (
+              <button
+                onClick={handleOpenLinkSong}
+                className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-all"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                Vincular música
+              </button>
+            )}
+          </div>
+          {songs.length === 0 ? (
+            <div className="p-8 text-center">
+              <Music className="w-8 h-8 text-rose-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 font-medium">Nenhuma música vinculada</p>
+              <p className="text-xs text-gray-400 mt-1">Use o Copilot para criar um repertório ou vincule músicas existentes do artista.</p>
+            </div>
+          ) : (
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {songs.map(song => (
                 <div key={song.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-100">
@@ -748,11 +875,73 @@ Responda em português. Seja direto e prático.`;
                   <span className="text-sm text-gray-800 truncate font-medium">{song.title}</span>
                   {song.status && song.status !== 'draft' && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white text-rose-600 border border-rose-200 shrink-0 ml-auto">
-                      {song.status === 'approved' ? 'Aprovada' : song.status === 'review' ? 'Revisão' : song.status}
+                      {song.status === 'ready' ? 'Pronta' : song.status === 'released' ? 'Lançada' : song.status}
                     </span>
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── MODAL: Vincular músicas ao projeto ──────────────────────────── */}
+        {linkSongOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-rose-600" />
+                  <h2 className="font-bold text-gray-800">Vincular músicas ao projeto</h2>
+                </div>
+                <button onClick={() => setLinkSongOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 p-4">
+                {artistWorks.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">Nenhuma música encontrada para este artista.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {artistWorks.map(work => {
+                      const isLinked = work.project_id === project.id;
+                      const isOtherProject = work.project_id && work.project_id !== project.id;
+                      return (
+                        <div key={work.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isLinked ? 'bg-rose-50 border-rose-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <Music className={`w-4 h-4 shrink-0 ${isLinked ? 'text-rose-500' : 'text-gray-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{work.title}</p>
+                            {isOtherProject && (
+                              <p className="text-[10px] text-amber-600">Vinculada a outro projeto</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleLinkWork(work.id, !isLinked)}
+                            disabled={linkingWork === work.id}
+                            className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+                              isLinked
+                                ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                            }`}
+                          >
+                            {linkingWork === work.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : isLinked ? (
+                              <><Unlink className="w-3 h-3" /> Desvincular</>
+                            ) : (
+                              <><Link2 className="w-3 h-3" /> Vincular</>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="px-5 py-3 border-t">
+                <button onClick={() => setLinkSongOpen(false)} className="w-full py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-all">
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         )}

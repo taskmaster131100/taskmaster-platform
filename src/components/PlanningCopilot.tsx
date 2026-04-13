@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './auth/AuthProvider';
+import { getPhasesForWorkstream, getSubTasksForWorkstream } from '../services/operationalTemplates';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -20,6 +21,7 @@ interface PlatformContext {
   projects: any[];
   shows: any[];
   tasks: any[];
+  subTasks: any[]; // sub-tarefas com phase + status para análise operacional
   teamMembers: any[];
   financials: any[];
   calendarEvents: any[];
@@ -40,6 +42,7 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
     projects: [],
     shows: [],
     tasks: [],
+    subTasks: [],
     teamMembers: [],
     financials: [],
     calendarEvents: [],
@@ -81,6 +84,18 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
     const { data: tasks } = await tasksQuery;
     context.tasks = tasks || [];
 
+    // Sub-tarefas — fundamentais para análise de fase e estado operacional real
+    // Sem elas a IA não sabe em que etapa o projeto realmente está
+    let subQuery = supabase
+      .from('tasks')
+      .select('id, title, status, phase, workstream, parent_task_id, project_id, due_date')
+      .not('parent_task_id', 'is', null)
+      .order('due_date', { ascending: true })
+      .limit(200);
+    if (organizationId) subQuery = subQuery.eq('organization_id', organizationId);
+    const { data: subTasks } = await subQuery;
+    context.subTasks = subTasks || [];
+
     // Membros da equipe
     const { data: team } = await supabase
       .from('team_invites')
@@ -102,12 +117,20 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
   return context;
 }
 
-// Formatar contexto para o system prompt — compacto para reduzir tokens
+// Mapa de label legível por workstream
+const WS_LABEL_MAP: Record<string, string> = {
+  producao_musical: 'Produção Musical', conteudo: 'Conteúdo',
+  marketing: 'Marketing', shows: 'Shows', logistica: 'Logística',
+  estrategia: 'Estratégia', financeiro: 'Financeiro', lancamento: 'Lançamento', geral: 'Geral',
+};
+
+// Formatar contexto para o system prompt — inclui estado operacional real por projeto
 function formatContextForAI(ctx: PlatformContext): string {
+  const today = new Date().toISOString().split('T')[0];
   let contextStr = '';
 
+  // ── PROJETOS ATIVOS ───────────────────────────────────────────
   if (ctx.projects.length > 0) {
-    // Limitar a 10 projetos mais recentes; descrição truncada em 60 chars
     contextStr += '\nPROJETOS ATIVOS:\n';
     ctx.projects.slice(0, 10).forEach(p => {
       const desc = (p.description || '').slice(0, 60);
@@ -115,6 +138,114 @@ function formatContextForAI(ctx: PlatformContext): string {
     });
   }
 
+  // ── ESTADO OPERACIONAL POR PROJETO (fase atual + próximos passos reais) ───
+  // Construído a partir das sub-tarefas — dá à IA visão real de onde está cada projeto
+  if (ctx.subTasks.length > 0 && ctx.projects.length > 0) {
+    const projectMap: Record<string, any> = {};
+    ctx.projects.forEach(p => { projectMap[p.id] = p; });
+
+    // Agrupar sub-tarefas: project_id → workstream → phase → tasks[]
+    const byProject: Record<string, Record<string, Record<string, any[]>>> = {};
+    ctx.subTasks.forEach(st => {
+      const pid = st.project_id;
+      if (!pid || !projectMap[pid]) return;
+      const ws = st.workstream || 'geral';
+      const ph = st.phase || 'sem_fase';
+      if (!byProject[pid]) byProject[pid] = {};
+      if (!byProject[pid][ws]) byProject[pid][ws] = {};
+      if (!byProject[pid][ws][ph]) byProject[pid][ws][ph] = [];
+      byProject[pid][ws][ph].push(st);
+    });
+
+    if (Object.keys(byProject).length > 0) {
+      contextStr += '\nESTADO OPERACIONAL POR PROJETO:\n';
+
+      Object.entries(byProject).slice(0, 8).forEach(([pid, workstreams]) => {
+        const proj = projectMap[pid];
+        const projName = proj?.title || proj?.name || 'Sem nome';
+        contextStr += `\n● Projeto: "${projName}"\n`;
+
+        Object.entries(workstreams).forEach(([ws, phases]) => {
+          const wsLabel = WS_LABEL_MAP[ws] || ws;
+          // Ordenar fases pelo template
+          const phaseOrder = getPhasesForWorkstream(ws).map(p => p.id);
+          const sortedPhases = Object.entries(phases).sort(([a], [b]) => {
+            const ia = phaseOrder.indexOf(a) === -1 ? 999 : phaseOrder.indexOf(a);
+            const ib = phaseOrder.indexOf(b) === -1 ? 999 : phaseOrder.indexOf(b);
+            return ia - ib;
+          });
+
+          // Identificar fase atual: primeira com tarefas pendentes
+          let currentPhaseKey = '';
+          let currentPhaseLabel = '';
+          for (const [phKey, phTasks] of sortedPhases) {
+            const hasPending = phTasks.some(t => t.status !== 'done');
+            if (hasPending) {
+              currentPhaseKey = phKey;
+              const phaseMeta = getPhasesForWorkstream(ws).find(p => p.id === phKey);
+              currentPhaseLabel = phaseMeta?.label || phKey.replace(/_/g, ' ');
+              break;
+            }
+          }
+
+          // Contar total/done por setor
+          let totalSt = 0, doneSt = 0;
+          sortedPhases.forEach(([, tasks]) => {
+            totalSt += tasks.length;
+            doneSt += tasks.filter(t => t.status === 'done').length;
+          });
+
+          if (totalSt === 0) return;
+          const pct = Math.round((doneSt / totalSt) * 100);
+
+          if (!currentPhaseKey) {
+            // Todas as fases concluídas
+            contextStr += `  [${wsLabel}] ✅ CONCLUÍDO (${totalSt}/${totalSt} sub-tarefas)\n`;
+          } else {
+            contextStr += `  [${wsLabel}] Fase atual: "${currentPhaseLabel}" | ${doneSt}/${totalSt} sub-tarefas (${pct}%)\n`;
+
+            // Listar próximas ações pendentes da fase atual (max 3)
+            const currentPhaseTasks = phases[currentPhaseKey] || [];
+            const pending = currentPhaseTasks.filter(t => t.status !== 'done').slice(0, 3);
+            pending.forEach(t => {
+              const overdue = t.due_date && t.due_date < today ? ' ⚠ATRASADO' : '';
+              const due = t.due_date ? ` | prazo: ${t.due_date}` : '';
+              const icon = t.status === 'in_progress' ? '→' : '○';
+              contextStr += `    ${icon} "${t.title}"${due}${overdue}\n`;
+            });
+
+            // Próxima fase (preview)
+            const currentIdx = sortedPhases.findIndex(([k]) => k === currentPhaseKey);
+            if (currentIdx !== -1 && currentIdx + 1 < sortedPhases.length) {
+              const [nextKey] = sortedPhases[currentIdx + 1];
+              const nextMeta = getPhasesForWorkstream(ws).find(p => p.id === nextKey);
+              const nextLabel = nextMeta?.label || nextKey.replace(/_/g, ' ');
+              contextStr += `    ↳ Próxima fase: "${nextLabel}" (aguardando conclusão da atual)\n`;
+            }
+          }
+        });
+      });
+    }
+  } else if (ctx.tasks.length > 0) {
+    // Fallback sem sub-tarefas: agrupar tarefas pai por workstream
+    const byWorkstream: Record<string, typeof ctx.tasks> = {};
+    ctx.tasks.forEach(t => {
+      const ws = t.workstream || 'geral';
+      if (!byWorkstream[ws]) byWorkstream[ws] = [];
+      byWorkstream[ws].push(t);
+    });
+    contextStr += '\nTAREFAS PENDENTES (por setor):\n';
+    Object.entries(byWorkstream).forEach(([ws, tasks]) => {
+      contextStr += `[${ws.toUpperCase()}] `;
+      tasks.slice(0, 3).forEach(t => {
+        contextStr += `"${t.title}"${t.due_date ? ` até ${t.due_date}` : ''}${t.priority === 'high' ? ' (!!)' : ''}; `;
+      });
+      if (tasks.length > 3) contextStr += `+${tasks.length - 3} mais`;
+      contextStr += '\n';
+    });
+  }
+
+  // ── SHOWS PRÓXIMOS ────────────────────────────────────────────
   if (ctx.shows.length > 0) {
     contextStr += '\nSHOWS PRÓXIMOS:\n';
     ctx.shows.slice(0, 5).forEach(s => {
@@ -122,28 +253,7 @@ function formatContextForAI(ctx: PlatformContext): string {
     });
   }
 
-  if (ctx.tasks.length > 0) {
-    // Agrupar por workstream; mostrar apenas as 3 próximas ações por setor
-    // (sub-tarefas ficam nas telas de setor — não enviadas aqui para economizar tokens)
-    const byWorkstream: Record<string, typeof ctx.tasks> = {};
-    ctx.tasks.forEach(t => {
-      const ws = t.workstream || 'geral';
-      if (!byWorkstream[ws]) byWorkstream[ws] = [];
-      byWorkstream[ws].push(t);
-    });
-
-    contextStr += '\nTAREFAS PENDENTES (próximas ações por setor):\n';
-    Object.entries(byWorkstream).forEach(([ws, tasks]) => {
-      const top3 = tasks.slice(0, 3);
-      contextStr += `[${ws.toUpperCase()}] `;
-      top3.forEach(t => {
-        contextStr += `"${t.title}"${t.due_date ? ` até ${t.due_date}` : ''}${t.priority === 'high' || t.priority === 'urgent' ? ' (!!)' : ''}; `;
-      });
-      if (tasks.length > 3) contextStr += `+${tasks.length - 3} mais`;
-      contextStr += '\n';
-    });
-  }
-
+  // ── EQUIPE ────────────────────────────────────────────────────
   if (ctx.teamMembers.length > 0) {
     contextStr += '\nEQUIPE:\n';
     ctx.teamMembers.slice(0, 10).forEach(m => {
@@ -151,6 +261,7 @@ function formatContextForAI(ctx: PlatformContext): string {
     });
   }
 
+  // ── ARTISTAS ──────────────────────────────────────────────────
   if (ctx.artists.length > 0) {
     contextStr += '\nARTISTAS:\n';
     ctx.artists.slice(0, 10).forEach(a => {
@@ -279,6 +390,29 @@ SEUS SUPERPODERES:
 
 DADOS ATUAIS DA PLATAFORMA DO USUÁRIO:
 ${contextStr}
+
+CONDUÇÃO OPERACIONAL — REGRA OBRIGATÓRIA:
+Quando o usuário perguntar "onde estou?", "o que falta?", "qual é o próximo passo?", "como está o projeto?", "o que preciso fazer agora?" ou similar:
+
+1. SEMPRE comece identificando a fase atual do projeto:
+   "Você está na fase de [FASE] do setor [SETOR] — [X]% concluído."
+
+2. SEMPRE liste os próximos passos concretos e pendentes dessa fase:
+   "O próximo passo é: [tarefa específica]."
+   "Ainda falta nessa fase: [tarefa], [tarefa]."
+
+3. SE há itens atrasados, avise imediatamente:
+   "⚠ Atenção: [tarefa] está [N] dias atrasada."
+
+4. SE detectar uma tarefa que está travando o progresso, nomeie o bloqueio:
+   "A gravação está travada porque [motivo concreto baseado nos dados]."
+
+5. SEMPRE termine com a próxima fase que virá depois:
+   "Depois de concluir isso, a próxima fase será [PRÓXIMA FASE]."
+
+Use SEMPRE os dados reais do ESTADO OPERACIONAL POR PROJETO acima.
+NUNCA responda com "não tenho acesso a dados em tempo real" — os dados estão no contexto.
+NUNCA seja genérico: cite o nome do projeto, fase, tarefa e prazo real.
 
 REGRA FUNDAMENTAL — CRIAR vs ATUALIZAR (leia antes de qualquer ação):
 Antes de responder, verifique se o usuário menciona um projeto pelo nome.
@@ -500,68 +634,143 @@ function buildStaticGreeting(artistName?: string): string {
   return `Olá! Sou o **Copiloto TaskMaster** — sua IA de planejamento musical.\n\nPosso te ajudar a:\n• 📁 Criar projetos completos com fases, tarefas e prazos\n• 📎 Analisar documentos e transformar em fluxo de trabalho\n• 🎤 Vincular projetos aos seus artistas, shows e lançamentos\n• 📅 Organizar entregáveis por fase com datas automáticas\n\n**Me conta: o que você quer estruturar hoje?** Pode descrever a ideia ou anexar um documento.`;
 }
 
-// Mapa de label legível por workstream (usado na mensagem orientativa)
-const WS_LABEL: Record<string, string> = {
-  producao_musical: 'Produção Musical', conteudo: 'Conteúdo',
-  marketing: 'Marketing', shows: 'Shows', logistica: 'Logística',
-  estrategia: 'Estratégia', financeiro: 'Financeiro', lancamento: 'Lançamento', geral: 'Geral',
-};
-
 /**
- * Detecção proativa baseada em regras — sem chamar a IA.
- * P2: formata como mensagem orientativa "Você está na fase de [X]. O próximo passo é [Y]."
+ * Detecção proativa baseada em dados reais de sub-tarefas — sem chamar a IA.
+ * Usa as sub-tarefas para identificar fase atual e próximos passos concretos.
  * Custo: zero tokens. A IA real só entra se o usuário responder.
  */
 function detectProactiveAlerts(ctx: PlatformContext): string | null {
   const today = new Date().toISOString().split('T')[0];
-  const pending = ctx.tasks.filter(t => t.status !== 'done');
-
-  if (pending.length === 0) return null;
-
   const lines: string[] = [];
 
-  // Orientação por setor: identificar workstream mais ativo e fase atual
-  const byWorkstream: Record<string, typeof pending> = {};
-  pending.forEach(t => {
-    const ws = t.workstream || 'geral';
-    if (!byWorkstream[ws]) byWorkstream[ws] = [];
-    byWorkstream[ws].push(t);
-  });
+  // ── ANÁLISE POR SUB-TAREFAS (dados operacionais reais) ────────
+  if (ctx.subTasks.length > 0 && ctx.projects.length > 0) {
+    const projectMap: Record<string, any> = {};
+    ctx.projects.forEach(p => { projectMap[p.id] = p; });
 
-  // Setor principal = que tem mais tarefas pendentes
-  const mainWs = Object.entries(byWorkstream)
-    .sort((a, b) => b[1].length - a[1].length)[0];
+    // Agrupar sub-tarefas pendentes por projeto → workstream → phase
+    const pendingSubs = ctx.subTasks.filter(t => t.status !== 'done');
 
-  if (mainWs) {
-    const [ws, wsTasks] = mainWs;
-    const wsLabel = WS_LABEL[ws] || ws.replace(/_/g, ' ');
+    if (pendingSubs.length > 0) {
+      // Encontrar o projeto mais ativo (mais sub-tarefas pendentes)
+      const byProject: Record<string, any[]> = {};
+      pendingSubs.forEach(st => {
+        if (!st.project_id) return;
+        if (!byProject[st.project_id]) byProject[st.project_id] = [];
+        byProject[st.project_id].push(st);
+      });
 
-    // Fase atual: tarefa com phase definida, mais urgente
-    const withPhase = wsTasks.filter(t => t.phase).sort((a, b) =>
-      (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1
-    );
-    const currentPhase = withPhase[0]?.phase;
+      const [mainProjectId, mainProjectSubs] = Object.entries(byProject)
+        .sort((a, b) => b[1].length - a[1].length)[0] || [];
 
-    // Próximo passo: tarefa mais urgente do setor
-    const next = wsTasks.sort((a, b) =>
-      (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1
-    )[0];
+      if (mainProjectId && mainProjectSubs) {
+        const proj = projectMap[mainProjectId];
+        const projName = proj?.title || proj?.name || 'Projeto';
 
-    if (currentPhase) {
-      lines.push(`Você está na fase de **${currentPhase.replace(/_/g, ' ')}** (${wsLabel}).`);
-    } else {
-      lines.push(`Setor com mais atividade: **${wsLabel}**.`);
+        // Workstream mais ativo do projeto
+        const byWs: Record<string, any[]> = {};
+        mainProjectSubs.forEach(st => {
+          const ws = st.workstream || 'geral';
+          if (!byWs[ws]) byWs[ws] = [];
+          byWs[ws].push(st);
+        });
+
+        const [mainWs, wsSubs] = Object.entries(byWs)
+          .sort((a, b) => b[1].length - a[1].length)[0] || [];
+
+        if (mainWs && wsSubs) {
+          const wsLabel = WS_LABEL_MAP[mainWs] || mainWs;
+
+          // Identificar fase atual via template ordering
+          const phaseOrder = getPhasesForWorkstream(mainWs).map(p => p.id);
+          const byPhase: Record<string, any[]> = {};
+          wsSubs.forEach(st => {
+            const ph = st.phase || 'sem_fase';
+            if (!byPhase[ph]) byPhase[ph] = [];
+            byPhase[ph].push(st);
+          });
+
+          const sortedPhases = Object.entries(byPhase).sort(([a], [b]) => {
+            const ia = phaseOrder.indexOf(a) === -1 ? 999 : phaseOrder.indexOf(a);
+            const ib = phaseOrder.indexOf(b) === -1 ? 999 : phaseOrder.indexOf(b);
+            return ia - ib;
+          });
+
+          const [currentPhaseKey, currentPhaseTasks] = sortedPhases[0] || [];
+
+          if (currentPhaseKey) {
+            const phaseMeta = getPhasesForWorkstream(mainWs).find(p => p.id === currentPhaseKey);
+            const phaseLabel = phaseMeta?.label || currentPhaseKey.replace(/_/g, ' ');
+
+            // Contar progresso total do workstream
+            const allWsSubs = [...ctx.subTasks.filter(st => st.project_id === mainProjectId && st.workstream === mainWs)];
+            const doneSubs = allWsSubs.filter(t => t.status === 'done').length;
+            const pct = allWsSubs.length > 0 ? Math.round((doneSubs / allWsSubs.length) * 100) : 0;
+
+            lines.push(`**${projName}** — ${wsLabel}`);
+            lines.push(`Você está na fase de **${phaseLabel}** (${pct}% do setor concluído).`);
+
+            // Próximo passo: primeira tarefa pendente da fase atual
+            const nextSub = currentPhaseTasks.sort((a: any, b: any) =>
+              (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1
+            )[0];
+
+            if (nextSub) {
+              const due = nextSub.due_date
+                ? ` — prazo: ${new Date(nextSub.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`
+                : '';
+              lines.push(`O próximo passo é **"${nextSub.title}"**${due}.`);
+            }
+
+            // Listar demais pendentes da fase atual (max 2)
+            const morePending = currentPhaseTasks
+              .filter((t: any) => t.id !== nextSub?.id)
+              .slice(0, 2);
+            if (morePending.length > 0) {
+              lines.push(`\nAinda falta nesta fase:`);
+              morePending.forEach((t: any) => {
+                lines.push(`• "${t.title}"`);
+              });
+            }
+
+            // Preview da próxima fase
+            if (sortedPhases.length > 1) {
+              const [nextPhaseKey] = sortedPhases[1];
+              const nextPhaseMeta = getPhasesForWorkstream(mainWs).find(p => p.id === nextPhaseKey);
+              const nextPhaseLabel = nextPhaseMeta?.label || nextPhaseKey.replace(/_/g, ' ');
+              lines.push(`\nApós isso: fase de **${nextPhaseLabel}**.`);
+            }
+          }
+        }
+      }
     }
+  } else {
+    // Fallback: sem sub-tarefas, usa tarefas pai
+    const pending = ctx.tasks.filter(t => t.status !== 'done');
+    if (pending.length === 0) return null;
 
-    if (next) {
-      lines.push(`O próximo passo é **"${next.title}"**${next.due_date ? ` — prazo: ${new Date(next.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}` : ''}.`);
+    const byWs: Record<string, typeof pending> = {};
+    pending.forEach(t => {
+      const ws = t.workstream || 'geral';
+      if (!byWs[ws]) byWs[ws] = [];
+      byWs[ws].push(t);
+    });
+    const [mainWs, wsTasks] = Object.entries(byWs).sort((a, b) => b[1].length - a[1].length)[0] || [];
+    if (mainWs) {
+      const wsLabel = WS_LABEL_MAP[mainWs] || mainWs;
+      const next = wsTasks.sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1)[0];
+      lines.push(`Setor com mais atividade: **${wsLabel}**.`);
+      if (next) lines.push(`Próxima tarefa: **"${next.title}"**.`);
     }
   }
 
-  // Alertas de atraso
-  const overdue = pending.filter(t => t.due_date && t.due_date < today);
+  if (lines.length === 0) return null;
+
+  // ── ALERTAS DE ATRASO ─────────────────────────────────────────
+  const allTasks = [...ctx.tasks, ...ctx.subTasks];
+  const overdue = allTasks.filter(t => t.status !== 'done' && t.due_date && t.due_date < today);
   if (overdue.length > 0) {
-    lines.push(`\n⚠ **${overdue.length} tarefa${overdue.length > 1 ? 's atrasadas' : ' atrasada'}:**`);
+    lines.push(`\n⚠ **${overdue.length} item${overdue.length > 1 ? 'ns atrasados' : ' atrasado'}:**`);
     overdue.slice(0, 3).forEach(t => {
       const days = Math.floor(
         (new Date(today).getTime() - new Date(t.due_date + 'T12:00:00').getTime()) / 86400000
@@ -571,16 +780,16 @@ function detectProactiveAlerts(ctx: PlatformContext): string | null {
     if (overdue.length > 3) lines.push(`• ...e mais ${overdue.length - 3}`);
   }
 
-  // Bloqueadas
+  // ── BLOQUEADAS ────────────────────────────────────────────────
   const blocked = ctx.tasks.filter(t => t.status === 'blocked');
   if (blocked.length > 0) {
     lines.push(`\n🔴 **${blocked.length} tarefa${blocked.length > 1 ? 's bloqueadas' : ' bloqueada'}:**`);
     blocked.slice(0, 2).forEach(t => {
-      lines.push(`• "${t.title}"${t.workstream ? ` (${WS_LABEL[t.workstream] || t.workstream})` : ''}`);
+      lines.push(`• "${t.title}"${t.workstream ? ` (${WS_LABEL_MAP[t.workstream] || t.workstream})` : ''}`);
     });
   }
 
-  lines.push('\nQuer que eu te ajude com algum desses pontos?');
+  lines.push('\nQuer que eu detalhe algum desses pontos?');
   return lines.join('\n');
 }
 
@@ -1350,11 +1559,46 @@ export default function PlanningCopilot() {
                   ...(dueDate ? { due_date: dueDate } : {}),
                 };
               });
-              const { error: taskError } = await supabase.from('tasks').insert(taskRows);
+              const { data: createdTasks, error: taskError } = await supabase
+                .from('tasks').insert(taskRows).select('id, workstream, due_date');
               if (taskError) {
                 // Rollback: apagar o projeto criado para evitar projeto sem tarefas
                 await supabase.from('projects').delete().eq('id', newProject.id);
                 throw new Error(`Falha ao criar tarefas da fase "${phase.name}": ${taskError.message}`);
+              }
+
+              // Auto-gerar sub-tarefas para cada tarefa pai criada
+              if (createdTasks && createdTasks.length > 0) {
+                const allSubRows: any[] = [];
+                for (const parent of createdTasks) {
+                  const ws = parent.workstream || 'geral';
+                  const template = getSubTasksForWorkstream(ws);
+                  if (template.length === 0) continue;
+                  const baseDate = parent.due_date
+                    ? new Date(parent.due_date + 'T12:00:00')
+                    : new Date();
+                  template.slice(0, 12).forEach(st => {
+                    const d = new Date(baseDate);
+                    d.setDate(d.getDate() - (st.days_from_parent || 0));
+                    allSubRows.push({
+                      title: st.title,
+                      status: 'todo',
+                      priority: st.priority || 'medium',
+                      phase: st.phase,
+                      workstream: ws,
+                      parent_task_id: parent.id,
+                      project_id: newProject.id,
+                      organization_id: resolvedOrgId,
+                      due_date: d.toISOString().split('T')[0],
+                    });
+                  });
+                }
+                if (allSubRows.length > 0) {
+                  // Insert em lotes de 50 para não ultrapassar limites da API
+                  for (let i = 0; i < allSubRows.length; i += 50) {
+                    await supabase.from('tasks').insert(allSubRows.slice(i, i + 50));
+                  }
+                }
               }
             }
           }
@@ -1370,7 +1614,7 @@ export default function PlanningCopilot() {
         console.info(`[Copilot] Contexto recarregado após criação do projeto | org: ${resolvedOrgId}`);
 
         // Toast com navegação direta para o TaskBoard filtrado pelo projeto
-        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas!`, {
+        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas + sub-tarefas operacionais geradas!`, {
           action: {
             label: 'Ver Tarefas →',
             onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name, view: 'departments' } })

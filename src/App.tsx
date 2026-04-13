@@ -316,7 +316,15 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         })) as Project[];
 
       setProjects(projectsList);
-      if (!selectedProjectId && projectsList.length > 0) {
+      // Verificar se há ?project= na URL (link compartilhado)
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedProjectId = urlParams.get('project');
+      if (sharedProjectId && projectsList.find((p: any) => p.id === sharedProjectId)) {
+        setSelectedProjectId(sharedProjectId);
+        setShowProjectDetail(true);
+        // Limpar o parâmetro da URL para não reprocessar
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (!selectedProjectId && projectsList.length > 0) {
         setSelectedProjectId(projectsList[0].id);
       }
       setTasks((tasksResult.data || []) as Task[]);

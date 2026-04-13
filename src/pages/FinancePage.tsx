@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  DollarSign, TrendingUp, TrendingDown, PieChart, Plus, 
-  Filter, Download, Calendar, MoreVertical, Edit2, Trash2,
-  ChevronDown, ChevronRight, AlertCircle, CheckCircle, Clock, X, FileText, Share2,
-  Sparkles, Loader2
+import {
+  DollarSign, TrendingUp, TrendingDown, Plus,
+  Download, X, FileText, Share2,
+  Sparkles, Loader2, Copy, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
 import { analyzeFinances } from '../services/aiMarketingService';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  shows: 'Shows e Eventos', streaming: 'Streaming/Royalties', licensing: 'Licenciamento',
+  merchandising: 'Merchandising', sponsorship: 'Patrocínios', other_revenue: 'Outras Receitas',
+  production: 'Produção Musical', marketing: 'Marketing', audiovisual: 'Audiovisual',
+  logistics: 'Logística', team: 'Equipe', distribution: 'Distribuição',
+  legal: 'Jurídico', equipment: 'Equipamentos', other_expense: 'Outras Despesas',
+  Show: 'Show', Streaming: 'Streaming', 'Direitos Autorais': 'Direitos Autorais',
+  Marketing: 'Marketing', Produção: 'Produção', Equipamento: 'Equipamento',
+  Transporte: 'Transporte', Hospedagem: 'Hospedagem', Alimentação: 'Alimentação', Outros: 'Outros',
+};
+
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 interface Budget {
   id: string;
@@ -63,8 +75,24 @@ export default function FinancePage() {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzingFinances, setAnalyzingFinances] = useState(false);
 
+  // Relatório mensal
+  const now = new Date();
+  const [reportMonth, setReportMonth] = useState(now.getMonth()); // 0-indexed
+  const [reportYear, setReportYear] = useState(now.getFullYear());
+  const [reportArtistId, setReportArtistId] = useState('');
+  const [reportArtists, setReportArtists] = useState<{ id: string; name: string; stage_name?: string }[]>([]);
+  const [reportData, setReportData] = useState<{
+    revenues: Transaction[];
+    expenses: Transaction[];
+    shows: { title: string; deal_value: number; show_date: string }[];
+  } | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
   useEffect(() => {
-    if (user) loadFinanceData();
+    if (user) {
+      loadFinanceData();
+      supabase.from('artists').select('id, name, stage_name').order('name').then(({ data }) => setReportArtists(data || []));
+    }
   }, [user]);
 
   const loadFinanceData = async () => {
@@ -162,9 +190,47 @@ export default function FinancePage() {
     }
   };
 
-  const handleGenerateArtistReport = () => {
-    toast.success(`Relatório de Prestação de Contas gerado para ${selectedArtist}`);
+  const handleGenerateArtistReport = async () => {
+    setReportLoading(true);
     setShowReportModal(true);
+    try {
+      const startDate = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01`;
+      const endDate = new Date(reportYear, reportMonth + 1, 0).toISOString().split('T')[0];
+
+      // Transações do mês
+      const monthTx = transactions.filter(t => t.transaction_date >= startDate && t.transaction_date <= endDate);
+
+      // Shows do artista selecionado no mês
+      let shows: { title: string; deal_value: number; show_date: string }[] = [];
+      if (reportArtistId) {
+        const artistObj = reportArtists.find(a => a.id === reportArtistId);
+        const artistName = artistObj?.name;
+        if (artistName) {
+          const { data: showsData } = await supabase
+            .from('shows')
+            .select('title, deal_value, show_date')
+            .eq('artist_id', reportArtistId)
+            .gte('show_date', startDate)
+            .lte('show_date', endDate)
+            .order('show_date');
+          shows = (showsData || []).map((s: any) => ({
+            title: s.title,
+            deal_value: Number(s.deal_value || 0),
+            show_date: s.show_date,
+          }));
+        }
+      }
+
+      setReportData({
+        revenues: monthTx.filter(t => t.type === 'revenue'),
+        expenses: monthTx.filter(t => t.type === 'expense'),
+        shows,
+      });
+    } catch (e) {
+      toast.error('Erro ao gerar relatório');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const handleAIAnalysis = async () => {
@@ -193,12 +259,12 @@ export default function FinancePage() {
           <p className="text-gray-600 mt-1">Gestão de lucros, despesas e prestação de contas</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={handleGenerateArtistReport}
+          <button
+            onClick={() => setShowReportModal(true)}
             className="px-4 py-2 bg-white border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50 font-medium"
           >
             <FileText className="w-5 h-5 text-[#FFAD85]" />
-            Relatório para Artista
+            Relatório Mensal
           </button>
           <button 
             onClick={handleAIAnalysis}
@@ -289,45 +355,219 @@ export default function FinancePage() {
         </table>
       </div>
 
-      {/* Modal de Relatório para o Artista */}
-      {showReportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Prestação de Contas: {selectedArtist}</h2>
-              <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
-            </div>
-            
-            <div className="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
-              <div className="flex justify-between border-b pb-3">
-                <span className="text-gray-600">Total Bruto (Receitas)</span>
-                <span className="font-bold text-green-600">R$ {transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between border-b pb-3">
-                <span className="text-gray-600">Total Despesas (Produção/Logística)</span>
-                <span className="font-bold text-red-600">- R$ {transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between border-b pb-3">
-                <span className="text-gray-600">Comissão Escritório (20%)</span>
-                <span className="font-bold text-orange-600">- R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) * 0.20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between pt-2">
-                <span className="text-xl font-bold">Saldo Líquido Artista</span>
-                <span className="text-xl font-bold text-blue-600">R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) * 0.20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
+      {/* Modal de Relatório Mensal */}
+      {showReportModal && (() => {
+        const artistObj = reportArtists.find(a => a.id === reportArtistId);
+        const artistLabel = artistObj ? (artistObj.stage_name || artistObj.name) : 'Todos os Artistas';
+        const totalRevenue = (reportData?.revenues || []).reduce((s, t) => s + t.amount, 0);
+        const totalExpenses = (reportData?.expenses || []).reduce((s, t) => s + t.amount, 0);
+        const totalShows = (reportData?.shows || []).reduce((s, sh) => s + sh.deal_value, 0);
+        const saldo = totalRevenue + totalShows - totalExpenses;
 
-            <div className="flex gap-4">
-              <button className="flex-1 py-4 bg-[#FFAD85] text-white rounded-xl font-bold text-lg hover:bg-[#FF9B6A] flex items-center justify-center gap-2">
-                <Download className="w-6 h-6" /> Baixar PDF
-              </button>
-              <button className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 flex items-center justify-center gap-2">
-                <Share2 className="w-6 h-6" /> Enviar WhatsApp
-              </button>
+        // Agrupar receitas por categoria
+        const revByCategory: Record<string, number> = {};
+        (reportData?.revenues || []).forEach(t => {
+          const cat = CATEGORY_LABELS[t.category] || t.category;
+          revByCategory[cat] = (revByCategory[cat] || 0) + t.amount;
+        });
+        const expByCategory: Record<string, number> = {};
+        (reportData?.expenses || []).forEach(t => {
+          const cat = CATEGORY_LABELS[t.category] || t.category;
+          expByCategory[cat] = (expByCategory[cat] || 0) + t.amount;
+        });
+
+        const fmt = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        const handleCopy = () => {
+          const lines = [
+            `📊 RELATÓRIO FINANCEIRO — ${MONTHS[reportMonth]}/${reportYear}`,
+            `Artista: ${artistLabel}`,
+            ``,
+            `✅ ENTRADAS`,
+            ...Object.entries(revByCategory).map(([c, v]) => `  ${c}: ${fmt(v)}`),
+            ...(reportData?.shows?.length ? [`  Shows: ${fmt(totalShows)}`] : []),
+            `  TOTAL: ${fmt(totalRevenue + totalShows)}`,
+            ``,
+            `❌ SAÍDAS`,
+            ...Object.entries(expByCategory).map(([c, v]) => `  ${c}: ${fmt(v)}`),
+            `  TOTAL: ${fmt(totalExpenses)}`,
+            ``,
+            `💰 SALDO: ${fmt(saldo)}`,
+          ];
+          navigator.clipboard.writeText(lines.join('\n'));
+          toast.success('Relatório copiado!');
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl my-8">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-2xl">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Relatório Mensal</h2>
+                  <p className="text-sm text-gray-500">Entradas, saídas e saldo por período</p>
+                </div>
+                <button onClick={() => { setShowReportModal(false); setReportData(null); }} className="p-2 hover:bg-gray-200 rounded-full">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Filtros */}
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Mês</label>
+                    <select
+                      value={reportMonth}
+                      onChange={e => { setReportMonth(Number(e.target.value)); setReportData(null); }}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    >
+                      {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Ano</label>
+                    <select
+                      value={reportYear}
+                      onChange={e => { setReportYear(Number(e.target.value)); setReportData(null); }}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    >
+                      {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Artista</label>
+                    <select
+                      value={reportArtistId}
+                      onChange={e => { setReportArtistId(e.target.value); setReportData(null); }}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    >
+                      <option value="">Todos</option>
+                      {reportArtists.map(a => (
+                        <option key={a.id} value={a.id}>{a.stage_name || a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={handleGenerateArtistReport}
+                  disabled={reportLoading}
+                  className="mt-3 w-full py-2.5 bg-[#FFAD85] text-white font-bold rounded-xl hover:bg-[#FF9B6A] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {reportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  {reportLoading ? 'Gerando...' : 'Gerar Relatório'}
+                </button>
+              </div>
+
+              {/* Resultado */}
+              {reportData && !reportLoading && (
+                <div className="px-6 py-5 space-y-5">
+                  {/* Título do período */}
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-gray-900">{MONTHS[reportMonth]} {reportYear} — {artistLabel}</p>
+                  </div>
+
+                  {/* Cards resumo */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+                      <p className="text-xs font-bold text-green-600 uppercase mb-1">Entradas</p>
+                      <p className="text-lg font-bold text-green-700">{fmt(totalRevenue + totalShows)}</p>
+                    </div>
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+                      <p className="text-xs font-bold text-red-500 uppercase mb-1">Saídas</p>
+                      <p className="text-lg font-bold text-red-600">{fmt(totalExpenses)}</p>
+                    </div>
+                    <div className={`border rounded-xl p-3 text-center ${saldo >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-100'}`}>
+                      <p className={`text-xs font-bold uppercase mb-1 ${saldo >= 0 ? 'text-blue-600' : 'text-red-500'}`}>Saldo</p>
+                      <p className={`text-lg font-bold ${saldo >= 0 ? 'text-blue-700' : 'text-red-600'}`}>{fmt(saldo)}</p>
+                    </div>
+                  </div>
+
+                  {/* Shows do artista no mês */}
+                  {reportData.shows.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-2">Shows no período</p>
+                      <div className="space-y-1">
+                        {reportData.shows.map((sh, i) => (
+                          <div key={i} className="flex justify-between items-center text-sm py-1.5 border-b border-gray-50">
+                            <span className="text-gray-700 truncate flex-1">{sh.title}</span>
+                            <span className="text-xs text-gray-400 mx-2">{new Date(sh.show_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                            <span className="font-bold text-green-600">{fmt(sh.deal_value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Receitas por categoria */}
+                  {Object.keys(revByCategory).length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-2">Receitas por categoria</p>
+                      <div className="space-y-1">
+                        {Object.entries(revByCategory).map(([cat, val]) => (
+                          <div key={cat} className="flex justify-between text-sm py-1 border-b border-gray-50">
+                            <span className="text-gray-600">{cat}</span>
+                            <span className="font-semibold text-green-600">{fmt(val)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-sm pt-1">
+                          <span className="font-bold text-gray-800">Total Receitas</span>
+                          <span className="font-bold text-green-700">{fmt(totalRevenue)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Despesas por categoria */}
+                  {Object.keys(expByCategory).length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-2">Despesas por categoria</p>
+                      <div className="space-y-1">
+                        {Object.entries(expByCategory).map(([cat, val]) => (
+                          <div key={cat} className="flex justify-between text-sm py-1 border-b border-gray-50">
+                            <span className="text-gray-600">{cat}</span>
+                            <span className="font-semibold text-red-500">{fmt(val)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-sm pt-1">
+                          <span className="font-bold text-gray-800">Total Despesas</span>
+                          <span className="font-bold text-red-600">{fmt(totalExpenses)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {reportData.revenues.length === 0 && reportData.expenses.length === 0 && reportData.shows.length === 0 && (
+                    <p className="text-center text-sm text-gray-400 py-4">Nenhuma movimentação em {MONTHS[reportMonth]}/{reportYear}.</p>
+                  )}
+
+                  {/* Ações */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleCopy}
+                      className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Copy className="w-4 h-4" /> Copiar (WhatsApp)
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      className="flex-1 py-3 bg-[#FFAD85] text-white rounded-xl font-bold hover:bg-[#FF9B6A] flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Download className="w-4 h-4" /> Imprimir / PDF
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!reportData && !reportLoading && (
+                <div className="px-6 py-10 text-center text-sm text-gray-400">
+                  Selecione o período e clique em <strong>Gerar Relatório</strong>.
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal Nova Transação */}
       {showAddModal && (

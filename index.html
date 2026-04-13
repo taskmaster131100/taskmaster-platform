@@ -81,6 +81,16 @@
       }
     </script>
     
+    <!-- Print styles para exportar projeto como PDF -->
+    <style>
+      @media print {
+        body > #root > * { display: none !important; }
+        body > #root > div[data-printable="true"] { display: block !important; }
+        .no-print { display: none !important; }
+        @page { margin: 1.5cm; size: A4; }
+      }
+    </style>
+
     <!-- Preload critical resources -->
     <link rel="preload" href="/src/main.tsx" as="script" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

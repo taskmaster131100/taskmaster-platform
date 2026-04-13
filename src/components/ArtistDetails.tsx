@@ -487,9 +487,24 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                   {/* Contadores rápidos */}
                   {!loadingOps && (
                     <div className="flex gap-4 mt-3 justify-center md:justify-start text-xs text-gray-500">
-                      <span><strong className="text-gray-800">{totalShowsCount}</strong> show{totalShowsCount !== 1 ? 's' : ''}</span>
-                      <span><strong className="text-gray-800">{totalReleasesCount}</strong> lançamento{totalReleasesCount !== 1 ? 's' : ''}</span>
-                      <span><strong className="text-gray-800">{artistProjects.length}</strong> projeto{artistProjects.length !== 1 ? 's' : ''} ativos</span>
+                      <button
+                        onClick={() => navigate('/shows', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                        className="hover:text-yellow-600 hover:underline transition-colors cursor-pointer"
+                      >
+                        <strong className="text-gray-800">{totalShowsCount}</strong> show{totalShowsCount !== 1 ? 's' : ''}
+                      </button>
+                      <button
+                        onClick={() => navigate('/releases', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                        className="hover:text-purple-600 hover:underline transition-colors cursor-pointer"
+                      >
+                        <strong className="text-gray-800">{totalReleasesCount}</strong> lançamento{totalReleasesCount !== 1 ? 's' : ''}
+                      </button>
+                      <button
+                        onClick={() => navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                        className="hover:text-orange-500 hover:underline transition-colors cursor-pointer"
+                      >
+                        <strong className="text-gray-800">{artistProjects.length}</strong> projeto{artistProjects.length !== 1 ? 's' : ''} ativos
+                      </button>
                     </div>
                   )}
                 </>

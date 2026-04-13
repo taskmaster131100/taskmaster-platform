@@ -27,9 +27,16 @@ export interface Show {
   production_split?: number;
   // outros
   status: ShowStatus;
+  stage?: string;
   notes?: string;
   org_id?: string;
   contractor_name?: string;
+  contract_url?: string;
+  contract_signed_at?: string;
+  payment_terms?: string;
+  load_in_time?: string;
+  soundcheck_time?: string;
+  doors_open_time?: string;
   created_at: string;
   updated_at: string;
 }
@@ -97,8 +104,15 @@ function normalizeShow(row: any): Show {
     artist_split: row.artist_split ? Number(row.artist_split) : undefined,
     production_split: row.production_split ? Number(row.production_split) : undefined,
     status: (row.status as ShowStatus) || 'consultado',
+    stage: row.stage || 'lead',
     notes: row.notes || '',
     org_id: row.org_id,
+    contract_url: row.contract_url || '',
+    contract_signed_at: row.contract_signed_at || '',
+    payment_terms: row.payment_terms || '',
+    load_in_time: row.load_in_time ? String(row.load_in_time).substring(11, 16) : '',
+    soundcheck_time: row.soundcheck_time ? String(row.soundcheck_time).substring(11, 16) : '',
+    doors_open_time: row.doors_open_time ? String(row.doors_open_time).substring(11, 16) : '',
     created_at: row.created_at || '',
     updated_at: row.updated_at || '',
   };
@@ -139,6 +153,11 @@ export async function createShow(showData: Partial<Show> & { artist_name?: strin
     commission_rate: showData.commission_rate ?? null,
     artist_split: showData.artist_split ?? null,
     production_split: showData.production_split ?? null,
+    load_in_time: (showData as any).load_in_time ? `1970-01-01T${(showData as any).load_in_time}:00Z` : null,
+    soundcheck_time: (showData as any).soundcheck_time ? `1970-01-01T${(showData as any).soundcheck_time}:00Z` : null,
+    doors_open_time: (showData as any).doors_open_time ? `1970-01-01T${(showData as any).doors_open_time}:00Z` : null,
+    contract_url: (showData as any).contract_url || null,
+    payment_terms: (showData as any).payment_terms || null,
   };
 
   const { data, error } = await supabase
@@ -166,6 +185,11 @@ export async function updateShow(id: string, updates: Partial<Show> & { city?: s
   if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
   if (updates.commission_rate !== undefined) dbUpdates.commission_rate = updates.commission_rate;
   if (updates.artist_split !== undefined) dbUpdates.artist_split = updates.artist_split;
+  if ((updates as any).load_in_time !== undefined) dbUpdates.load_in_time = (updates as any).load_in_time ? `1970-01-01T${(updates as any).load_in_time}:00Z` : null;
+  if ((updates as any).soundcheck_time !== undefined) dbUpdates.soundcheck_time = (updates as any).soundcheck_time ? `1970-01-01T${(updates as any).soundcheck_time}:00Z` : null;
+  if ((updates as any).doors_open_time !== undefined) dbUpdates.doors_open_time = (updates as any).doors_open_time ? `1970-01-01T${(updates as any).doors_open_time}:00Z` : null;
+  if ((updates as any).contract_url !== undefined) dbUpdates.contract_url = (updates as any).contract_url || null;
+  if ((updates as any).payment_terms !== undefined) dbUpdates.payment_terms = (updates as any).payment_terms || null;
   if ((updates as any).value !== undefined || updates.deal_value !== undefined) {
     dbUpdates.deal_value = updates.deal_value ?? (updates as any).value;
   }
