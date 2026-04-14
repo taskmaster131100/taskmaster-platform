@@ -41,7 +41,7 @@ const BetaBanner = React.lazy(() => import('./components/BetaBanner'));
 const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const Onboarding = React.lazy(() => import('./components/Onboarding'));
 const LoginForm = React.lazy(() => import('./components/auth/LoginForm'));
-const RegisterForm = React.lazy(() => import('./components/auth/RegisterForm'));
+const RegisterGate = React.lazy(() => import('./components/auth/RegisterGate'));
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword'));
 const DashboardRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.DashboardRedirect })));
 const VisaoGeralRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.VisaoGeralRedirect })));
@@ -673,7 +673,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
                 </div>
               </div>
             }>
-              <RegisterForm />
+              <RegisterGate />
             </React.Suspense>
           } />
           <Route path="/reset-password" element={
