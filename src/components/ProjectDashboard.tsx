@@ -530,20 +530,22 @@ Responda em português. Seja direto e prático.`;
               </button>
               <button
                 onClick={() => {
-                  const url = `${window.location.origin}/?project=${project.id}`;
+                  const url = `${window.location.origin}/project/${project.id}`;
                   navigator.clipboard.writeText(url).then(() => toast.success('Link copiado!')).catch(() => toast.error('Erro ao copiar.'));
                 }}
-                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-400 rounded-xl text-sm hover:text-gray-600 hover:bg-gray-50 transition-all shrink-0"
-                title="Copiar link do projeto"
+                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-all shrink-0"
+                title="Compartilhar projeto"
               >
                 <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-medium">Compartilhar</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-400 rounded-xl text-sm hover:text-gray-600 hover:bg-gray-50 transition-all shrink-0"
-                title="Exportar / Imprimir PDF"
+                className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-all shrink-0"
+                title="Exportar PDF"
               >
                 <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-medium">Exportar PDF</span>
               </button>
               <button
                 onClick={handleArchive}

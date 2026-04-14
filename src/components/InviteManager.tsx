@@ -54,14 +54,18 @@ export default function InviteManager() {
     setLoading(true);
     setLastLink(null);
     try {
-      const { token } = await sendInvite({
+      const { token, emailSent } = await sendInvite({
         email,
         role,
         artist_id: artistId || null,
       });
       const link = `${APP_URL}/invite/${token}`;
       setLastLink(link);
-      toast.success(`Convite enviado para ${email}`);
+      if (emailSent) {
+        toast.success(`Convite enviado por e-mail para ${email}`);
+      } else {
+        toast.warning(`Convite criado! E-mail não enviado — copie e envie o link manualmente.`);
+      }
       setEmail('');
       loadInvites();
     } catch (err: any) {

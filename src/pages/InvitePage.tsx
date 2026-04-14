@@ -166,15 +166,21 @@ export default function InvitePage() {
             </div>
 
             {!user?.id ? (
-              <div className="mt-4">
+              <div className="mt-4 space-y-2">
                 <p className="text-sm text-gray-600 mb-3">
-                  Para aceitar o convite, faça login com o email convidado.
+                  Para aceitar o convite, faça login ou crie sua conta com o e-mail convidado.
                 </p>
                 <Link
                   to={`/login?redirect=${encodeURIComponent(`/invite/${encodeURIComponent(tokenValue)}`)}`}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white font-semibold"
                 >
-                  Ir para login <ArrowRight className="w-4 h-4" />
+                  Já tenho conta — Fazer login <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to={`/join?redirect=${encodeURIComponent(`/invite/${encodeURIComponent(tokenValue)}`)}`}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Criar minha conta <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             ) : (

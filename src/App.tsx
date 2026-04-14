@@ -42,6 +42,7 @@ const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const Onboarding = React.lazy(() => import('./components/Onboarding'));
 const LoginForm = React.lazy(() => import('./components/auth/LoginForm'));
 const RegisterGate = React.lazy(() => import('./components/auth/RegisterGate'));
+const RegisterForm = React.lazy(() => import('./components/auth/RegisterForm'));
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword'));
 const DashboardRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.DashboardRedirect })));
 const VisaoGeralRedirect = React.lazy(() => import('./pages/RedirectPages').then(module => ({ default: module.VisaoGeralRedirect })));
@@ -199,6 +200,18 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   // Update activeTab based on route
   useEffect(() => {
     const path = location.pathname;
+
+    // Rota de projeto — abre ProjectDashboard via URL /project/:id
+    if (path.startsWith('/project/')) {
+      const projectId = path.split('/')[2];
+      if (projectId) {
+        setSelectedProjectId(projectId);
+        setShowProjectDetail(true);
+        setShowArtistDetails(null);
+      }
+      return; // não aplicar outros efeitos de rota
+    }
+
     // Rotas sem projeto fecham o overlay de projeto (evita tela presa após botão "Voltar")
     const nonProjectPaths = ['/', '/organization', '/tasks', '/tarefas', '/calendar', '/reports',
       '/kpis', '/artists', '/shows', '/releases', '/music', '/planejamento', '/users', '/profile'];
@@ -345,10 +358,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
   };
 
   const handleSelectProject = (projectId: string) => {
-    setSelectedProjectId(projectId);
-    setShowArtistDetails(null);  // fecha overlay de artista
-    setShowProjectDetail(true);  // abre overlay de projeto (prioridade sobre activeTab)
-    // Sem navigate — evita conflito com location effect que sobrescreveria activeTab
+    navigate('/project/' + projectId);
   };
 
   const handleCreateProject = () => {
@@ -438,10 +448,9 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
       if (newProject) {
         setProjects(prev => [newProject as Project, ...prev]);
-        setSelectedProjectId(newProject.id);
-        setActiveTab('dashboard');
         toast.success('Projeto criado com sucesso!');
         loadData();
+        navigate('/project/' + newProject.id);
       }
       setShowCreateProject(false);
     } catch (error: any) {
@@ -699,6 +708,13 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
               </div>
             }>
               <InvitePage />
+            </React.Suspense>
+          } />
+
+          {/* /join — cadastro direto para usuários convidados por equipe */}
+          <Route path="/join" element={
+            <React.Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+              <RegisterForm />
             </React.Suspense>
           } />
 
@@ -1018,6 +1034,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Routes>
           <Route path="/pending-approval" element={
             <React.Suspense fallback={<div />}><PendingApproval /></React.Suspense>
+          } />
+          {/* Permitir acesso ao convite de equipe — aceitar o convite auto-aprova o usuário */}
+          <Route path="/invite/:token" element={
+            <React.Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+              <InvitePage />
+            </React.Suspense>
           } />
           <Route path="*" element={<Navigate to="/pending-approval" replace />} />
         </Routes>

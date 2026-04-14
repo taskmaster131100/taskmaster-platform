@@ -24,10 +24,10 @@ export interface SendInviteParams {
   artist_id?: string | null;
 }
 
-async function sendInviteEmail(email: string, role: string, token: string) {
+async function sendInviteEmail(email: string, role: string, token: string): Promise<boolean> {
   if (!BREVO_KEY) {
     console.warn('[inviteService] VITE_BREVO_API_KEY não configurada — e-mail não enviado');
-    return;
+    return false;
   }
 
   const link = `${APP_URL}/invite/${token}`;
@@ -65,13 +65,16 @@ async function sendInviteEmail(email: string, role: string, token: string) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       console.error('[inviteService] Brevo erro:', err);
+      return false;
     }
+    return true;
   } catch (e) {
     console.error('[inviteService] falha ao enviar e-mail:', e);
+    return false;
   }
 }
 
-export async function sendInvite({ email, role, artist_id }: SendInviteParams): Promise<{ token: string }> {
+export async function sendInvite({ email, role, artist_id }: SendInviteParams): Promise<{ token: string; emailSent: boolean }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Não autorizado');
 
@@ -115,9 +118,9 @@ export async function sendInvite({ email, role, artist_id }: SendInviteParams): 
   if (error) throw new Error(error.message);
 
   // Enviar e-mail via Brevo
-  await sendInviteEmail(email.toLowerCase(), role, token);
+  const emailSent = await sendInviteEmail(email.toLowerCase(), role, token);
 
-  return { token };
+  return { token, emailSent };
 }
 
 export async function listInvites(): Promise<Invite[]> {

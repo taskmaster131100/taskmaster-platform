@@ -200,12 +200,15 @@ export default function RegisterForm() {
         }
       }
 
-      console.log('Signup complete, redirecting to /');
-
-      toast.success('Cadastro realizado! Seu acesso será liberado após aprovação do administrador. Você receberá um email quando for aprovado.');
-
-      // Redirect to pending approval page
-      navigate('/pending-approval');
+      // Se veio de um link de convite de equipe, redirecionar de volta ao convite
+      const redirectTo = searchParams.get('redirect');
+      if (redirectTo && redirectTo.startsWith('/invite/')) {
+        toast.success('Conta criada! Aceite o convite para entrar na equipe.');
+        navigate(redirectTo);
+      } else {
+        toast.success('Cadastro realizado! Seu acesso será liberado após aprovação do administrador. Você receberá um email quando for aprovado.');
+        navigate('/pending-approval');
+      }
     } catch (err: any) {
       console.error('Signup failed:', err);
 
