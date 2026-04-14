@@ -103,7 +103,9 @@ export default function InvitePage() {
       }
 
       toast.success('Convite aceito! Você já faz parte da organização.');
-      navigate('/team');
+      // Atualiza a sessão para refletir approved:true gravado pelo RPC
+      await supabase.auth.refreshSession();
+      navigate('/');
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || 'Não foi possível aceitar o convite.');

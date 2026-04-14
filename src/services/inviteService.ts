@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const BREVO_KEY = import.meta.env.VITE_BREVO_API_KEY;
+const BREVO_KEY = import.meta.env.VITE_BREVO_API_KEY || import.meta.env.VITE_BREVO_KEY;
 const SENDER = {
   name: import.meta.env.VITE_BREVO_SENDER_NAME || 'TaskMaster',
   email: import.meta.env.VITE_BREVO_SENDER_EMAIL || 'contact@taskmaster.works',
