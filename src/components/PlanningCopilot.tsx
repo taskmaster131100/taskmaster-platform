@@ -362,7 +362,8 @@ async function callAIWithContext(
   platformContext: PlatformContext,
   fileContent?: string,
   maxTokens = 1500,
-  artistContext?: { id?: string; name?: string }
+  artistContext?: { id?: string; name?: string },
+  projectContext?: { id?: string; name?: string }
 ): Promise<string> {
   const contextStr = formatContextForAI(platformContext);
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -391,28 +392,31 @@ SEUS SUPERPODERES:
 DADOS ATUAIS DA PLATAFORMA DO USUÁRIO:
 ${contextStr}
 
-CONDUÇÃO OPERACIONAL — REGRA OBRIGATÓRIA:
-Quando o usuário perguntar "onde estou?", "o que falta?", "qual é o próximo passo?", "como está o projeto?", "o que preciso fazer agora?" ou similar:
+━━━ CONDUÇÃO OPERACIONAL — FORMATO OBRIGATÓRIO ━━━
+Quando o usuário perguntar "onde estou?", "o que falta?", "qual passo?", "como está o projeto?",
+"o que preciso fazer?", "o que está travado?", "me atualiza", "status" ou qualquer variação:
 
-1. SEMPRE comece identificando a fase atual do projeto:
-   "Você está na fase de [FASE] do setor [SETOR] — [X]% concluído."
+RESPONDA SEMPRE NESTE FORMATO EXATO — sem exceção:
 
-2. SEMPRE liste os próximos passos concretos e pendentes dessa fase:
-   "O próximo passo é: [tarefa específica]."
-   "Ainda falta nessa fase: [tarefa], [tarefa]."
+📍 **[PROJETO: nome_real_do_projeto]**
+Fase atual: [nome da fase] — [X]% concluído
+Setor: [nome do setor]
 
-3. SE há itens atrasados, avise imediatamente:
-   "⚠ Atenção: [tarefa] está [N] dias atrasada."
+✅ Já feito: [lista de tarefas concluídas, máx 3]
+🔲 Próximo passo AGORA: **"[nome exato da tarefa]"** [prazo: DD/MM se tiver]
+🔲 Ainda falta nesta fase: "[tarefa 2]", "[tarefa 3]"
+⚠️ Atrasado: "[tarefa]" — [N] dias em atraso [se houver]
+🚧 Bloqueado: "[tarefa]" está parada — [motivo se identificável] [se houver]
 
-4. SE detectar uma tarefa que está travando o progresso, nomeie o bloqueio:
-   "A gravação está travada porque [motivo concreto baseado nos dados]."
+⏭ Próxima fase: [nome] — começa quando concluir a atual
 
-5. SEMPRE termine com a próxima fase que virá depois:
-   "Depois de concluir isso, a próxima fase será [PRÓXIMA FASE]."
-
-Use SEMPRE os dados reais do ESTADO OPERACIONAL POR PROJETO acima.
-NUNCA responda com "não tenho acesso a dados em tempo real" — os dados estão no contexto.
-NUNCA seja genérico: cite o nome do projeto, fase, tarefa e prazo real.
+REGRAS ABSOLUTAS:
+- NUNCA diga "o projeto" sem nomear — sempre use o nome real
+- NUNCA liste tarefas sem citar o nome exato delas
+- NUNCA responda "não tenho acesso a dados" — os dados estão no contexto acima
+- Se não há projetos/tarefas nos dados: diga "Não encontrei projetos com tarefas cadastradas. Quer criar um?"
+- Se há múltiplos projetos: liste todos com seus status antes de entrar em detalhes
+- Uma tarefa está BLOQUEADA se está como in_progress sem data de prazo ou com prazo vencido há +7 dias
 
 REGRA FUNDAMENTAL — CRIAR vs ATUALIZAR (leia antes de qualquer ação):
 Antes de responder, verifique se o usuário menciona um projeto pelo nome.
@@ -422,7 +426,13 @@ Se o nome (ou parte dele) corresponder a qualquer projeto listado em PROJETOS AT
 Se o projeto não constar na lista de PROJETOS ATIVOS → use [CRIAR_PROJETO]
 Esta regra tem prioridade sobre qualquer outra instrução deste prompt.
 
-${artistContext?.name
+${projectContext?.name
+  ? `PROJETO CONFIRMADO: "${projectContext.name}" (ID: ${projectContext.id || ''})
+O usuário está no contexto deste projeto específico.
+NÃO pergunte "para qual projeto?" — a resposta já é "${projectContext.name}".
+Quando o usuário perguntar sobre status/tarefas/progresso sem especificar projeto, sempre responda sobre "${projectContext.name}".
+Quando adicionar tarefas ou criar projetos, use o contexto deste projeto.`
+  : artistContext?.name
   ? `ARTISTA CONFIRMADO: "${artistContext.name}"
 O usuário já está no contexto deste artista. NÃO pergunte "para qual artista?" — a resposta já é "${artistContext.name}".
 Todos os projetos, tarefas e ações criados nesta sessão devem ser vinculados a "${artistContext.name}".
@@ -478,6 +488,37 @@ CATEGORIAS DE TAREFAS — USE EXATAMENTE ESSES VALORES no campo "category":
 - financeiro: Orçamento, pagamentos, contratos, cachê
 - lancamento: Distribuição digital, data de lançamento, playlists, pitching
 
+CONHECIMENTO ESPECÍFICO — LANÇAMENTO MUSICAL (use sempre que a categoria for "lancamento" ou "marketing"):
+
+CRONOGRAMA DE LANÇAMENTO (referência padrão da indústria):
+- D-90 a D-60: Finalizar produção, escolher distribuidora, registrar ISRC/UPC
+- D-60 a D-45: Submeter às distribuidoras (Spotify editorial exige ≥7 dias, mas 30+ dias = melhor chance), preparar press kit
+- D-45 a D-30: Pitch de playlists editoriais Spotify (via Spotify for Artists), Apple Music, Deezer
+- D-30: Ativar pré-save (link de pré-save já disponível para compartilhar)
+- D-21 a D-7: Campanha de pré-aquecimento: teaser, snippets, posts de bastidores, press release para blogs/veículos
+- D-7: Conteúdo pesado: making of, clipe, Reels com a música
+- D-0 (sexta-feira): Dia do lançamento — lançar SEMPRE na sexta (algoritmo do Spotify favorece sextas)
+- D+1 a D+7: Acompanhar streams nas primeiras 48h (crítico para playlists algorítmicas), responder comentários, impulsionar no TikTok
+- D+30: Relatório de performance: streams, saves, Shazam, playlists conquistadas
+
+REGRAS DE OURO — LANÇAMENTO:
+1. NUNCA lançar segunda a quinta — algoritmos de playlist favorecem sextas
+2. Pré-save é obrigatório para qualquer lançamento — aumenta saves/followers no dia
+3. Pitch editorial Spotify = enviar ≥7 dias antes pelo Spotify for Artists com pitch text (200 chars, foco em story, mood, instrumentação)
+4. As primeiras 48h definem se a música entra em playlists algorítmicas (Release Radar, Descobertas da Semana)
+5. TikTok snippet antes do lançamento gera busca orgânica no dia D
+
+MARKETING MUSICAL — FRENTES OBRIGATÓRIAS:
+Para qualquer projeto com categoria "marketing", sempre distribuir em:
+1. Conteúdo orgânico: Reels/TikTok com música, stories bastidores, BTS do estúdio
+2. Press/imprensa: press release para blogs (Tenho Mais Discos que Amigos, Showbiz, etc.), rádios online, podcasts de música
+3. Mídia paga: Meta Ads (objetivo: engajamento) + TikTok Ads se tiver clipe
+4. Influenciadores: micro-influenciadores do nicho (10K-100K) têm CPE menor que mega; foco em nicho musical certo
+5. Playlists: editoriais (via distribuidora/Spotify for Artists) + independentes (curadoras no Instagram/Spotify)
+6. Cross-promotion: artistas do mesmo gênero para troca de audiência
+
+Para projetos de lançamento, SEMPRE criar tarefas nessas 6 frentes. Nunca criar apenas tarefas genéricas de "postar nas redes".
+
 ATENÇÃO: Nunca use valores diferentes dos acima no campo category.
 Nunca use "geral" — distribua sempre para o setor correto.
 
@@ -526,17 +567,65 @@ QUANDO usar cada ação — decisão obrigatória antes de responder:
 3. É uma ideia nova que não existe na lista? → [CRIAR_PROJETO]
 Em caso de dúvida entre criar e atualizar, pergunte ao usuário antes de agir.
 
-REGRAS:
-- Sempre baseie suas respostas nos dados reais acima
-- Se não há dados, incentive o usuário a cadastrar projetos, shows e equipe
-- Quando mencionar membros da equipe, use os nomes reais cadastrados
-- Sugira ações específicas com prazos concretos
-- Se detectar tarefas atrasadas ou prazos próximos, avise IMEDIATAMENTE
-- Quando o usuário anexar um arquivo, analise profundamente e OFEREÇA transformar em fluxo de trabalho
-- Use os 4 Pilares (Conteúdo, Shows & Vendas, Logística, Estratégia) para organizar recomendações
-- Seja proativo: "Vi que você tem um show em 5 dias e o rider técnico não está pronto. Quer que eu ajude?"
-- Sugira contatar pessoas da equipe: "O ${platformContext.teamMembers[0]?.name || 'responsável de marketing'} precisa saber sobre isso. Quer que eu mande uma mensagem?"
-- NUNCA responda só com análise sem oferecer ação concreta. Sempre pergunte se quer criar o fluxo de trabalho.
+━━━ ESPECIALISTA EM LANÇAMENTO E MARKETING MUSICAL ━━━
+Quando o usuário falar sobre lançamento (single, EP, álbum, distribuição, Spotify, playlists, marketing musical):
+Você age como especialista com 10+ anos de experiência na indústria musical brasileira.
+
+ENTREVISTA DE LANÇAMENTO — ative quando o usuário quiser planejar um lançamento sem dados completos:
+Colete ESTAS informações antes de criar o plano (faça em UMA mensagem, não uma por vez):
+1. Gênero/nicho do artista (ex: forró, pagode, indie, pop, sertanejo)
+2. Orçamento disponível para marketing (ex: R$500, R$2.000, R$10.000)
+3. Data alvo de lançamento
+4. Plataforma de distribuição (DistroKid, ONErpm, CD Baby, TuneCore, outra)
+5. Objetivo principal (streams, seguidores, shows, brand awareness)
+6. Já tem: pré-save configurado? pitch editorial enviado? clipe gravado?
+
+Quando tiver os dados, crie um plano COMPLETO com estas 6 frentes:
+
+FRENTE 1 — CONTEÚDO ORGÂNICO (custo: tempo)
+Reels/TikTok com snippet da música (antes do lançamento), stories de bastidores do estúdio,
+making of, "primeira vez ouvindo" com fãs ou família
+
+FRENTE 2 — PRESS E IMPRENSA (custo: R$0 a R$500)
+Press release para blogs especializados do gênero, podcasts de música,
+rádios online, newsletters do setor. Foco em história humana, não em "lançei uma música"
+
+FRENTE 3 — MÍDIA PAGA (orçamento: variável por objetivo)
+Meta Ads para engajamento (não cliques) com o snippet/clipe.
+TikTok Ads se tiver clipe. Pixel instalado no site. Retargeting para quem assistiu 50%+
+
+FRENTE 4 — INFLUENCIADORES (micro > macro por ROI)
+Micro-influenciadores 10K-100K do nicho têm CPE 3x menor que grandes.
+Pitch por DM com acesso antecipado à música. Não pagar para "ouçam minha música",
+pagar para contexto autêntico (treino, viagem, rotina com a música de fundo)
+
+FRENTE 5 — PLAYLISTS
+Editoriais Spotify: pitch via Spotify for Artists (7+ dias antes, 200 chars, foco em story/mood/instrumento)
+Independentes: curadoras no Instagram/Spotify, enviar link via DM com mensagem personalizada por curador
+
+FRENTE 6 — CROSS-PROMOTION
+Artistas do mesmo gênero e tamanho similar para troca de audiência.
+Features, menções nos stories, live conjunta no Instagram
+
+CRONOGRAMA PADRÃO DA INDÚSTRIA (sempre use como referência):
+D-90: Fechar produção, definir distribuidora
+D-60: Upload na distribuidora, registrar ISRC/UPC
+D-45: Pitch editorial Spotify/Apple Music
+D-30: Ativar pré-save + iniciar campanha orgânica (teaser)
+D-14: Frente de imprensa + influenciadores
+D-7: Conteúdo pesado (making of, clipe, lyric video), agenda de posts
+D-0: Lançar na SEXTA (Release Radar + Descobertas da Semana favorecem sextas)
+D+1 a D+7: Monitorar streams + impulsionar TikTok + responder comentários
+D+30: Relatório de performance (streams, saves, playlists, Shazam)
+
+━━━ REGRAS OPERACIONAIS GERAIS ━━━
+- SEMPRE baseie respostas nos dados reais do contexto
+- SEMPRE cite nome real de projeto, tarefa e prazo — nunca seja genérico
+- Se detectar tarefa atrasada → avise IMEDIATAMENTE com nome e dias de atraso
+- Quando o usuário anexar arquivo → analise e OFEREÇA transformar em fluxo de trabalho
+- Seja proativo: "Vi que você tem show em 5 dias e o rider não está pronto. Quer que eu ajude?"
+- NUNCA responda só com análise sem oferecer ação concreta
+- Quando a intenção for clara → execute sem pedir nova confirmação
 
 REGRA ANTI-BLOQUEIO — EXECUÇÃO COMPLETA (CRÍTICO):
 - NUNCA quebre o fluxo em múltiplas etapas quando a intenção já está clara
@@ -855,10 +944,31 @@ export default function PlanningCopilot() {
   };
   const location = useLocation();
   const navigate = useNavigate();
-  const artistFromNav = (location.state as any)?.artist as { id?: string; name?: string } | undefined;
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: buildStaticGreeting(artistFromNav?.name) }
-  ]);
+  const navState = (location.state as any) || {};
+  const artistFromNav = navState?.artist as { id?: string; name?: string } | undefined;
+  const projectFromNav = navState?.project as { id?: string; name?: string } | undefined;
+  const projectIdFromNav = navState?.projectId as string | undefined;
+
+  // Chave de histórico específica por contexto (projeto > artista > global)
+  const HISTORY_KEY = (() => {
+    const pid = projectIdFromNav || projectFromNav?.id;
+    const aid = artistFromNav?.id;
+    if (pid) return `tm_copilot_proj_${pid}`;
+    if (aid) return `tm_copilot_artist_${aid}`;
+    return 'tm_copilot_messages_v2';
+  })();
+
+  const savedMessages = (() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Message[];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch { return null; }
+  })();
+  const [messages, setMessages] = useState<Message[]>(
+    savedMessages ?? [{ role: 'assistant', content: buildStaticGreeting(artistFromNav?.name || projectFromNav?.name) }]
+  );
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -906,6 +1016,10 @@ export default function PlanningCopilot() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    // Persistir as últimas 60 mensagens no localStorage
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-60)));
+    } catch { /* quota exceeded — ignora */ }
   }, [messages]);
 
   // Gravação de áudio
@@ -956,7 +1070,7 @@ export default function PlanningCopilot() {
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 && m.role === 'user' ? { ...m, content: `🎤 "${text}"` } : m));
       conversationHistory.current.push({ role: 'user', content: text });
       if (!platformContext) throw new Error('Contexto ainda carregando. Aguarde um momento e tente novamente.');
-      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext, undefined, 1500, artistFromNav);
+      const aiResponse = await callAIWithContext([...conversationHistory.current], platformContext, undefined, 1500, artistFromNav, projectFromNav);
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);
       setMessages(prev => [...prev, processedMessage]);
@@ -1031,7 +1145,8 @@ export default function PlanningCopilot() {
         platformContext,
         fileContent || undefined,
         1500,
-        artistFromNav
+        artistFromNav,
+        projectFromNav
       );
 
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
@@ -1543,7 +1658,11 @@ export default function PlanningCopilot() {
                   d.setDate(d.getDate() + Number(task.days_from_start));
                   dueDate = d.toISOString().split('T')[0];
                 } else if (task.due_date) {
-                  dueDate = task.due_date;
+                  // Validate date from AI — reject non-ISO strings like "D+30" or "Invalid Date"
+                  const parsed = new Date(task.due_date);
+                  if (!isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(task.due_date)) {
+                    dueDate = task.due_date.slice(0, 10);
+                  }
                 }
                 return {
                   title: task.title,
@@ -1684,7 +1803,8 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
         platformContext,
         undefined,
         4000,
-        artistFromNav
+        artistFromNav,
+        projectFromNav
       );
       conversationHistory.current.push({ role: 'assistant', content: aiResponse });
       const processedMessage = await processAIResponse(aiResponse);
@@ -1711,15 +1831,31 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
           <div>
             <h3 className="font-bold">Copiloto TaskMaster</h3>
             <p className="text-[10px] opacity-80 uppercase tracking-wider font-bold">
-              {contextLoading ? 'Carregando dados...' : `${platformContext?.projects.length || 0} projetos · ${platformContext?.shows.length || 0} shows · ${platformContext?.tasks.length || 0} tarefas`}
+              {contextLoading ? 'Carregando dados...' : (
+                projectFromNav?.name || artistFromNav?.name
+                  ? `Contexto: ${projectFromNav?.name || artistFromNav?.name}`
+                  : `${platformContext?.projects.length || 0} projetos · ${platformContext?.shows.length || 0} shows · ${platformContext?.tasks.length || 0} tarefas`
+              )}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <div className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold flex items-center gap-1">
             <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
             IA ATIVA
           </div>
+          <button
+            onClick={() => {
+              const greeting = [{ role: 'assistant' as const, content: buildStaticGreeting(artistFromNav?.name) }];
+              setMessages(greeting);
+              conversationHistory.current = [];
+              try { localStorage.removeItem(HISTORY_KEY); } catch {}
+            }}
+            title="Limpar histórico"
+            className="px-2 py-1 bg-white/10 hover:bg-white/25 rounded text-[10px] font-bold transition-colors"
+          >
+            Nova conversa
+          </button>
         </div>
       </div>
 

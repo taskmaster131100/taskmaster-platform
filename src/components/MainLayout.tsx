@@ -74,6 +74,7 @@ export default function MainLayout({
       title: 'LANÇAMENTOS',
       items: [
         { id: 'releases', label: 'Lançamentos', icon: Disc3, link: '/releases' },
+        { id: 'music', label: 'Produção Musical', icon: Music, link: '/music' },
       ]
     },
     {

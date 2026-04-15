@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Briefcase, CheckCircle2, Clock, AlertTriangle, ArrowRight,
   User, Calendar, DollarSign, BarChart2, Tag, Layers, Plus,
@@ -92,14 +93,24 @@ export default function ProjectDashboard({
   onAddTask,
   onArchive,
 }: ProjectDashboardProps) {
+  const navigate = useNavigate();
   const [artist, setArtist] = useState<{ name: string; stage_name?: string } | null>(null);
   const [loadingArtist, setLoadingArtist] = useState(false);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [songs, setSongs] = useState<{ id: string; title: string; status: string }[]>([]);
 
   // ── AI Chat no projeto ────────────────────────────────────────────────────
+  const AI_HISTORY_KEY = `tm_proj_ai_${project?.id || 'unknown'}`;
+  const loadSavedAiMessages = (): AiMessage[] => {
+    try {
+      const raw = localStorage.getItem(AI_HISTORY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as AiMessage[];
+      return Array.isArray(parsed) ? parsed.slice(-40) : [];
+    } catch { return []; }
+  };
   const [aiOpen, setAiOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>(loadSavedAiMessages);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null);
@@ -135,6 +146,12 @@ export default function ProjectDashboard({
       .limit(30)
       .then(({ data }) => setSongs(data || []));
   }, [project?.id]);
+
+  // Persistir histórico do chat IA no localStorage
+  useEffect(() => {
+    if (aiMessages.length === 0) return;
+    try { localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(aiMessages.slice(-40))); } catch {}
+  }, [aiMessages]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -214,28 +231,63 @@ export default function ProjectDashboard({
     setAiLoading(true);
     setTimeout(() => { if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight; }, 50);
 
+    const today = new Date().toISOString().split('T')[0];
     const systemPrompt = `Você é o Copiloto IA do projeto "${project?.name}" na plataforma TaskMaster.
-Você tem acesso ao estado atual do projeto e responde de forma direta e prática.
+HOJE: ${today}
+Você conhece TODO o estado operacional deste projeto e responde com precisão cirúrgica.
 
-CONTEXTO DO PROJETO:
+CONTEXTO COMPLETO DO PROJETO:
 ${buildAiContext()}
 
-QUANDO SUGERIR ADICIONAR TAREFA SIMPLES:
-Use a tag abaixo (só quando o usuário pedir ou aceitar uma sugestão concreta):
+━━━ REGRA DE CONDUÇÃO OPERACIONAL (OBRIGATÓRIA) ━━━
+Quando o usuário perguntar "onde estou?", "o que falta?", "qual passo?", "como está?", "o que fazer?", "o que está travado?" ou similar, SEMPRE responda neste formato exato:
+
+📍 **[PROJETO: ${project?.name}]**
+Fase atual: [nome da fase] — [X]% concluído
+Setor: [nome do setor/workstream]
+
+✅ Já feito: [tarefa concluída 1], [tarefa 2]
+🔲 Próximo passo: **[tarefa específica]** [prazo se tiver]
+🔲 Ainda falta: [tarefa], [tarefa]
+⚠️ [BLOQUEADO se houver tarefa parada há muito tempo]
+
+⏭ Depois desta fase vem: [próxima fase]
+
+REGRA ABSOLUTA: NUNCA use "o projeto" sozinho — sempre diga "${project?.name}".
+NUNCA responda sem citar tarefa real pelo nome. Se não há tarefas, diga claramente.
+
+━━━ ESPECIALISTA EM LANÇAMENTO MUSICAL ━━━
+Se o projeto for de lançamento (single, EP, álbum), você age como especialista da indústria.
+Cronograma obrigatório de lançamento:
+- D-90 a D-60: Fechar produção, registrar ISRC/UPC, escolher distribuidora
+- D-60 a D-45: Upload na distribuidora, preparar press kit
+- D-45 a D-30: Pitch editorial Spotify (via Spotify for Artists, 200 chars, story + mood + instrumentação)
+- D-30: Ativar pré-save, começar campanha de pré-aquecimento
+- D-21 a D-7: Teaser, snippet no TikTok, Reels com a música, press release
+- D-7: Making of, clipe/lyric video, agendar posts
+- D-0: Lançar SEMPRE na sexta (favorece Release Radar + Descobertas da Semana)
+- D+1 a D+7: Monitorar streams, impulsionar TikTok, responder comentários
+- D+30: Relatório: streams, saves, Shazam, playlists conquistadas
+
+Quando discutir estratégia de lançamento, SEMPRE colete antes:
+1. Orçamento disponível para marketing
+2. Gênero/nicho do artista
+3. Data alvo do lançamento
+4. Plataforma de distribuição
+5. Já tem pré-save configurado? pitch feito?
+
+Frentes obrigatórias de marketing: orgânico (Reels/TikTok) + press + mídia paga + influenciadores + playlists + cross-promotion
+
+━━━ AÇÕES DISPONÍVEIS ━━━
+ADICIONAR TAREFA SIMPLES (só quando usuário pedir ou aceitar):
 [ADICIONAR_TAREFA]{"title":"...","workstream":"marketing","priority":"medium","description":"...","days_from_start":7}[/ADICIONAR_TAREFA]
-Workstreams válidos: conteudo, marketing, shows, logistica, estrategia, financeiro, lancamento, producao_musical, geral
+Workstreams: conteudo, marketing, shows, logistica, estrategia, financeiro, lancamento, producao_musical
 
-QUANDO DETECTAR PRODUÇÃO MUSICAL (álbum, DVD, EP, gravação, repertório, pré-produção musical):
-Use a tag abaixo para criar a estrutura operacional completa de produção:
-[CRIAR_PRODUCAO_MUSICAL]{"song_count":12,"songs":["Título 1","Título 2"],"responsible":"Nome","description":"contexto","tipo":"DVD"}[/CRIAR_PRODUCAO_MUSICAL]
-- song_count: número de músicas informado (padrão 1 se não informado)
-- songs: lista de títulos se o usuário mencionou nomes específicos, senão lista vazia []
-- responsible: responsável técnico se mencionado, senão ""
-- tipo: "DVD", "Álbum", "EP", "Single" ou "Produção"
-Isso cria automaticamente: tarefas estruturadas (repertório → arranjos → ensaios → gravação) no TaskBoard sob o workstream "Produção Musical", mais uma entrada de songs no banco para cada música.
+PRODUÇÃO MUSICAL (álbum, DVD, EP, gravação, repertório):
+[CRIAR_PRODUCAO_MUSICAL]{"song_count":12,"songs":["Título 1"],"responsible":"","description":"","tipo":"Álbum"}[/CRIAR_PRODUCAO_MUSICAL]
 
-REGRA: Pergunte "Quer que eu estruture isso no projeto?" antes de incluir qualquer tag de ação.
-Responda em português. Seja direto e prático.`;
+REGRA: Pergunte "Quer que eu estruture isso no projeto?" antes de usar qualquer tag de ação.
+Responda em português. Seja direto e específico. Máximo 4 parágrafos curtos.`;
 
     try {
       const res = await fetch('/api/ai-chat', {
@@ -517,8 +569,16 @@ Responda em português. Seja direto e prático.`;
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 ${aiOpen ? 'bg-[#FFAD85] text-white shadow-orange-100' : 'bg-orange-50 text-[#FF9B6A] border border-orange-200 hover:bg-orange-100'}`}
               >
                 <Sparkles className="w-4 h-4" />
-                {aiOpen ? 'Fechar IA' : 'Perguntar à IA'}
+                {aiOpen ? 'Fechar IA' : 'IA do Projeto'}
                 {aiOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+              </button>
+              <button
+                onClick={() => navigate('/planejamento', { state: { projectId: project.id, project: { id: project.id, name: project.name } } })}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all shrink-0"
+                title="Abrir no Copiloto completo"
+              >
+                <Bot className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-medium">Copiloto IA</span>
               </button>
               <button
                 onClick={onNavigateToTasks}
@@ -970,7 +1030,15 @@ Responda em português. Seja direto e prático.`;
             <div className="px-5 py-4 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 flex items-center gap-2">
               <Bot className="w-4 h-4 text-[#FF9B6A]" />
               <h3 className="font-bold text-gray-800 text-sm">Copiloto do Projeto</h3>
-              <span className="text-xs text-gray-400 ml-1">— converse sobre "{project.name}"</span>
+              <span className="text-xs text-gray-400 ml-1 flex-1">— "{project.name}"</span>
+              {aiMessages.length > 0 && (
+                <button
+                  onClick={() => { setAiMessages([]); try { localStorage.removeItem(AI_HISTORY_KEY); } catch {} }}
+                  className="text-[10px] text-gray-400 hover:text-red-500 transition-colors px-2 py-0.5 rounded border border-gray-200 hover:border-red-200"
+                >
+                  Limpar
+                </button>
+              )}
             </div>
 
             {/* Histórico */}

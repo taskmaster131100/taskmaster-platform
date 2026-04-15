@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         checkSingleSession(session.user.id);
         setLoading(true); // reabrir loading enquanto resolve org
-        ensureOrganization().then(() => {
+        ensureOrganization().finally(() => {
           if (mounted) setLoading(false);
         });
       } else {

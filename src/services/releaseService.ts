@@ -6,6 +6,8 @@ export type ReleaseStatus = 'pre_production' | 'production' | 'mixing' | 'master
 export type PhaseStatus = 'pending' | 'in_progress' | 'completed';
 export type FileType = 'cover' | 'press_kit' | 'track' | 'document';
 
+export type PlaylistPitchStatus = 'not_sent' | 'sent' | 'in_analysis' | 'approved' | 'rejected';
+
 export interface Release {
   id: string;
   title: string;
@@ -28,6 +30,11 @@ export interface Release {
   organization_id?: string;
   org_id?: string;
   isrc?: string;
+  // campos operacionais adicionais
+  presave_link?: string;
+  playlist_pitch_status?: PlaylistPitchStatus;
+  budget?: number;
+  cover_art_status?: 'pending' | 'ready' | 'approved';
   created_at: string;
   updated_at: string;
 }
@@ -121,6 +128,11 @@ function normalizeRelease(row: any): Release {
     status: row.status as ReleaseStatus,
     organization_id: row.organization_id || row.org_id,
     org_id: row.org_id || row.organization_id,
+    isrc: row.isrc || '',
+    presave_link: row.presave_link || '',
+    playlist_pitch_status: (row.playlist_pitch_status as PlaylistPitchStatus) || 'not_sent',
+    budget: row.budget ? Number(row.budget) : undefined,
+    cover_art_status: row.cover_art_status || 'pending',
     created_at: row.created_at || '',
     updated_at: row.updated_at || '',
   };
@@ -148,6 +160,10 @@ export async function createRelease(
     release_notes: releaseData.release_notes || releaseData.notes || null,
     isrc: (releaseData as any).isrc || null,
     status: releaseData.status || 'pre_production',
+    presave_link: releaseData.presave_link || null,
+    playlist_pitch_status: releaseData.playlist_pitch_status || 'not_sent',
+    budget: releaseData.budget ?? null,
+    cover_art_status: releaseData.cover_art_status || 'pending',
   };
 
   const { data, error } = await supabase
@@ -184,6 +200,10 @@ export async function updateRelease(id: string, updates: Partial<Release> & { ar
     dbUpdates.cover_art_url = updates.cover_art_url || updates.cover_url;
   }
   if ((updates as any).isrc !== undefined) dbUpdates.isrc = (updates as any).isrc;
+  if (updates.presave_link !== undefined) dbUpdates.presave_link = updates.presave_link || null;
+  if (updates.playlist_pitch_status !== undefined) dbUpdates.playlist_pitch_status = updates.playlist_pitch_status;
+  if (updates.budget !== undefined) dbUpdates.budget = updates.budget ?? null;
+  if (updates.cover_art_status !== undefined) dbUpdates.cover_art_status = updates.cover_art_status;
   if (updates.artist_name) {
     const aid = await resolveArtistId(updates.artist_name, updates.artist_id);
     if (aid) dbUpdates.artist_id = aid;

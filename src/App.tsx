@@ -765,7 +765,15 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
 
   const renderContent = () => {
     // showProjectDetail: MÁXIMA PRIORIDADE — antes de qualquer check de activeTab
-    // Sem navigate() → location effect não interfere
+    // Se projetos ainda estão carregando, mostrar skeleton em vez de tela em branco
+    if (showProjectDetail && !selectedProject) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+          <div className="w-10 h-10 border-4 border-[#FF9B6A] border-t-transparent rounded-full animate-spin mb-3" />
+          <p className="text-sm text-gray-500">Carregando projeto...</p>
+        </div>
+      );
+    }
     if (showProjectDetail && selectedProject) {
       return (
         <ProjectDashboard

@@ -264,6 +264,8 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
       const payload = {
         ...editData,
         commission_rate: editData.commission_rate === '' ? null : Number(editData.commission_rate),
+        contract_start_date: editData.contract_start_date || null,
+        contract_end_date: editData.contract_end_date || null,
       };
       const { error } = await supabase
         .from('artists')
@@ -826,7 +828,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                   {artistProjects.map(proj => (
                     <li
                       key={proj.id}
-                      onClick={() => onSelectProject ? onSelectProject(proj.id) : navigate('/planejamento', { state: { artist: { id: artistId, name: artist.stage_name || artist.name } } })}
+                      onClick={() => onSelectProject ? onSelectProject(proj.id) : navigate('/planejamento', { state: { projectId: proj.id, project: { id: proj.id, name: proj.name }, artist: { id: artistId, name: artist.stage_name || artist.name } } })}
                       className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
                     >
                       <div className="min-w-0">

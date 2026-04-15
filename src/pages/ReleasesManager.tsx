@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck, ChevronDown, ChevronUp, ArrowRight, Zap } from 'lucide-react';
+import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck, ChevronDown, ChevronUp, ArrowRight, Zap, Link2 } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import PlanLimitModal from '../components/PlanLimitModal';
@@ -129,7 +129,11 @@ export default function ReleasesManager() {
     upc: '',
     distributor: '',
     status: 'pre_production' as ReleaseStatus,
-    notes: ''
+    notes: '',
+    presave_link: '',
+    playlist_pitch_status: 'not_sent' as import('../services/releaseService').PlaylistPitchStatus,
+    budget: '' as string | number,
+    cover_art_status: 'pending' as 'pending' | 'ready' | 'approved',
   });
 
   const [navArtistId, setNavArtistId] = useState<string | undefined>(undefined);
@@ -178,13 +182,19 @@ export default function ReleasesManager() {
     }
   };
 
+  // Normaliza budget de string para number antes de enviar ao service
+  const normalizedFormData = () => ({
+    ...formData,
+    budget: formData.budget !== '' ? Number(formData.budget) : undefined,
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Edit mode: save directly (no AI flow for edits)
     if (selectedRelease) {
       try {
-        await updateRelease(selectedRelease.id, formData);
+        await updateRelease(selectedRelease.id, normalizedFormData());
         setShowModal(false);
         resetForm();
         loadReleases();
@@ -204,7 +214,7 @@ export default function ReleasesManager() {
     if (!proposal || !proposal.viable) return;
     setSavingRelease(true);
     try {
-      const newRelease = await createRelease(formData);
+      const newRelease = await createRelease(normalizedFormData());
       await saveReleaseWithTasks(newRelease.id, proposal.tasks);
       setShowModal(false);
       setModalStep('form');
@@ -222,7 +232,7 @@ export default function ReleasesManager() {
   const handleConfirmWithoutTimeline = async () => {
     setSavingRelease(true);
     try {
-      await createRelease(formData);
+      await createRelease(normalizedFormData());
       setShowModal(false);
       setModalStep('form');
       setProposal(null);
@@ -253,7 +263,11 @@ export default function ReleasesManager() {
       upc: release.upc || '',
       distributor: release.distributor || '',
       status: release.status,
-      notes: release.notes || ''
+      notes: release.notes || '',
+      presave_link: release.presave_link || '',
+      playlist_pitch_status: release.playlist_pitch_status || 'not_sent',
+      budget: release.budget ?? '',
+      cover_art_status: release.cover_art_status || 'pending',
     });
     setShowModal(true);
   };
@@ -333,7 +347,11 @@ export default function ReleasesManager() {
       upc: '',
       distributor: '',
       status: 'pre_production',
-      notes: ''
+      notes: '',
+      presave_link: '',
+      playlist_pitch_status: 'not_sent',
+      budget: '',
+      cover_art_status: 'pending',
     });
     setSelectedRelease(null);
     setModalStep('form');
@@ -737,6 +755,70 @@ export default function ReleasesManager() {
                       placeholder="Anotações sobre o lançamento..."
                     />
                   </div>
+
+                  {/* ── Campos Operacionais ─────────────────────────────── */}
+                  <div className="col-span-2 pt-2 border-t border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Operacional</p>
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Link do Pré-Save
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.presave_link}
+                      onChange={(e) => setFormData({ ...formData, presave_link: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="https://presave.io/..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pitch de Playlists
+                    </label>
+                    <select
+                      value={formData.playlist_pitch_status}
+                      onChange={(e) => setFormData({ ...formData, playlist_pitch_status: e.target.value as any })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    >
+                      <option value="not_sent">Não enviado</option>
+                      <option value="sent">Enviado</option>
+                      <option value="in_analysis">Em análise</option>
+                      <option value="approved">Aprovado ✓</option>
+                      <option value="rejected">Rejeitado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Arte da Capa
+                    </label>
+                    <select
+                      value={formData.cover_art_status}
+                      onChange={(e) => setFormData({ ...formData, cover_art_status: e.target.value as any })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                    >
+                      <option value="pending">Pendente</option>
+                      <option value="ready">Pronta</option>
+                      <option value="approved">Aprovada ✓</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Orçamento (R$)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.budget}
+                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                      placeholder="0,00"
+                    />
+                  </div>
                 </div>
 
                 {!selectedRelease && (
@@ -1106,6 +1188,39 @@ export default function ReleasesManager() {
                 )}
               </div>
 
+              {/* Painéis operacionais adicionais */}
+              {(selectedRelease.presave_link || selectedRelease.budget || selectedRelease.playlist_pitch_status !== 'not_sent') && (
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedRelease.presave_link && (
+                    <div className="col-span-2 bg-blue-50 rounded-xl p-3 flex items-center gap-3">
+                      <Link2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-blue-600 font-bold">Pré-Save</p>
+                        <a href={selectedRelease.presave_link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-800 truncate block hover:underline">
+                          {selectedRelease.presave_link}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {selectedRelease.budget !== undefined && selectedRelease.budget > 0 && (
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs text-gray-500 mb-1">Orçamento</p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedRelease.budget)}
+                      </p>
+                    </div>
+                  )}
+                  {selectedRelease.playlist_pitch_status && selectedRelease.playlist_pitch_status !== 'not_sent' && (
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs text-gray-500 mb-1">Pitch de Playlists</p>
+                      <p className={`text-sm font-bold ${selectedRelease.playlist_pitch_status === 'approved' ? 'text-green-600' : selectedRelease.playlist_pitch_status === 'rejected' ? 'text-red-500' : 'text-orange-500'}`}>
+                        {{ not_sent: '—', sent: 'Enviado', in_analysis: 'Em análise', approved: 'Aprovado ✓', rejected: 'Rejeitado' }[selectedRelease.playlist_pitch_status]}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Checklist */}
               <div>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -1114,13 +1229,14 @@ export default function ReleasesManager() {
                 <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
                   {[
                     { label: 'Áudio master finalizado', detail: 'WAV 24bit/44.1kHz ou superior', required: true },
-                    { label: 'Capa do lançamento', detail: '3000x3000px JPG/PNG', required: true },
+                    { label: 'Capa do lançamento (3000×3000px)', detail: selectedRelease.cover_art_status === 'approved' ? '✓ Aprovada' : selectedRelease.cover_art_status === 'ready' ? 'Pronta — aguardando aprovação' : 'Pendente', required: true, done: selectedRelease.cover_art_status === 'approved' || selectedRelease.cover_art_status === 'ready' },
                     { label: 'ISRC registrado', detail: selectedRelease.isrc ? `✓ ${selectedRelease.isrc}` : 'Ainda não informado', required: true, done: !!selectedRelease.isrc },
                     { label: 'UPC / EAN', detail: selectedRelease.upc ? `✓ ${selectedRelease.upc}` : 'Ainda não informado', required: true, done: !!selectedRelease.upc },
                     { label: 'Distribuidora definida', detail: selectedRelease.distributor ? `✓ ${selectedRelease.distributor}` : 'Ainda não informada', required: true, done: !!selectedRelease.distributor },
                     { label: 'Press release / bio atualizada', detail: 'Texto para assessoria e plataformas', required: false },
-                    { label: 'Pré-save configurado', detail: 'Link de pré-save para campanha', required: false },
-                    { label: 'Pitch para playlists editoriais', detail: 'Enviar com 7+ dias via distribuição', required: false },
+                    { label: 'Pré-save configurado', detail: selectedRelease.presave_link ? `✓ Link ativo` : 'Link de pré-save para campanha — ativar 2 semanas antes', required: false, done: !!selectedRelease.presave_link },
+                    { label: 'Pitch para playlists editoriais', detail: selectedRelease.playlist_pitch_status === 'approved' ? '✓ Aprovado!' : selectedRelease.playlist_pitch_status === 'sent' ? 'Enviado — aguardando resposta' : selectedRelease.playlist_pitch_status === 'in_analysis' ? 'Em análise' : 'Enviar com 7+ dias via Spotify for Artists', required: false, done: selectedRelease.playlist_pitch_status === 'approved' },
+                    { label: 'Lançar na sexta-feira', detail: 'Algoritmos do Spotify priorizam lançamentos de sexta', required: false, done: !!selectedRelease.release_date && new Date(selectedRelease.release_date + 'T12:00:00').getDay() === 5 },
                   ].map((item, idx) => (
                     <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${item.done ? 'bg-green-50' : ''}`}>
                       <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500' : item.required ? 'border-orange-400' : 'border-gray-300'}`}>
