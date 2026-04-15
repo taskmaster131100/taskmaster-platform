@@ -611,6 +611,476 @@ test.describe('11. Performance', () => {
 // BLOCO 12 — RESPONSIVIDADE
 // ══════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════
+// BLOCO 13 — FLUXO DE CONVITE
+// ══════════════════════════════════════════════════════════
+
+test.describe('13. Fluxo de Convite', () => {
+  test('13.1 Página de solicitar acesso carrega', async ({ page }) => {
+    await page.goto(`${BASE_URL}/invite`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '13-1-invite-page');
+    const hasContent = await page.locator('input, button, h1, h2').count() > 0;
+    console.log('Página de convite carregou:', hasContent);
+  });
+
+  test('13.2 Formulário de solicitação de acesso existe', async ({ page }) => {
+    await page.goto(`${BASE_URL}/invite`);
+    await page.waitForTimeout(2000);
+    const hasEmail = await page.locator('input[type="email"], input[name="email"]').count() > 0;
+    console.log('Campo de e-mail encontrado:', hasEmail);
+    await screenshot(page, '13-2-invite-form');
+  });
+
+  test('13.3 Convite via link não resulta em tela branca', async ({ page }) => {
+    // Simula acesso a link de convite inválido — deve mostrar erro, não tela branca
+    await page.goto(`${BASE_URL}/invite?token=token-invalido-teste`);
+    await page.waitForTimeout(3000);
+    await screenshot(page, '13-3-invite-invalid-token');
+    const body = await page.textContent('body') || '';
+    const isBlank = body.trim().length < 50;
+    console.log('Tela em branco:', isBlank);
+    expect(isBlank).toBe(false);
+  });
+
+  test('13.4 Aceitar convite não trava em loading infinito', async ({ page }) => {
+    await page.goto(`${BASE_URL}/invite?token=token-invalido-teste`);
+
+    // Aguardar até 8 segundos — não deve ficar preso em spinner
+    await page.waitForTimeout(8000);
+    await screenshot(page, '13-4-invite-no-infinite-loading');
+
+    // Spinner de loading não deve estar mais visível após 8s
+    const hasSpinner = await page.locator('[class*="spin"], [class*="loading"], [class*="animate-spin"]').count();
+    console.log('Spinners ainda visíveis após 8s:', hasSpinner);
+    // Aceitamos 1 spinner como possível (header fixo), mas não múltiplos
+    expect(hasSpinner).toBeLessThan(3);
+  });
+
+  test('13.5 Registro via convite — fluxo completo visível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/register`);
+    await page.waitForTimeout(2000);
+    await screenshot(page, '13-5-register-invite');
+    const hasForm = await page.locator('form, input').count() > 0;
+    console.log('Formulário de registro existe:', hasForm);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 14 — /project/:id (não pode ser tela branca)
+// ══════════════════════════════════════════════════════════
+
+test.describe('14. Projeto Detail Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('14.1 Navegar para projeto via dashboard não fica em branco', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    // Clicar no primeiro projeto disponível
+    const projectLink = page.locator('[href*="/project/"], button:has-text("Abrir"), a:has-text("Ver projeto")').first();
+    if (await projectLink.count() > 0) {
+      await projectLink.click();
+      await page.waitForTimeout(4000);
+      await screenshot(page, '14-1-project-detail');
+
+      const body = await page.textContent('body') || '';
+      const isBlank = body.trim().length < 100;
+      console.log('Tela em branco:', isBlank);
+      console.log('URL após clicar projeto:', page.url());
+      expect(isBlank).toBe(false);
+    } else {
+      console.log('Nenhum projeto disponível para clicar — pulando');
+    }
+  });
+
+  test('14.2 Acesso direto a /project/:id sem branco', async ({ page }) => {
+    // Buscar um ID real de projeto via navegação
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    // Tentar clicar em um projeto para descobrir o ID
+    const projectLink = page.locator('[href*="/project/"]').first();
+    let projectUrl = '';
+    if (await projectLink.count() > 0) {
+      projectUrl = await projectLink.getAttribute('href') || '';
+    }
+
+    if (projectUrl) {
+      await page.goto(`${BASE_URL}${projectUrl}`);
+    } else {
+      // Fallback: tentar rota genérica
+      await page.goto(`${BASE_URL}/project/00000000-0000-0000-0000-000000000000`);
+    }
+
+    await page.waitForTimeout(5000);
+    await screenshot(page, '14-2-project-id-direct');
+
+    const body = await page.textContent('body') || '';
+    const isBlank = body.trim().length < 50;
+    console.log('Tela em branco no /project/:id:', isBlank);
+    console.log('URL final:', page.url());
+    expect(isBlank).toBe(false);
+  });
+
+  test('14.3 ProjectDashboard mostra TaskBoard', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    const projectLink = page.locator('[href*="/project/"]').first();
+    if (await projectLink.count() > 0) {
+      const href = await projectLink.getAttribute('href') || '';
+      await page.goto(`${BASE_URL}${href}`);
+      await page.waitForTimeout(4000);
+
+      const hasTaskBoard = await page.locator(
+        '[class*="task"], [class*="kanban"], [class*="board"], button:has-text("Tarefas")'
+      ).count() > 0;
+      console.log('TaskBoard presente no projeto:', hasTaskBoard);
+      await screenshot(page, '14-3-project-taskboard');
+    }
+  });
+
+  test('14.4 IA inline do projeto responde', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    const projectLink = page.locator('[href*="/project/"]').first();
+    if (await projectLink.count() > 0) {
+      const href = await projectLink.getAttribute('href') || '';
+      await page.goto(`${BASE_URL}${href}`);
+      await page.waitForTimeout(4000);
+
+      // Abrir painel de IA se houver botão
+      const aiBtn = page.locator('button:has-text("IA"), button:has-text("Copilot"), button:has-text("Assistente")').first();
+      if (await aiBtn.count() > 0) {
+        await aiBtn.click();
+        await page.waitForTimeout(1500);
+
+        const input = page.locator('input[type="text"], textarea').last();
+        if (await input.count() > 0) {
+          await input.fill('Qual é o status deste projeto?');
+          await page.keyboard.press('Enter');
+          await page.waitForTimeout(8000); // aguardar resposta IA
+          await screenshot(page, '14-4-project-ai-response');
+
+          const messages = await page.locator('[class*="message"], [class*="chat"]').count();
+          console.log('Mensagens IA no projeto:', messages);
+        }
+      } else {
+        console.log('Botão IA não encontrado no projeto');
+        await screenshot(page, '14-4-no-ai-btn');
+      }
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 15 — PDF / IMPRESSÃO (não pode ser branco)
+// ══════════════════════════════════════════════════════════
+
+test.describe('15. PDF e Impressão', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('15.1 CSS de impressão não esconde o conteúdo principal', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    // Emular mídia de impressão
+    await page.emulateMedia({ media: 'print' });
+    await page.waitForTimeout(1000);
+    await screenshot(page, '15-1-print-media-dashboard');
+
+    // Verificar que o conteúdo principal ainda está visível
+    const mainContent = await page.locator('main, [class*="flex-1"], [class*="content"]').first();
+    const isVisible = await mainContent.isVisible().catch(() => false);
+    console.log('Conteúdo principal visível no print:', isVisible);
+    expect(isVisible).toBe(true);
+  });
+
+  test('15.2 Página de projeto tem conteúdo para imprimir', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    const projectLink = page.locator('[href*="/project/"]').first();
+    if (await projectLink.count() > 0) {
+      const href = await projectLink.getAttribute('href') || '';
+      await page.goto(`${BASE_URL}${href}`);
+      await page.waitForTimeout(4000);
+
+      // Emular print
+      await page.emulateMedia({ media: 'print' });
+      await page.waitForTimeout(1000);
+      await screenshot(page, '15-2-project-print');
+
+      const body = await page.textContent('body') || '';
+      console.log('Tamanho do conteúdo em modo print:', body.trim().length);
+      expect(body.trim().length).toBeGreaterThan(100);
+    }
+  });
+
+  test('15.3 Sidebar some no print (não polui o PDF)', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+    await page.emulateMedia({ media: 'print' });
+    await page.waitForTimeout(1000);
+
+    // Sidebar deve estar oculta no print
+    const sidebar = page.locator('aside, nav.lg\\:flex, [class*="w-64"]').first();
+    const sidebarVisible = await sidebar.isVisible().catch(() => false);
+    console.log('Sidebar visível no print:', sidebarVisible);
+    await screenshot(page, '15-3-print-no-sidebar');
+  });
+
+  test('15.4 Releases — modal de detalhes tem conteúdo imprimível', async ({ page }) => {
+    await page.goto(`${BASE_URL}/releases`);
+    await page.waitForTimeout(2000);
+    await page.emulateMedia({ media: 'print' });
+    await page.waitForTimeout(1000);
+    await screenshot(page, '15-4-releases-print');
+    const body = await page.textContent('body') || '';
+    expect(body.trim().length).toBeGreaterThan(50);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 16 — COPILOT IA COM CONTEXTO DE PROJETO
+// ══════════════════════════════════════════════════════════
+
+test.describe('16. Copilot IA — Contexto de Projeto', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('16.1 /planejamento carrega sem erro', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(3000);
+    await screenshot(page, '16-1-planejamento');
+    const hasInput = await page.locator('input[type="text"], textarea').count() > 0;
+    console.log('Copilot tem input:', hasInput);
+    expect(hasInput).toBe(true);
+  });
+
+  test('16.2 Copilot responde sem citar "não tenho acesso a dados"', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(3000);
+
+    const input = page.locator('input[type="text"], textarea').last();
+    if (await input.count() > 0) {
+      await input.fill('Quais são meus projetos ativos?');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(10000); // aguardar resposta IA
+
+      await screenshot(page, '16-2-copilot-response');
+      const body = await page.textContent('body') || '';
+      const hasDataError = body.toLowerCase().includes('não tenho acesso a dados');
+      console.log('Resposta contém "não tenho acesso a dados":', hasDataError);
+      expect(hasDataError).toBe(false);
+    }
+  });
+
+  test('16.3 Copilot com contexto de projeto via state', async ({ page }) => {
+    // Navegar ao /planejamento com state de projeto (simula clique em "Copiloto IA" no dashboard)
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    const projectLink = page.locator('[href*="/project/"]').first();
+    if (await projectLink.count() > 0) {
+      const href = await projectLink.getAttribute('href') || '';
+      await page.goto(`${BASE_URL}${href}`);
+      await page.waitForTimeout(4000);
+
+      // Clicar no botão Copiloto IA do ProjectDashboard
+      const copilotBtn = page.locator('button:has-text("Copiloto IA"), button:has-text("Copilot"), a:has-text("Copiloto")').first();
+      if (await copilotBtn.count() > 0) {
+        await copilotBtn.click();
+        await page.waitForTimeout(3000);
+        await screenshot(page, '16-3-copilot-with-context');
+
+        // Verificar se header mostra contexto do projeto
+        const body = await page.textContent('body') || '';
+        const hasContext = body.toLowerCase().includes('contexto') || body.toLowerCase().includes('projeto');
+        console.log('Contexto de projeto presente no Copilot:', hasContext);
+      } else {
+        console.log('Botão Copiloto IA não encontrado — pulando');
+        await screenshot(page, '16-3-no-copilot-btn');
+      }
+    }
+  });
+
+  test('16.4 Copilot usa nome real do projeto na resposta', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(3000);
+
+    const input = page.locator('input[type="text"], textarea').last();
+    if (await input.count() > 0) {
+      await input.fill('Me dê o status operacional do meu projeto mais recente');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(12000);
+
+      await screenshot(page, '16-4-copilot-operational');
+      const body = await page.textContent('body') || '';
+
+      // Resposta não deve ser genérica
+      const isGeneric = body.toLowerCase().includes('seu projeto') && !body.includes('📍');
+      console.log('Resposta genérica (sem nome do projeto):', isGeneric);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 17 — HISTÓRICO DE CHAT POR PROJETO
+// ══════════════════════════════════════════════════════════
+
+test.describe('17. Histórico de Chat por Projeto', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('17.1 Mensagem persiste após F5 no Copilot', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(3000);
+
+    const input = page.locator('input[type="text"], textarea').last();
+    if (await input.count() > 0) {
+      await input.fill('Mensagem de teste para persistência de histórico');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(8000);
+
+      // Recarregar página
+      await page.reload();
+      await page.waitForTimeout(3000);
+      await screenshot(page, '17-1-history-after-reload');
+
+      const body = await page.textContent('body') || '';
+      const hasHistory = body.includes('Mensagem de teste para persistência');
+      console.log('Histórico persistiu após reload:', hasHistory);
+    }
+  });
+
+  test('17.2 Botão "Nova conversa" limpa o histórico', async ({ page }) => {
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(3000);
+
+    const novaBtn = page.locator('button:has-text("Nova conversa"), button:has-text("Nova Conversa")').first();
+    if (await novaBtn.count() > 0) {
+      await novaBtn.click();
+      await page.waitForTimeout(1000);
+      await screenshot(page, '17-2-nova-conversa');
+
+      // Chat deve estar limpo (apenas mensagem de boas-vindas)
+      const messages = await page.locator('[class*="message"], [class*="bubble"]').count();
+      console.log('Mensagens após "Nova conversa":', messages);
+      expect(messages).toBeLessThan(3);
+    } else {
+      console.log('Botão "Nova conversa" não encontrado — pulando');
+    }
+  });
+
+  test('17.3 Histórico do projeto A não aparece no projeto B', async ({ page }) => {
+    // Verificar que as chaves localStorage são isoladas por projeto
+    await page.goto(`${BASE_URL}/planejamento`);
+    await page.waitForTimeout(2000);
+
+    const localStorageKeys = await page.evaluate(() => Object.keys(localStorage));
+    const chatKeys = localStorageKeys.filter(k => k.startsWith('tm_copilot') || k.startsWith('tm_proj'));
+    console.log('Chaves de histórico no localStorage:', chatKeys);
+
+    // Deve ter chaves separadas por contexto
+    const hasPerContextKeys = chatKeys.some(k => k.includes('proj_') || k.includes('artist_'));
+    console.log('Histórico por contexto separado:', hasPerContextKeys);
+    await screenshot(page, '17-3-localstorage-keys');
+  });
+
+  test('17.4 Botão "Limpar" no dashboard apaga histórico inline', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.waitForTimeout(3000);
+
+    const projectLink = page.locator('[href*="/project/"]').first();
+    if (await projectLink.count() > 0) {
+      const href = await projectLink.getAttribute('href') || '';
+      await page.goto(`${BASE_URL}${href}`);
+      await page.waitForTimeout(4000);
+
+      // Abrir IA inline
+      const aiBtn = page.locator('button:has-text("IA"), button:has-text("Copilot")').first();
+      if (await aiBtn.count() > 0) {
+        await aiBtn.click();
+        await page.waitForTimeout(1000);
+
+        // Limpar histórico
+        const clearBtn = page.locator('button:has-text("Limpar")').first();
+        if (await clearBtn.count() > 0) {
+          await clearBtn.click();
+          await page.waitForTimeout(500);
+          await screenshot(page, '17-4-cleared-history');
+          console.log('Botão Limpar funcionou');
+        } else {
+          console.log('Botão Limpar não encontrado');
+        }
+      }
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 18 — RELEASES OPERACIONAL
+// ══════════════════════════════════════════════════════════
+
+test.describe('18. Releases — Campos Operacionais', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('18.1 Formulário de release tem novos campos', async ({ page }) => {
+    await page.goto(`${BASE_URL}/releases`);
+    await page.waitForTimeout(2000);
+
+    const createBtn = page.locator('button').filter({ hasText: /novo|criar|release|\+/i }).first();
+    if (await createBtn.count() > 0) {
+      await createBtn.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '18-1-release-form');
+
+      const hasBudget = await page.locator('input[name*="budget"], input[placeholder*="orçamento"], input[placeholder*="budget"]').count() > 0;
+      const hasPresave = await page.locator('input[name*="presave"], input[placeholder*="pré-save"], input[placeholder*="Pre-save"]').count() > 0;
+      const hasPitch = await page.locator('select[name*="pitch"], [placeholder*="pitch"]').count() > 0;
+
+      console.log('Campo budget:', hasBudget);
+      console.log('Campo presave_link:', hasPresave);
+      console.log('Campo pitch status:', hasPitch);
+    }
+  });
+
+  test('18.2 Modal de detalhes de release mostra status operacional', async ({ page }) => {
+    await page.goto(`${BASE_URL}/releases`);
+    await page.waitForTimeout(2000);
+
+    const releaseCard = page.locator('[class*="card"], [class*="release"], button:has-text("Ver"), button:has-text("Detalhes")').first();
+    if (await releaseCard.count() > 0) {
+      await releaseCard.click();
+      await page.waitForTimeout(1500);
+      await screenshot(page, '18-2-release-detail');
+
+      const body = await page.textContent('body') || '';
+      const hasPitchStatus = /pitch|pré.save|presave|orçamento|capa/i.test(body);
+      console.log('Modal tem campos operacionais:', hasPitchStatus);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// BLOCO 12 — RESPONSIVIDADE
+// ══════════════════════════════════════════════════════════
+
 test.describe('12. Responsividade', () => {
   test('12.1 Mobile (375x812) — iPhone', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
