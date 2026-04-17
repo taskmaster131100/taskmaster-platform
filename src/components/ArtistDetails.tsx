@@ -243,6 +243,10 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
       bio: data.bio || '',
       contact_email: data.contact_email || '',
       contact_phone: data.contact_phone || '',
+      instagram: data.instagram || '',
+      youtube: data.youtube || '',
+      tiktok: data.tiktok || '',
+      spotify: data.spotify || '',
       commission_rate: data.commission_rate ?? '',
       contract_start_date: data.contract_start_date || '',
       contract_end_date: data.contract_end_date || '',
@@ -266,6 +270,11 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
         commission_rate: editData.commission_rate === '' ? null : Number(editData.commission_rate),
         contract_start_date: editData.contract_start_date || null,
         contract_end_date: editData.contract_end_date || null,
+        instagram: editData.instagram || null,
+        youtube: editData.youtube || null,
+        tiktok: editData.tiktok || null,
+        spotify: editData.spotify || null,
+        contact_phone: editData.contact_phone || null,
       };
       const { error } = await supabase
         .from('artists')
@@ -536,7 +545,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Telefone</label>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Telefone / WhatsApp</label>
                     <input
                       type="tel"
                       value={editData.contact_phone}
@@ -545,9 +554,54 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                       placeholder="(11) 99999-9999"
                     />
                   </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Redes Sociais</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Instagram className="w-4 h-4 text-pink-500 shrink-0" />
+                        <input
+                          type="text"
+                          value={editData.instagram}
+                          onChange={(e) => setEditData({ ...editData, instagram: e.target.value })}
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                          placeholder="@usuario ou URL"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Youtube className="w-4 h-4 text-red-500 shrink-0" />
+                        <input
+                          type="text"
+                          value={editData.youtube}
+                          onChange={(e) => setEditData({ ...editData, youtube: e.target.value })}
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                          placeholder="Canal ou URL"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 h-4 text-[10px] font-black text-gray-600 shrink-0 flex items-center justify-center">TK</span>
+                        <input
+                          type="text"
+                          value={editData.tiktok}
+                          onChange={(e) => setEditData({ ...editData, tiktok: e.target.value })}
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                          placeholder="@usuario ou URL"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Radio className="w-4 h-4 text-green-600 shrink-0" />
+                        <input
+                          type="text"
+                          value={editData.spotify}
+                          onChange={(e) => setEditData({ ...editData, spotify: e.target.value })}
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                          placeholder="Spotify URL ou artist ID"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {artist.contact_email ? (
                     <div className="flex items-center gap-3 text-gray-600">
                       <Mail className="w-4 h-4 flex-shrink-0" />
@@ -562,11 +616,45 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                       <span className="text-sm">{artist.contact_phone}</span>
                     </div>
                   )}
-                  <div className="pt-4 border-t border-gray-50 flex gap-4 justify-center">
-                    <Instagram className="w-5 h-5 text-gray-400 hover:text-pink-600 cursor-pointer transition-colors" />
-                    <Twitter className="w-5 h-5 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" />
-                    <Youtube className="w-5 h-5 text-gray-400 hover:text-red-600 cursor-pointer transition-colors" />
-                  </div>
+                  {(artist.instagram || artist.youtube || artist.tiktok || artist.spotify) && (
+                    <div className="pt-3 border-t border-gray-50 space-y-2">
+                      {artist.instagram && (
+                        <a href={artist.instagram.startsWith('http') ? artist.instagram : `https://instagram.com/${artist.instagram.replace('@','')}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-pink-600 hover:underline">
+                          <Instagram className="w-4 h-4" />
+                          <span className="truncate">{artist.instagram}</span>
+                        </a>
+                      )}
+                      {artist.youtube && (
+                        <a href={artist.youtube.startsWith('http') ? artist.youtube : `https://youtube.com/@${artist.youtube}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-red-600 hover:underline">
+                          <Youtube className="w-4 h-4" />
+                          <span className="truncate">{artist.youtube}</span>
+                        </a>
+                      )}
+                      {artist.tiktok && (
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <span className="text-[10px] font-black w-4 text-center">TK</span>
+                          <span className="truncate">{artist.tiktok}</span>
+                        </div>
+                      )}
+                      {artist.spotify && (
+                        <div className="flex items-center gap-2 text-sm text-green-700">
+                          <Radio className="w-4 h-4" />
+                          <span className="truncate">{artist.spotify}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!artist.instagram && !artist.youtube && !artist.tiktok && !artist.spotify && (
+                    <div className="pt-3 border-t border-gray-50 flex gap-4 justify-center">
+                      <Instagram className="w-5 h-5 text-gray-300" />
+                      <Youtube className="w-5 h-5 text-gray-300" />
+                      <Radio className="w-5 h-5 text-gray-300" />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

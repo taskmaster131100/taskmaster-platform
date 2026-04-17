@@ -5,7 +5,7 @@ import {
   User, Calendar, DollarSign, BarChart2, Tag, Layers, Plus,
   Circle, AlertCircle, Loader2, FileText, Archive, Sparkles,
   Send, Bot, X, ChevronDown, ChevronUp, Music, Link2, Unlink,
-  Share2, Printer
+  Share2, Printer, Edit2, Save, Target, Zap, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -120,6 +120,20 @@ export default function ProjectDashboard({
   const [artistWorks, setArtistWorks] = useState<{ id: string; title: string; status: string; project_id: string | null }[]>([]);
   const [linkingWork, setLinkingWork] = useState<string | null>(null);
 
+  // ── Visão do Projeto ───────────────────────────────────────────────────────
+  const [visionOpen, setVisionOpen] = useState(true);
+  const [editingVision, setEditingVision] = useState(false);
+  const [savingVision, setSavingVision] = useState(false);
+  const [visionData, setVisionData] = useState({ objective: '', strategy: '', project_type: '' });
+
+  useEffect(() => {
+    setVisionData({
+      objective: project?.objective || '',
+      strategy: project?.strategy || '',
+      project_type: project?.project_type || '',
+    });
+  }, [project?.id]);
+
   useEffect(() => {
     if (!project?.artist_id) return;
     setLoadingArtist(true);
@@ -191,6 +205,27 @@ export default function ProjectDashboard({
   const getMemberName = (id?: string) =>
     id ? (orgMembers.find(m => m.id === id)?.name || null) : null;
 
+  // ── Vision save ───────────────────────────────────────────────────────────
+  const handleSaveVision = async () => {
+    if (!project?.id) return;
+    setSavingVision(true);
+    const { error } = await supabase
+      .from('projects')
+      .update({
+        objective: visionData.objective || null,
+        strategy: visionData.strategy || null,
+        project_type: visionData.project_type || null,
+      })
+      .eq('id', project.id);
+    setSavingVision(false);
+    if (error) { toast.error('Erro ao salvar visão.'); return; }
+    project.objective = visionData.objective;
+    project.strategy = visionData.strategy;
+    project.project_type = visionData.project_type;
+    setEditingVision(false);
+    toast.success('Visão do projeto salva!');
+  };
+
   // ── Archive ───────────────────────────────────────────────────────────────
   const handleArchive = async () => {
     if (!window.confirm(`Arquivar o projeto "${project?.name}"? Ele não aparecerá mais na lista, mas os dados ficam salvos.`)) return;
@@ -232,11 +267,17 @@ export default function ProjectDashboard({
     setTimeout(() => { if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight; }, 50);
 
     const today = new Date().toISOString().split('T')[0];
-    const systemPrompt = `Você é o SISTEMA OPERACIONAL DE CARREIRA ARTÍSTICA do TaskMaster, focado no projeto "${project?.name}".
-Gestor musical sênior com 15+ anos de indústria. Pensa a carreira completa, não tarefa por tarefa.
+    const systemPrompt = `Você é o SISTEMA OPERACIONAL DE CARREIRA ARTÍSTICA do TaskMaster.
+Gestor musical sênior com 15+ anos de indústria fonográfica brasileira. Direto, operacional e específico.
 HOJE: ${today}
 
-CONTEXTO COMPLETO DO PROJETO:
+PROJETO: "${project?.name}"
+${project?.project_type ? `Tipo: ${project.project_type}` : ''}
+${project?.objective ? `Objetivo: ${project.objective}` : '⚠️ Objetivo não definido — peça ao usuário que defina.'}
+${project?.strategy ? `Estratégia: ${project.strategy}` : ''}
+${project?.end_date ? `Data de entrega: ${project.end_date}` : '⚠️ Sem data de entrega — necesário para backward planning.'}
+
+SITUAÇÃO ATUAL:
 ${buildAiContext()}
 
 ━━━ MATRIZ DE CARREIRA — FUNDAÇÃO ━━━
@@ -273,8 +314,16 @@ Se mencionar show, pergunte: "É show VENDIDO ou EVENTO PRÓPRIO?"
 VENDIDO: Prospecção→Negociação→Contrato→Logística→Execução→Pós-show
 PRÓPRIO: Planejamento→Estrutura→Artístico→Ingressos→Execução→Pós-evento
 
+━━━ REGRAS DE CONDUÇÃO (OBRIGATÓRIO) ━━━
+❌ NUNCA: "Você pode fazer...", "Sugiro...", "Seria interessante..."
+✅ SEMPRE: "Você precisa fazer isso agora:", "Próximo passo obrigatório:", "Está atrasado — faça hoje:"
+
+Se a tarefa estiver atrasada: aponte o atraso e dê a solução imediata.
+Se o projeto estiver sem data/objetivo: exija que o usuário defina antes de continuar.
+Se houver tarefas bloqueadas: identifique o gargalo e resolva.
+
 ━━━ AÇÕES DISPONÍVEIS ━━━
-ADICIONAR TAREFA (use due_date, não days_from_start):
+ADICIONAR TAREFA:
 [ADICIONAR_TAREFA]{"title":"Nome da Tarefa","workstream":"marketing","priority":"high","description":"Detalhes","due_date":"${today}","etapa":"Nome da Etapa","internal_notes":"Contexto operacional"}[/ADICIONAR_TAREFA]
 
 Workstreams válidos: producao_musical, conteudo, marketing, shows, logistica, estrategia, financeiro, lancamento
@@ -282,8 +331,8 @@ Workstreams válidos: producao_musical, conteudo, marketing, shows, logistica, e
 PRODUÇÃO MUSICAL:
 [CRIAR_PRODUCAO_MUSICAL]{"song_count":12,"songs":["Título 1"],"responsible":"","description":"","tipo":"Álbum"}[/CRIAR_PRODUCAO_MUSICAL]
 
-REGRA: Se intenção clara → execute. Se dúvida → pergunte antes.
-Responda em português. Seja direto e específico.`;
+REGRA: Se intenção clara → execute diretamente. Respostas curtas e operacionais. Sem enrolação.
+Responda em português.`;
 
     try {
       const res = await fetch('/api/ai-chat', {
@@ -332,16 +381,20 @@ Responda em português. Seja direto e específico.`;
     if (pendingAction.type === 'add_task') {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        const today = new Date();
-        const dueDate = d.days_from_start
-          ? new Date(today.setDate(today.getDate() + Number(d.days_from_start))).toISOString().split('T')[0]
-          : null;
+        // Prefer direct due_date from IA, fallback to days_from_start for legacy
+        const dueDate = d.due_date
+          ? d.due_date
+          : d.days_from_start
+            ? new Date(Date.now() + Number(d.days_from_start) * 86400000).toISOString().split('T')[0]
+            : null;
         const { error } = await supabase.from('tasks').insert({
           title: d.title,
           description: d.description || '',
           status: 'todo',
           priority: d.priority || 'medium',
           workstream: d.workstream || 'geral',
+          etapa: d.etapa || null,
+          internal_notes: d.internal_notes || null,
           project_id: project.id,
           organization_id: project.organization_id,
           reporter_id: user?.id,
@@ -627,6 +680,183 @@ Responda em português. Seja direto e específico.`;
             </div>
           </div>
         </div>
+
+        {/* ── ALERTA PROJETO INCOMPLETO ────────────────────────────────────── */}
+        {(!project.end_date || !project.objective) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-800">Projeto incompleto</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {!project.objective && !project.end_date
+                  ? 'Defina o objetivo e a data de entrega para ativar o planejamento automático.'
+                  : !project.objective
+                    ? 'Defina o objetivo do projeto na seção Visão abaixo.'
+                    : 'Defina a data de entrega para o backward planning funcionar.'}
+              </p>
+            </div>
+            <button
+              onClick={() => { setVisionOpen(true); setEditingVision(true); }}
+              className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg shrink-0 transition-colors"
+            >
+              Completar
+            </button>
+          </div>
+        )}
+
+        {/* ── VISÃO DO PROJETO ─────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setVisionOpen(o => !o)}
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-bold text-gray-800 text-sm">Visão do Projeto</h3>
+              {(!project.objective && !project.strategy && !project.project_type) && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">Incompleto</span>
+              )}
+            </div>
+            {visionOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {visionOpen && (
+            <div className="px-5 pb-5 border-t border-gray-50">
+              {editingVision ? (
+                <div className="pt-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Tipo de Projeto</label>
+                    <input
+                      type="text"
+                      value={visionData.project_type}
+                      onChange={e => setVisionData(v => ({ ...v, project_type: e.target.value }))}
+                      placeholder="Ex: Lançamento de single, Show próprio, EP, Turnê..."
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Objetivo</label>
+                    <textarea
+                      rows={2}
+                      value={visionData.objective}
+                      onChange={e => setVisionData(v => ({ ...v, objective: e.target.value }))}
+                      placeholder="O que esse projeto precisa alcançar? (Ex: lançar o single X e atingir 50k streams em 30 dias)"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Estratégia Geral</label>
+                    <textarea
+                      rows={3}
+                      value={visionData.strategy}
+                      onChange={e => setVisionData(v => ({ ...v, strategy: e.target.value }))}
+                      placeholder="Como vamos alcançar o objetivo? (Ex: campanha de conteúdo + tráfego pago + playlist pitch)"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleSaveVision}
+                      disabled={savingVision}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    >
+                      {savingVision ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      Salvar
+                    </button>
+                    <button
+                      onClick={() => { setEditingVision(false); setVisionData({ objective: project.objective || '', strategy: project.strategy || '', project_type: project.project_type || '' }); }}
+                      className="px-4 py-2 text-xs text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Tipo</p>
+                      <p className="text-sm text-gray-700 font-medium">{project.project_type || <span className="text-gray-300 italic">Não definido</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Período</p>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {project.start_date ? formatDate(project.start_date) : '—'} → {project.end_date ? formatDate(project.end_date) : '—'}
+                      </p>
+                    </div>
+                    {project.budget > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Orçamento</p>
+                        <p className="text-sm text-gray-700 font-medium">R$ {Number(project.budget).toLocaleString('pt-BR')}</p>
+                      </div>
+                    )}
+                  </div>
+                  {project.objective ? (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Objetivo</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{project.objective}</p>
+                    </div>
+                  ) : null}
+                  {project.strategy ? (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Estratégia</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{project.strategy}</p>
+                    </div>
+                  ) : null}
+                  {!project.objective && !project.strategy && (
+                    <p className="text-sm text-gray-400 italic py-2">Nenhuma visão definida ainda. Complete para ativar o planejamento automático da IA.</p>
+                  )}
+                  <button
+                    onClick={() => setEditingVision(true)}
+                    className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Editar visão
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── O QUE FAZER HOJE ─────────────────────────────────────────────── */}
+        {(overdue.length > 0 || upcoming.length > 0 || inProgress > 0) && (
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-4 h-4 text-orange-500" />
+              <h3 className="font-bold text-gray-800 text-sm">O que fazer hoje</h3>
+            </div>
+            <div className="space-y-2">
+              {upcoming.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="text-orange-500 font-bold text-xs mt-0.5 shrink-0">🔥 Agora:</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {upcoming[0].title}
+                    {upcoming[0].due_date && <span className="text-xs text-gray-500 font-normal ml-1">— {formatDate(upcoming[0].due_date)}</span>}
+                  </span>
+                </div>
+              )}
+              {overdue.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="text-red-500 font-bold text-xs mt-0.5 shrink-0">⚠️ Atrasado:</span>
+                  <span className="text-sm text-red-700">
+                    {overdue[0].title}
+                    {overdue.length > 1 && <span className="text-xs text-red-500 ml-1">+{overdue.length - 1} mais</span>}
+                  </span>
+                </div>
+              )}
+              {upcoming.length > 1 && (
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-500 font-bold text-xs mt-0.5 shrink-0">⏭ Próximo:</span>
+                  <span className="text-sm text-gray-700">
+                    {upcoming[1].title}
+                    {upcoming[1].due_date && <span className="text-xs text-gray-400 ml-1">— {formatDate(upcoming[1].due_date)}</span>}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── CARDS DE STATUS ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
