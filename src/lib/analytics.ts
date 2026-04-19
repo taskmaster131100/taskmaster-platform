@@ -43,20 +43,20 @@ export function trackEvent(event: string, properties?: Record<string, unknown>) 
   if (POSTHOG_KEY) posthog.capture(event, properties);
 
   // 2. Supabase — fire and forget
-  supabase.auth.getUser().then(({ data: { user } }) => {
-    if (!user) return;
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session?.user) return; // sem auth, não registra
     supabase
       .from('analytics_events')
       .insert({
-        user_id: user.id,
+        user_id: session.user.id,
         event_name: event,
         properties: properties || {},
         session_id: getSessionId(),
       })
       .then(({ error }) => {
-        if (error) console.debug('[analytics] Supabase write failed:', error.message);
+        if (error) console.warn('[analytics] insert falhou:', error.message, '| event:', event);
       });
-  }).catch(() => {});
+  }).catch((err) => { console.warn('[analytics] getSession falhou:', err); });
 }
 
 export function resetAnalytics() {

@@ -194,6 +194,22 @@ export default function InvitePage() {
               </div>
             </div>
 
+            {user?.id && invite.email && user.email && invite.email.toLowerCase() !== user.email.toLowerCase() && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold">E-mail diferente</p>
+                  <p>Este convite é para <strong>{invite.email}</strong>, mas você está logado como <strong>{user.email}</strong>.</p>
+                  <Link
+                    to={`/login?redirect=${encodeURIComponent(`/invite/${tokenValue}`)}`}
+                    className="mt-1 inline-block text-amber-700 font-semibold underline"
+                  >
+                    Trocar de conta
+                  </Link>
+                </div>
+              </div>
+            )}
+
             {!user?.id ? (
               <div className="mt-4 space-y-2">
                 <p className="text-sm text-gray-600 mb-3">
@@ -217,7 +233,7 @@ export default function InvitePage() {
             ) : (
               <button
                 onClick={handleAccept}
-                disabled={accepting}
+                disabled={accepting || !!(invite.email && user?.email && invite.email.toLowerCase() !== user.email.toLowerCase())}
                 className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-[#FFAD85] to-[#FF9B6A] text-white font-semibold disabled:opacity-50"
               >
                 {accepting ? (

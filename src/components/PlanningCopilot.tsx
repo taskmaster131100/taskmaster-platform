@@ -552,10 +552,12 @@ ANTES de qualquer ação, verifique PROJETOS ATIVOS no contexto:
 4. DÚVIDA entre criar e atualizar → pergunte antes de agir
 
 PROIBIDO ABSOLUTO:
-- Criar projeto com nome igual ou similar a um já existente
+- Criar projeto com nome igual ou similar a um já existente → perguntar se quer atualizar o existente
 - Criar projeto sem ter coletado as 5 informações do diagnóstico
 - Criar qualquer tarefa sem due_date
 - Criar tarefa genérica sem subtarefas detalhadas
+- Criar projeto sem os campos: objective, end_date (ou launch_date), project_type → se faltar qualquer um: perguntar primeiro
+- Gerar JSON de [CRIAR_PROJETO] sem "objective", "end_date" e "project_type" preenchidos
 
 ${projectContext?.name
   ? `━━━ PROJETO CONFIRMADO: "${projectContext.name}" (ID: ${projectContext.id || ''}) ━━━
@@ -1643,25 +1645,45 @@ export default function PlanningCopilot() {
           console.info('[Copilot] Nenhum artista associado ao projeto — criando sem artist_id');
         }
 
-        // P1 — dedup: bloquear se projeto com mesmo nome foi criado nos últimos 5 minutos
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const { data: recentDuplicate } = await supabase
+        // P1 — dedup: buscar qualquer projeto com mesmo nome + mesmo artista (sem janela de tempo)
+        const { data: existingProjects } = await supabase
           .from('projects')
-          .select('id, name')
+          .select('id, name, status')
           .eq('organization_id', resolvedOrgId)
           .ilike('name', (projectData.name || '').trim())
-          .gte('created_at', fiveMinAgo)
-          .limit(1)
-          .maybeSingle();
-        if (recentDuplicate) {
-          console.warn(`[Copilot] Dedup bloqueou criação duplicada de "${projectData.name}"`);
-          return {
+          .neq('status', 'archived')
+          .limit(3);
+
+        if (existingProjects && existingProjects.length > 0) {
+          const existingIds = existingProjects.map(p => p.id);
+          const existing = existingProjects[0];
+          console.warn(`[Copilot] Dedup: projeto "${projectData.name}" já existe (${existingIds.join(', ')})`);
+          // Retornar com opção de navegar para o projeto existente
+          setMessages(prev => [...prev, {
             role: 'assistant' as const,
-            content: `⚠️ O projeto **"${projectData.name}"** já foi criado há pouco. Acesse **Tarefas** para ver o projeto existente. Se quiser criar um projeto diferente, use outro nome.`
-          };
+            content: `⚠️ Já existe um projeto chamado **"${existing.name}"** (status: ${existing.status}).\n\nO que você quer fazer?\n\n• Se quer **adicionar tarefas** ao projeto existente → abra o projeto no menu Tarefas e use a IA do projeto\n• Se é um projeto **diferente** → use outro nome e me diga o diferencial\n• Se quer **substituir** → me confirme e arquivarei o antigo antes de criar o novo`
+          }]);
+          isCreatingProjectRef.current = false;
+          return null as any;
         }
 
-        // P2 — bloquear se não há artista vinculado
+        // P2 — validar campos obrigatórios antes de criar
+        const missingFields: string[] = [];
+        if (!projectData.objective) missingFields.push('objetivo do projeto');
+        if (!projectData.end_date && !projectData.launch_date) missingFields.push('data de lançamento/entrega');
+        if (!projectData.project_type && !projectData.tipo) missingFields.push('tipo de projeto');
+
+        if (missingFields.length > 0) {
+          console.warn(`[Copilot] Projeto incompleto — faltam: ${missingFields.join(', ')}`);
+          setMessages(prev => [...prev, {
+            role: 'assistant' as const,
+            content: `❌ Não posso criar o projeto ainda. Faltam informações obrigatórias:\n\n${missingFields.map(f => `• ${f}`).join('\n')}\n\nMe responda essas perguntas para continuar.`
+          }]);
+          isCreatingProjectRef.current = false;
+          return null as any;
+        }
+
+        // P3 — bloquear se não há artista vinculado
         if (!resolvedArtistId) {
           return {
             role: 'assistant' as const,
@@ -1789,8 +1811,19 @@ export default function PlanningCopilot() {
         loadPlatformContext(resolvedOrgId).then(ctx => setPlatformContext(ctx));
         console.info(`[Copilot] Contexto recarregado após criação do projeto | org: ${resolvedOrgId}`);
 
+        // Redirecionar automaticamente para o ProjectDashboard após 2s
+        setTimeout(() => {
+          navigate('/planejamento', {
+            state: {
+              projectId: newProject.id,
+              project: { id: newProject.id, name: projectData.name },
+              autoOpenProject: true,
+            }
+          });
+        }, 2000);
+
         // Toast com navegação direta para o TaskBoard filtrado pelo projeto
-        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas + sub-tarefas operacionais geradas!`, {
+        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas! Abrindo projeto...`, {
           action: {
             label: 'Ver Tarefas →',
             onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name, view: 'departments' } })

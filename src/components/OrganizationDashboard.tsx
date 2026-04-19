@@ -4,7 +4,7 @@ import {
   Users, FolderOpen, DollarSign, Calendar, Music, Rocket, Search,
   MoreVertical, TrendingUp, TrendingDown, Loader2, Sparkles,
   AlertTriangle, Info, CheckCircle2, ArrowRight, Building2, Plus,
-  Clock, Mic2, Disc3, Archive, ExternalLink
+  Clock, Mic2, Disc3, Archive, ExternalLink, Play, Zap
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProactiveSuggestions, Suggestion } from '../services/suggestionService';
@@ -41,7 +41,9 @@ export default function OrganizationDashboard({
     tasksDueToday: any[];
     showsThisWeek: any[];
     releasesThisWeek: any[];
-  }>({ tasksDueToday: [], showsThisWeek: [], releasesThisWeek: [] });
+    nextTask: any | null;
+  }>({ tasksDueToday: [], showsThisWeek: [], releasesThisWeek: [], nextTask: null });
+  const [startingTask, setStartingTask] = useState(false);
   const [stats, setStats] = useState([
     {
       icon: Music,
@@ -162,7 +164,7 @@ export default function OrganizationDashboard({
       const today = new Date().toISOString().split('T')[0];
       const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
-      const [tasksTodayResult, showsWeekResult, releasesWeekResult] = await Promise.all([
+      const [tasksTodayResult, showsWeekResult, releasesWeekResult, nextTaskResult] = await Promise.all([
         supabase
           .from('tasks')
           .select('id, title, status, deadline, priority')
@@ -183,13 +185,23 @@ export default function OrganizationDashboard({
           .gte('release_date', today)
           .lte('release_date', in7days)
           .order('release_date', { ascending: true })
-          .limit(3)
+          .limit(3),
+        supabase
+          .from('tasks')
+          .select('id, title, status, deadline, priority')
+          .in('status', ['todo', 'not_started', 'pending'])
+          .order('deadline', { ascending: true, nullsFirst: false })
+          .limit(1),
       ]);
 
+      const overdueTasks = tasksTodayResult.data || [];
+      const primaryTask = overdueTasks[0] || nextTaskResult.data?.[0] || null;
+
       setTodayData({
-        tasksDueToday: tasksTodayResult.data || [],
+        tasksDueToday: overdueTasks,
         showsThisWeek: showsWeekResult.data || [],
-        releasesThisWeek: releasesWeekResult.data || []
+        releasesThisWeek: releasesWeekResult.data || [],
+        nextTask: primaryTask,
       });
 
       // Atualizar Stats
@@ -241,6 +253,20 @@ export default function OrganizationDashboard({
     }
   }
 
+  async function startTask(taskId: string) {
+    setStartingTask(true);
+    try {
+      await supabase.from('tasks').update({ status: 'in_progress' }).eq('id', taskId);
+      setTodayData(prev => ({
+        ...prev,
+        tasksDueToday: prev.tasksDueToday.map(t => t.id === taskId ? { ...t, status: 'in_progress' } : t),
+        nextTask: prev.nextTask?.id === taskId ? { ...prev.nextTask, status: 'in_progress' } : prev.nextTask,
+      }));
+    } finally {
+      setStartingTask(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -277,7 +303,8 @@ export default function OrganizationDashboard({
   const hasTodayItems =
     todayData.tasksDueToday.length > 0 ||
     todayData.showsThisWeek.length > 0 ||
-    todayData.releasesThisWeek.length > 0;
+    todayData.releasesThisWeek.length > 0 ||
+    !!todayData.nextTask;
 
   const todayLabel = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long'
@@ -297,6 +324,36 @@ export default function OrganizationDashboard({
               Hoje — {todayLabel}
             </span>
           </div>
+          {/* Primary task — Começar agora */}
+          {todayData.nextTask && (
+            <div className={`flex items-center gap-4 px-5 py-4 border-b border-gray-100 ${todayData.tasksDueToday.length > 0 ? 'bg-red-50/60' : 'bg-orange-50/60'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${todayData.tasksDueToday.length > 0 ? 'bg-red-100' : 'bg-orange-100'}`}>
+                <Zap className={`w-4 h-4 ${todayData.tasksDueToday.length > 0 ? 'text-red-600' : 'text-orange-600'}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
+                  {todayData.tasksDueToday.length > 0 ? 'Tarefa urgente' : 'Próxima tarefa'}
+                </p>
+                <p className="text-sm font-semibold text-gray-800 truncate">{todayData.nextTask.title}</p>
+              </div>
+              {todayData.nextTask.status !== 'in_progress' ? (
+                <button
+                  onClick={() => startTask(todayData.nextTask.id)}
+                  disabled={startingTask}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                >
+                  <Play className="w-3 h-3" />
+                  Começar agora
+                </button>
+              ) : (
+                <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Em andamento
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
 
             {/* Tarefas urgentes */}

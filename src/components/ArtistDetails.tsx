@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase, TrendingUp, Star, ChevronRight, Archive } from 'lucide-react';
+import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twitter, Youtube, Edit2, Save, X, Mic2, Disc3, CheckSquare, ArrowRight, AlertCircle, Plus, Sparkles, Radio, Briefcase, TrendingUp, Star, ChevronRight, Archive, Play, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -103,6 +103,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
   const [artistProjects, setArtistProjects] = useState<any[]>([]);
   const [artistProjectTasks, setArtistProjectTasks] = useState<any[]>([]);
   const [loadingOps, setLoadingOps] = useState(false);
+  const [startingProjectTask, setStartingProjectTask] = useState(false);
   // Contagens totais para cálculo de fase de carreira
   const [totalShowsCount, setTotalShowsCount] = useState(0);
   const [totalReleasesCount, setTotalReleasesCount] = useState(0);
@@ -236,6 +237,16 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
 
     loadOpsData();
   }, [artist?.name]);
+
+  const startProjectTask = async (taskId: string) => {
+    setStartingProjectTask(true);
+    try {
+      await supabase.from('tasks').update({ status: 'in_progress' }).eq('id', taskId);
+      setArtistProjectTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'in_progress' } : t));
+    } finally {
+      setStartingProjectTask(false);
+    }
+  };
 
   const populateEditData = (data: any) => {
     setEditData({
@@ -963,16 +974,22 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                   </button>
                 </div>
                 <ul className="space-y-2">
-                  {artistProjectTasks.map(task => {
+                  {artistProjectTasks.map((task, idx) => {
                     const today = new Date().toISOString().split('T')[0];
                     const isOverdue = task.due_date && task.due_date < today;
+                    const isFirst = idx === 0;
+                    const canStart = isFirst && task.status !== 'in_progress' && task.status !== 'done';
                     const priorityColor = task.priority === 'high' || task.priority === 'urgent'
                       ? 'bg-red-500' : task.priority === 'medium' ? 'bg-yellow-500' : 'bg-gray-400';
                     return (
-                      <li key={task.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${priorityColor}`} />
+                      <li key={task.id} className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${isFirst ? 'bg-indigo-50/70 border border-indigo-100' : 'hover:bg-gray-50'}`}>
+                        {isFirst ? (
+                          <Zap className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 mt-1" />
+                        ) : (
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${priorityColor}`} />
+                        )}
                         <div className="min-w-0 flex-1">
-                          <p className={`text-sm font-medium truncate ${isOverdue ? 'text-red-700' : 'text-gray-800'}`}>
+                          <p className={`text-sm font-medium truncate ${isOverdue ? 'text-red-700' : isFirst ? 'text-indigo-800' : 'text-gray-800'}`}>
                             {task.title}
                           </p>
                           {task.due_date && (
@@ -982,7 +999,22 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                             </p>
                           )}
                         </div>
-                        {isOverdue && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />}
+                        {isOverdue && !isFirst && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />}
+                        {canStart && (
+                          <button
+                            onClick={() => startProjectTask(task.id)}
+                            disabled={startingProjectTask}
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                          >
+                            <Play className="w-2.5 h-2.5" />
+                            Começar
+                          </button>
+                        )}
+                        {isFirst && task.status === 'in_progress' && (
+                          <span className="shrink-0 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                            Em andamento
+                          </span>
+                        )}
                       </li>
                     );
                   })}
