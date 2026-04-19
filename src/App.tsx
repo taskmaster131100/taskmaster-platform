@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Toaster, toast } from 'sonner';
 import { useAuth } from './components/auth/AuthProvider';
 import SupabaseConnection from './components/SupabaseConnection';
+import { trackEvent } from './lib/analytics';
 
 // Lazy load all components for better performance
 const MainLayout = React.lazy(() => import('./components/MainLayout'));
@@ -79,6 +80,7 @@ const OrganizationProfile = React.lazy(() => import('./components/OrganizationPr
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 const InvitePage = React.lazy(() => import('./pages/InvitePage'));
 const AdminUsuarios = React.lazy(() => import('./pages/AdminUsuarios'));
+const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 
 // Classic Routes Preview (feature flag controlled)
@@ -526,6 +528,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         // Atualizar lista instantaneamente sem esperar reload
         setArtists(prev => [...prev, newArtist as Artist]);
         toast.success('Artista criado com sucesso!');
+        trackEvent('artist_created', { method: 'manual', genre: safeArtistData.genre });
         // Recarregar dados em background
         loadData();
       }
@@ -1107,6 +1110,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/admin/usuarios" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <AdminUsuarios />
+          </React.Suspense>
+        } />
+
+        <Route path="/admin/analytics" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <AnalyticsPage />
           </React.Suspense>
         } />
 

@@ -7,6 +7,7 @@ import {
   Send, Bot, X, ChevronDown, ChevronUp, Music, Link2, Unlink,
   Share2, Printer, Edit2, Save, Target, Zap, ChevronRight
 } from 'lucide-react';
+import { trackEvent } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -132,6 +133,13 @@ export default function ProjectDashboard({
       strategy: project?.strategy || '',
       project_type: project?.project_type || '',
     });
+    if (project?.id) {
+      trackEvent('project_opened', {
+        project_id: project.id,
+        project_status: project.status,
+        has_tasks: (tasks?.length ?? 0) > 0,
+      });
+    }
   }, [project?.id]);
 
   useEffect(() => {
@@ -260,6 +268,7 @@ export default function ProjectDashboard({
   const handleAiSend = async () => {
     if (!aiInput.trim() || aiLoading) return;
     const userMsg = aiInput.trim();
+    trackEvent('copilot_message_sent', { context: 'project_dashboard', project_id: project?.id });
     setAiInput('');
     const history: AiMessage[] = [...aiMessages, { role: 'user', content: userMsg }];
     setAiMessages(history);
@@ -821,7 +830,9 @@ Responda em português.`;
 
         {/* ── O QUE FAZER HOJE ─────────────────────────────────────────────── */}
         {(overdue.length > 0 || upcoming.length > 0 || inProgress > 0) && (
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4"
+            onClick={() => trackEvent('today_block_viewed', { project_id: project?.id, overdue_count: overdue.length, upcoming_count: upcoming.length })}
+          >
             <div className="flex items-center gap-2 mb-3">
               <Zap className="w-4 h-4 text-orange-500" />
               <h3 className="font-bold text-gray-800 text-sm">O que fazer hoje</h3>

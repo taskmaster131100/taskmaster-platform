@@ -3,6 +3,7 @@ import { ArrowLeft, Music, Loader2, Mail, Phone, Calendar, Globe, Instagram, Twi
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { trackEvent } from '../lib/analytics';
 
 // ── Fase de Carreira por Artista ──────────────────────────────────────────────
 type CareerStage = 'iniciante' | 'desenvolvimento' | 'crescimento' | 'profissional';
@@ -119,6 +120,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
         if (error) throw error;
         setArtist(data);
         populateEditData(data);
+        trackEvent('artist_viewed', { artist_id: artistId });
       } catch (error) {
         console.error('Erro ao carregar detalhes do artista:', error);
         toast.error('Erro ao carregar detalhes do artista');
@@ -284,6 +286,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
       setArtist({ ...artist, ...payload });
       setIsEditing(false);
       toast.success('Artista atualizado com sucesso!');
+      trackEvent('artist_edited', { artist_id: artistId, genre: payload.genre });
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar alterações. Tente novamente.');

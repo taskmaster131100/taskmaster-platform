@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './auth/AuthProvider';
 import { getPhasesForWorkstream, getSubTasksForWorkstream } from '../services/operationalTemplates';
+import { trackEvent } from '../lib/analytics';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -1127,12 +1128,19 @@ export default function PlanningCopilot() {
     if ((!input.trim() && !attachedFile) || !platformContext) return;
 
     const userText = input.trim() || (attachedFile ? `Analise meu projeto: ${attachedFile.name}` : '');
-    const userMessage: Message = { 
-      role: 'user', 
+    const userMessage: Message = {
+      role: 'user',
       content: userText,
       metadata: attachedFile ? { fileName: attachedFile.name } : undefined
     };
-    
+
+    trackEvent('copilot_message_sent', {
+      has_file: !!attachedFile,
+      artist_id: artistFromNav?.id,
+      project_id: projectFromNav?.id,
+      message_length: userText.length,
+    });
+
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setReadyToCreate(false); // nova mensagem cancela o banner de confirmação pendente
@@ -1241,6 +1249,7 @@ export default function PlanningCopilot() {
         .select('id')
         .single();
       if (error) throw error;
+      trackEvent('artist_created', { method: 'ai_copilot', genre: genre || null });
       return { status: 'created', id: newArtist.id };
     } catch (err) {
       console.error('Erro ao criar artista:', err);
@@ -1767,6 +1776,14 @@ export default function PlanningCopilot() {
         window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
           detail: { projectId: newProject.id, projectName: projectData.name }
         }));
+        trackEvent('project_created', {
+          project_id: newProject.id,
+          project_type: projectData.project_type || null,
+          method: 'ai_copilot',
+          artist_id: resolvedArtistId,
+          total_tasks: totalTasks,
+          budget: projectData.budget,
+        });
 
         // Recarregar contexto: usar resolvedOrgId (garantido) em vez de organizationId do auth
         loadPlatformContext(resolvedOrgId).then(ctx => setPlatformContext(ctx));

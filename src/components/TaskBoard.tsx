@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { trackEvent } from '../lib/analytics';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider';
@@ -110,6 +111,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   useEffect(() => {
     loadTasks();
     loadOrgMembers();
+    trackEvent('taskboard_opened', { project_id: project?.id || null });
 
     const channel = supabase
       .channel('tasks-changes')
@@ -377,6 +379,12 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
         .eq('id', taskId);
 
       if (error) throw error;
+
+      if (updates.status === 'done') {
+        trackEvent('task_completed', { task_id: taskId });
+      } else if (updates.status) {
+        trackEvent('task_status_changed', { task_id: taskId, new_status: updates.status });
+      }
 
       toast.success('Tarefa atualizada!');
       loadTasks();

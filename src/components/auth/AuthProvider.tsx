@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import { identifyUser, trackEvent, resetAnalytics } from '../../lib/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -38,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
+        identifyUser(session.user.id, { email: session.user.email });
+        if (_event === 'SIGNED_IN') trackEvent('user_session_start');
         checkSingleSession(session.user.id);
         setLoading(true); // reabrir loading enquanto resolve org
         ensureOrganization().finally(() => {
@@ -142,16 +145,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    if (data.user) {
+      identifyUser(data.user.id, { email: data.user.email });
+      trackEvent('user_login', { method: 'email' });
+    }
   };
 
   const signOut = async () => {
+    trackEvent('user_logout');
     await supabase.auth.signOut();
     localStorage.removeItem('tm_session_id');
+    resetAnalytics();
     setOrganizationId(null);
   };
 
