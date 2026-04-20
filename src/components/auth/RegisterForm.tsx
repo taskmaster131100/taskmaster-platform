@@ -170,6 +170,20 @@ export default function RegisterForm() {
       const firstName = name.split(' ')[0];
       sendWelcomeEmail(email, firstName).catch(() => {});
 
+      // Disparar sequência de ativação 7 dias (fire-and-forget)
+      const n8nUrl = import.meta.env.VITE_N8N_URL || 'http://localhost:5678';
+      fetch(`${n8nUrl}/webhook/suporte-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'user_signup',
+          user_id: authData.user.id,
+          email,
+          name,
+          account_type: accountType,
+        }),
+      }).catch(() => {});
+
       // Notificar admin sobre novo cadastro pendente de aprovação
       try {
         await fetch('/api/notify-signup', {
