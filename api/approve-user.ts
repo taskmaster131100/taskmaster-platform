@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Client } from 'pg';
 
-const DB_URL = process.env.SUPABASE_DB_URL || 'postgresql://postgres:HubIb1E6qF0Q3GoG@db.ktspxbucvfzaqyszpyso.supabase.co:5432/postgres';
+const DB_URL = process.env.SUPABASE_DB_URL || '';
 const ADMIN_EMAILS = ['marcos@taskmaster.works', 'balmarcos131100@gmail.com', 'balmarcos@hotmail.com'];
 
 async function getDb() {

@@ -1,11 +1,7 @@
 import { supabase } from '../lib/supabase';
 
-const BREVO_KEY = import.meta.env.VITE_BREVO_API_KEY || import.meta.env.VITE_BREVO_KEY;
-const SENDER = {
-  name: import.meta.env.VITE_BREVO_SENDER_NAME || 'TaskMaster',
-  email: import.meta.env.VITE_BREVO_SENDER_EMAIL || 'contact@taskmaster.works',
-};
-const APP_URL = import.meta.env.VITE_APP_URL || 'https://www.taskmaster.works';
+// Email enviado via proxy server-side — Brevo key não exposta no cliente
+const APP_URL = 'https://www.taskmaster.works';
 
 export interface Invite {
   id: string;
@@ -25,11 +21,6 @@ export interface SendInviteParams {
 }
 
 async function sendInviteEmail(email: string, role: string, token: string): Promise<boolean> {
-  if (!BREVO_KEY) {
-    console.warn('[inviteService] VITE_BREVO_API_KEY não configurada — e-mail não enviado');
-    return false;
-  }
-
   const link = `${APP_URL}/invite/${token}`;
   const roleLabel: Record<string, string> = {
     viewer: 'Visualizador', editor: 'Editor', admin: 'Administrador',
@@ -37,7 +28,6 @@ async function sendInviteEmail(email: string, role: string, token: string): Prom
 
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;border:1px solid #e5e7eb">
-      <img src="${APP_URL}/logo.png" alt="TaskMaster" style="height:36px;margin-bottom:24px" onerror="this.style.display='none'" />
       <h2 style="color:#111827;margin:0 0 8px">Você foi convidado para a equipe</h2>
       <p style="color:#6b7280;margin:0 0 24px">
         Você recebeu um convite para entrar na plataforma <strong>TaskMaster</strong> como <strong>${roleLabel[role] || role}</strong>.
@@ -52,22 +42,18 @@ async function sendInviteEmail(email: string, role: string, token: string): Prom
   `;
 
   try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    const res = await fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'api-key': BREVO_KEY, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: SENDER,
-        to: [{ email }],
+        type: 'raw',
+        to: { email },
         subject: 'Convite para a plataforma TaskMaster',
-        htmlContent: html,
+        html,
+        sender: { name: 'TaskMaster', email: 'contact@taskmaster.works' },
       }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.error('[inviteService] Brevo erro:', err);
-      return false;
-    }
-    return true;
+    return res.ok;
   } catch (e) {
     console.error('[inviteService] falha ao enviar e-mail:', e);
     return false;
