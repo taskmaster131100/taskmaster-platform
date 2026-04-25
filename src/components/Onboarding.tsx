@@ -153,11 +153,11 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-center">
                 <div className="text-2xl font-bold text-orange-600">$49<span className="text-sm font-normal text-gray-500">/mês</span></div>
-                <div className="text-sm font-medium text-gray-700 mt-1">Plano Inicial</div>
+                <div className="text-sm font-medium text-gray-700 mt-1">Plano Entrada</div>
                 <div className="text-xs text-gray-500 mt-0.5">1 artista · projetos · shows · tarefas</div>
               </div>
               <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-center">
-                <div className="text-2xl font-bold text-purple-600">$75<span className="text-sm font-normal text-gray-500">/mês</span></div>
+                <div className="text-2xl font-bold text-purple-600">$79<span className="text-sm font-normal text-gray-500">/mês</span></div>
                 <div className="text-sm font-medium text-gray-700 mt-1">Plano Base</div>
                 <div className="text-xs text-gray-500 mt-0.5">Múltiplos artistas · financeiro · CRM</div>
               </div>

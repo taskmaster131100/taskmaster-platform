@@ -410,6 +410,7 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       }
 
       // P2 — resolver artist_id a partir do artistName informado no Wizard
+      // Se não encontrar, cria automaticamente para não bloquear o usuário novo
       let resolvedArtistId: string | null = null;
       if (projectData.artistName?.trim()) {
         const { data: artistRow } = await supabase
@@ -421,15 +422,26 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
           .limit(1)
           .maybeSingle();
         resolvedArtistId = artistRow?.id || null;
+
         if (!resolvedArtistId) {
-          // Artista não encontrado — bloquear e avisar
-          toast.error(`Artista "${projectData.artistName}" não encontrado. Crie o artista antes de criar o projeto.`);
-          return;
+          // Artista não existe — criar automaticamente com os dados do wizard
+          const artistName = projectData.artistName.trim();
+          const { data: newArtist } = await supabase
+            .from('artists')
+            .insert({
+              name: artistName,
+              stage_name: artistName,
+              genre: projectData.genre?.trim() || 'Não definido',
+              organization_id: resolvedOrgId,
+              created_by: user?.id,
+            })
+            .select('id')
+            .single();
+          resolvedArtistId = newArtist?.id || null;
+          if (resolvedArtistId) {
+            setArtists(prev => [...prev, { id: resolvedArtistId!, name: artistName } as Artist]);
+          }
         }
-      } else {
-        // P2 — campo artista é obrigatório
-        toast.error('Todo projeto precisa estar vinculado a um artista. Informe o nome do artista.');
-        return;
       }
 
       const { data: newProject, error } = await supabase
@@ -449,6 +461,21 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       if (error) throw error;
 
       if (newProject) {
+        // Salvar tarefas geradas pela IA no banco
+        const wizardTasks: string[] = Array.isArray(projectData.tasks) ? projectData.tasks : [];
+        if (wizardTasks.length > 0) {
+          const taskRows = wizardTasks.map((taskTitle: string) => ({
+            title: String(taskTitle).slice(0, 255),
+            status: 'todo',
+            priority: 'medium',
+            workstream: 'geral',
+            project_id: newProject.id,
+            organization_id: resolvedOrgId,
+            reporter_id: user?.id,
+          }));
+          await supabase.from('tasks').insert(taskRows);
+        }
+
         setProjects(prev => [newProject as Project, ...prev]);
         toast.success('Projeto criado com sucesso!');
         loadData();
@@ -468,16 +495,19 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
       return;
     }
     try {
-      // Buscar organization_id do utilizador
-      let orgId: string | null = null;
-      try {
+      // Usar organizationId do contexto de auth — fonte única e confiável
+      // Lookup separado causava dessincronização: artista criado com org errada sumia no próximo loadData()
+      let orgId: string | null = organizationId;
+      if (!orgId && user?.id) {
         const { data: orgData } = await supabase
           .from('user_organizations')
           .select('organization_id')
-          .eq('user_id', user?.id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
           .maybeSingle();
         orgId = orgData?.organization_id || null;
-      } catch { /* ignore */ }
+      }
 
       // Enviar apenas os campos que existem na tabela artists do Supabase
       // Colunas reais: name, stage_name, genre, subgenre, bio, instagram, spotify, youtube, tiktok, email, phone, organization_id
