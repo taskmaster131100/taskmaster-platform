@@ -200,15 +200,15 @@ export async function checkTaskDeadlines(): Promise<void> {
   const { data: tasks } = await supabase
     .from('tasks')
     .select('*')
-    .eq('assigned_to', user.id)
+    .eq('assignee_id', user.id)
     .neq('status', 'done')
-    .lte('deadline', threeDaysFromNow.toISOString().split('T')[0])
-    .gte('deadline', today.toISOString().split('T')[0]);
+    .lte('due_date', threeDaysFromNow.toISOString().split('T')[0])
+    .gte('due_date', today.toISOString().split('T')[0]);
 
   for (const task of tasks || []) {
-    const deadline = new Date(task.deadline);
+    const deadline = new Date(task.due_date);
     const isToday = deadline.toDateString() === today.toDateString();
-    const isOverdue = deadline < today;
+    const isOverdue = deadline < today && !isToday;
 
     let type: NotificationType;
     let title: string;

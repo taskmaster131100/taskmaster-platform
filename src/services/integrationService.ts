@@ -248,7 +248,7 @@ export async function onReleaseCreated(release: {
         description: `${release.title} - ${release.artist_name}`,
         workstream: department,
         status: 'todo',
-        deadline: dueDate.toISOString().split('T')[0],
+        due_date: dueDate.toISOString().split('T')[0],
         created_by: user.id,
         metadata: {
           release_id: release.id,
@@ -401,7 +401,7 @@ export async function getProjectSummary(projectId: string): Promise<{
 
   const { data: tasks } = await supabase
     .from('tasks')
-    .select('status, deadline')
+    .select('status, due_date')
     .eq('metadata->>project_id', projectId);
 
   const summary = {
@@ -417,7 +417,7 @@ export async function getProjectSummary(projectId: string): Promise<{
       summary.completedTasks++;
     } else {
       summary.pendingTasks++;
-      if (task.deadline && task.deadline < today) {
+      if (task.due_date && task.due_date < today) {
         summary.overdueTasks++;
       }
     }

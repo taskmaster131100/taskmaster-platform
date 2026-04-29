@@ -100,10 +100,10 @@ export async function buildUserContext(): Promise<string> {
         .limit(3),
       supabase
         .from('tasks')
-        .select('title, deadline, status')
+        .select('title, due_date, status')
         .neq('status', 'done')
-        .lte('deadline', in7days)
-        .order('deadline', { ascending: true })
+        .lte('due_date', in7days)
+        .order('due_date', { ascending: true })
         .limit(5)
     ]);
 
@@ -119,11 +119,11 @@ export async function buildUserContext(): Promise<string> {
       ? releases.map(r => `"${r.title}" previsto para ${r.release_date} — ${r.status}`).join('; ')
       : 'nenhum lançamento nos próximos 30 dias';
 
-    const overdueOrSoon = tasks.filter(t => t.deadline <= today);
+    const overdueOrSoon = tasks.filter(t => t.due_date <= today);
     const tasksText = tasks.length > 0
       ? tasks.map(t => {
-          const isOverdue = t.deadline < today;
-          return `"${t.title}" (prazo: ${t.deadline}${isOverdue ? ' — ATRASADA' : ''})`;
+          const isOverdue = t.due_date < today;
+          return `"${t.title}" (prazo: ${t.due_date}${isOverdue ? ' — ATRASADA' : ''})`;
         }).join('; ')
       : 'nenhuma tarefa urgente';
 

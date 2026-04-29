@@ -44,6 +44,7 @@ export default function OrganizationDashboard({
     nextTask: any | null;
   }>({ tasksDueToday: [], showsThisWeek: [], releasesThisWeek: [], nextTask: null });
   const [startingTask, setStartingTask] = useState(false);
+  const [monthBalance, setMonthBalance] = useState<number | null>(null);
   const [stats, setStats] = useState([
     {
       icon: Music,
@@ -147,14 +148,26 @@ export default function OrganizationDashboard({
       // 4. Carregar Financeiro (Faturamento do mês)
       const firstDayOfMonth = new Date();
       firstDayOfMonth.setDate(1);
-      const { data: financeData } = await supabase
-        .from('financial_transactions')
-        .select('amount')
-        .eq('type', 'revenue')
-        .eq('status', 'paid')
-        .gte('transaction_date', firstDayOfMonth.toISOString().split('T')[0]);
-      
-      const totalRevenue = financeData?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+      const firstDay = firstDayOfMonth.toISOString().split('T')[0];
+      const [{ data: financeData }, { data: expenseData }] = await Promise.all([
+        supabase
+          .from('financial_transactions')
+          .select('amount')
+          .eq('type', 'revenue')
+          .in('status', ['paid', 'approved', 'pending'])
+          .gte('transaction_date', firstDay),
+        supabase
+          .from('financial_transactions')
+          .select('amount')
+          .eq('type', 'expense')
+          .in('status', ['paid', 'approved', 'pending'])
+          .gte('transaction_date', firstDay),
+      ]);
+
+      const totalRevenue = financeData?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0;
+      const totalExpenses = expenseData?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0;
+      const monthBalance = totalRevenue - totalExpenses;
+      setMonthBalance(monthBalance);
 
       // 5. Carregar Sugestões Proativas
       const proactiveSuggestions = await getProactiveSuggestions();
@@ -162,35 +175,32 @@ export default function OrganizationDashboard({
 
       // 6. Carregar dados de "Hoje"
       const today = new Date().toISOString().split('T')[0];
-      const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
       const [tasksTodayResult, showsWeekResult, releasesWeekResult, nextTaskResult] = await Promise.all([
         supabase
           .from('tasks')
-          .select('id, title, status, deadline, priority')
+          .select('id, title, status, due_date, priority')
           .neq('status', 'done')
-          .lte('deadline', today)
-          .order('deadline', { ascending: true })
+          .lte('due_date', today)
+          .order('due_date', { ascending: true })
           .limit(5),
         supabase
           .from('shows')
           .select('id, title, show_date, city, status')
           .gte('show_date', today)
-          .lte('show_date', in7days)
           .order('show_date', { ascending: true })
           .limit(3),
         supabase
           .from('releases')
           .select('id, title, release_date, status')
           .gte('release_date', today)
-          .lte('release_date', in7days)
           .order('release_date', { ascending: true })
           .limit(3),
         supabase
           .from('tasks')
-          .select('id, title, status, deadline, priority')
+          .select('id, title, status, due_date, priority')
           .in('status', ['todo', 'not_started', 'pending'])
-          .order('deadline', { ascending: true, nullsFirst: false })
+          .order('due_date', { ascending: true, nullsFirst: false })
           .limit(1),
       ]);
 
@@ -312,6 +322,20 @@ export default function OrganizationDashboard({
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      {/* Alerta de saldo negativo */}
+      {monthBalance !== null && monthBalance < 0 && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-red-800">Saldo negativo este mês</p>
+            <p className="text-sm text-red-600">
+              Suas despesas superam as receitas em{' '}
+              <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(monthBalance))}</strong>.
+              {' '}<button onClick={() => navigate('/finance')} className="underline font-medium">Ver financeiro →</button>
+            </p>
+          </div>
+        </div>
+      )}
       {/* Virtual Agent Proactive Notifications */}
       <VirtualAgentWidget />
 
@@ -394,12 +418,12 @@ export default function OrganizationDashboard({
               )}
             </div>
 
-            {/* Shows desta semana */}
+            {/* Próximos Shows */}
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className={`w-2 h-2 rounded-full ${todayData.showsThisWeek.length > 0 ? 'bg-yellow-500' : 'bg-gray-300'}`} />
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Shows esta semana
+                  Próximos Shows
                 </span>
                 {todayData.showsThisWeek.length > 0 && (
                   <span className="ml-auto text-xs font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
@@ -408,7 +432,7 @@ export default function OrganizationDashboard({
                 )}
               </div>
               {todayData.showsThisWeek.length === 0 ? (
-                <p className="text-xs text-gray-400">Nenhum show esta semana</p>
+                <p className="text-xs text-gray-400">Nenhum show agendado</p>
               ) : (
                 <ul className="space-y-1.5">
                   {todayData.showsThisWeek.map(show => (
@@ -418,7 +442,7 @@ export default function OrganizationDashboard({
                     >
                       <Mic2 className="w-3.5 h-3.5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <span className="truncate group-hover:underline">
-                        {show.title} — {new Date(show.show_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        {show.title} — {new Date(String(show.show_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                       </span>
                     </li>
                   ))}
@@ -434,12 +458,12 @@ export default function OrganizationDashboard({
               )}
             </div>
 
-            {/* Lançamentos esta semana */}
+            {/* Próximos Lançamentos */}
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className={`w-2 h-2 rounded-full ${todayData.releasesThisWeek.length > 0 ? 'bg-purple-500' : 'bg-gray-300'}`} />
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Lançamentos esta semana
+                  Próximos Lançamentos
                 </span>
                 {todayData.releasesThisWeek.length > 0 && (
                   <span className="ml-auto text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
@@ -448,7 +472,7 @@ export default function OrganizationDashboard({
                 )}
               </div>
               {todayData.releasesThisWeek.length === 0 ? (
-                <p className="text-xs text-gray-400">Nenhum lançamento esta semana</p>
+                <p className="text-xs text-gray-400">Nenhum lançamento agendado</p>
               ) : (
                 <ul className="space-y-1.5">
                   {todayData.releasesThisWeek.map(release => (
@@ -458,7 +482,7 @@ export default function OrganizationDashboard({
                     >
                       <Disc3 className="w-3.5 h-3.5 text-purple-500 mt-0.5 flex-shrink-0" />
                       <span className="truncate group-hover:underline">
-                        {release.title} — {new Date(release.release_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        {release.title} — {new Date(String(release.release_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                       </span>
                     </li>
                   ))}

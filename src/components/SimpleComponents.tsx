@@ -137,7 +137,7 @@ const ParentTaskCard = ({
     setGenerating(true);
     try {
       const baseDate = task.due_date
-        ? new Date(task.due_date + 'T12:00:00')
+        ? new Date(String(task.due_date).slice(0, 10) + 'T12:00:00')
         : new Date();
 
       // P1: dedup por título normalizado (lowercase + trim + colapsar espaços)
@@ -272,7 +272,7 @@ const ParentTaskCard = ({
               <>
                 {task.project_name && <span>·</span>}
                 <span className={task.due_date < today && task.status !== 'done' ? 'text-red-500' : ''}>
-                  {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                  {new Date(String(task.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                 </span>
               </>
             )}
@@ -387,7 +387,7 @@ const ParentTaskCard = ({
                                 ? 'text-red-500 font-medium'
                                 : 'text-gray-400'
                             }`}>
-                              {new Date(st.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                              {new Date(String(st.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                             </div>
                           )}
                         </div>
@@ -786,7 +786,7 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
                     {/* Prazo */}
                     {ft.due_date && (
                       <span className={`text-[10px] font-medium flex-shrink-0 ${isOverdueFt ? 'text-red-600' : 'text-gray-400'}`}>
-                        {isOverdueFt ? '⚠ ' : ''}{new Date(ft.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        {isOverdueFt ? '⚠ ' : ''}{new Date(String(ft.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                       </span>
                     )}
                   </div>
@@ -811,7 +811,7 @@ export const SectorTaskView = ({ workstream }: { workstream: string }) => {
                   <>
                     <span>·</span>
                     <span className={stats.nextStep.due_date < today ? 'text-red-600 font-medium' : 'text-gray-400'}>
-                      {stats.nextStep.due_date < today ? '⚠ ' : ''}{new Date(stats.nextStep.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      {stats.nextStep.due_date < today ? '⚠ ' : ''}{new Date(String(stats.nextStep.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </span>
                   </>
                 )}

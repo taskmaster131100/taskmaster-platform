@@ -74,7 +74,7 @@ function formatDate(dateStr?: string): string {
 
 function isOverdue(due_date?: string, status?: string): boolean {
   if (!due_date || status === 'done') return false;
-  return new Date(due_date + 'T23:59:59') < new Date();
+  return new Date(String(due_date).slice(0, 10) + 'T23:59:59') < new Date();
 }
 
 function daysUntil(dateStr?: string): number | null {
@@ -247,7 +247,7 @@ export default function ProjectDashboard({
   const buildAiContext = () => {
     const total = tasks.length;
     const done = tasks.filter(t => t.status === 'done').length;
-    const overdueTasks = tasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date + 'T23:59:59') < new Date());
+    const overdueTasks = tasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.String(due_date).slice(0, 10) + 'T23:59:59') < new Date());
     const blockedTasks = tasks.filter(t => t.status === 'blocked');
     const byWs: Record<string, Task[]> = {};
     tasks.forEach(t => { const ws = t.workstream || 'geral'; if (!byWs[ws]) byWs[ws] = []; byWs[ws].push(t); });
@@ -554,11 +554,11 @@ Responda em português.`;
   today.setHours(0, 0, 0, 0);
 
   const overdue = tasks
-    .filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date + 'T23:59:59') < new Date())
+    .filter(t => t.status !== 'done' && t.due_date && new Date(t.String(due_date).slice(0, 10) + 'T23:59:59') < new Date())
     .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
 
   const upcoming = tasks
-    .filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date + 'T00:00:00') >= today)
+    .filter(t => t.status !== 'done' && t.due_date && new Date(String(t.due_date).slice(0, 10) + 'T12:00:00') >= today)
     .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
     .slice(0, 8);
 

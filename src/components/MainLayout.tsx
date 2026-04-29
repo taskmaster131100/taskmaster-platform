@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Music, Home, Users, Calendar, BarChart3,
@@ -6,9 +6,11 @@ import {
   Sparkles, TrendingUp, CheckSquare,
   Shield, User, Mic2,
   BookOpen, MapPin, Disc3,
-  DollarSign, UsersRound, Bell, Search, Bot, Brain, PhoneCall, Megaphone
+  DollarSign, UsersRound, Bell, Search, Bot, Brain, PhoneCall, Megaphone, FileText,
+  AlertTriangle, Clock
 } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
+import { supabase } from '../lib/supabase';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -36,6 +38,38 @@ export default function MainLayout({
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<{ id: string; type: 'task' | 'show' | 'release'; title: string; detail: string; link: string }[]>([]);
+  const [notifLoaded, setNotifLoaded] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  async function loadNotifications() {
+    if (notifLoaded) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const in3days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+      const [overdueTasks, upcomingShows, upcomingReleases] = await Promise.all([
+        supabase.from('tasks').select('id, title, due_date').neq('status', 'done').lte('due_date', today).order('due_date').limit(5),
+        supabase.from('shows').select('id, title, show_date').gte('show_date', today).lte('show_date', in3days).order('show_date').limit(3),
+        supabase.from('releases').select('id, title, release_date').gte('release_date', today).lte('release_date', in3days).order('release_date').limit(3),
+      ]);
+      const items: typeof notifications = [];
+      (overdueTasks.data || []).forEach(t => items.push({ id: t.id, type: 'task', title: t.title, detail: `Venceu em ${t.due_date}`, link: '/tasks' }));
+      (upcomingShows.data || []).forEach(s => items.push({ id: s.id, type: 'show', title: s.title, detail: `Show em ${s.show_date}`, link: '/shows' }));
+      (upcomingReleases.data || []).forEach(r => items.push({ id: r.id, type: 'release', title: r.title, detail: `Lança em ${r.release_date}`, link: '/releases' }));
+      setNotifications(items);
+      setNotifLoaded(true);
+    } catch {}
+  }
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -88,6 +122,7 @@ export default function MainLayout({
       items: [
         { id: 'team', label: 'Equipe', icon: UsersRound, link: '/team' },
         { id: 'finance', label: 'Financeiro', icon: DollarSign, link: '/finance' },
+        { id: 'epk', label: 'EPK', icon: FileText, link: '/epk' },
       ]
     },
     {
@@ -304,10 +339,44 @@ export default function MainLayout({
             </button>
             
             {/* Notifications */}
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative touch-button">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setNotifOpen(o => !o); loadNotifications(); }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative touch-button"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-xl z-50">
+                  <div className="p-3 border-b border-gray-100 flex justify-between items-center">
+                    <span className="font-semibold text-sm text-gray-900">Notificações</span>
+                    <button onClick={() => setNotifOpen(false)}><X className="w-4 h-4 text-gray-400" /></button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-6">Nenhuma notificação pendente</p>
+                    ) : (
+                      notifications.map(n => (
+                        <button
+                          key={n.id}
+                          onClick={() => { navigate(n.link); setNotifOpen(false); }}
+                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 text-left"
+                        >
+                          {n.type === 'task' ? <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" /> : <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 leading-tight">{n.title}</p>
+                            <p className="text-xs text-gray-500">{n.detail}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Desktop buttons */}
             <button

@@ -82,6 +82,7 @@ const InvitePage = React.lazy(() => import('./pages/InvitePage'));
 const AdminUsuarios = React.lazy(() => import('./pages/AdminUsuarios'));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const EPKPage = React.lazy(() => import('./pages/EPKPage'));
 
 // Classic Routes Preview (feature flag controlled)
 const WelcomePreview = React.lazy(() => import('./pages/WelcomePreview'));
@@ -1025,7 +1026,11 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
     }
     if (activeTab === 'shows') return <ShowsManager />;
     if (activeTab === 'releases') return <ReleasesManager />;
-    if (activeTab === 'music') return <SectorTaskView workstream="producao_musical" />;
+    if (activeTab === 'music') return (
+      <React.Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFAD85]"></div></div>}>
+        <MusicHub />
+      </React.Suspense>
+    );
 
     return null;
   };
@@ -1234,6 +1239,12 @@ const ProjectWizard = React.lazy(() => import('./components/ProjectWizard'));
         <Route path="/finance" element={
           <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
             <FinancePage />
+          </React.Suspense>
+        } />
+
+        <Route path="/epk" element={
+          <React.Suspense fallback={<div className="p-6">Carregando...</div>}>
+            <EPKPage />
           </React.Suspense>
         } />
 

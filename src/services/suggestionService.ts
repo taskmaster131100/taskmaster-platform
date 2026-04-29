@@ -82,17 +82,42 @@ export const getProactiveSuggestions = async (): Promise<Suggestion[]> => {
       });
     }
 
-    // 4. Sugestão de Faturamento (Se houver shows fechados sem transação)
-    // Nota: Lógica simplificada para o MVP
-    suggestions.push({
-      id: 'finance-check',
-      title: 'Revisão Financeira',
-      description: 'Bom dia! Que tal revisar o faturamento dos shows do último final de semana?',
-      type: 'action',
-      module: 'finance',
-      actionLabel: 'Ver Financeiro',
-      actionPath: '/finance'
-    });
+    // 4. Orientação para conta nova sem dados
+    const { count: artistCount } = await supabase.from('artists').select('*', { count: 'exact', head: true });
+    const { count: showCount } = await supabase.from('shows').select('*', { count: 'exact', head: true });
+
+    if (!artistCount || artistCount === 0) {
+      suggestions.push({
+        id: 'onboarding-artist',
+        title: 'Cadastre seu primeiro artista',
+        description: 'Comece criando o perfil do artista que você representa. É o ponto de partida para organizar shows, lançamentos e projetos.',
+        type: 'action',
+        module: 'tasks',
+        actionLabel: 'Criar Artista',
+        actionPath: '/artists'
+      });
+    } else if (!showCount || showCount === 0) {
+      suggestions.push({
+        id: 'onboarding-show',
+        title: 'Registre seu próximo show',
+        description: 'Cadastre um show para começar a gerar checklists, tarefas de produção e acompanhar o financeiro.',
+        type: 'info',
+        module: 'shows',
+        actionLabel: 'Cadastrar Show',
+        actionPath: '/shows'
+      });
+    } else {
+      // 4. Sugestão de Faturamento (conta com dados)
+      suggestions.push({
+        id: 'finance-check',
+        title: 'Revisão Financeira',
+        description: 'Que tal revisar o faturamento dos shows recentes e atualizar as entradas financeiras?',
+        type: 'action',
+        module: 'finance',
+        actionLabel: 'Ver Financeiro',
+        actionPath: '/finance'
+      });
+    }
 
   } catch (error) {
     console.error('Error generating suggestions:', error);

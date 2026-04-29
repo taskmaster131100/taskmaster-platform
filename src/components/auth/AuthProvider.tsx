@@ -109,9 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sessionId = crypto.randomUUID();
     localStorage.setItem('tm_session_id', sessionId);
 
-    // Atualizar o ID da sessão no banco de dados (tabela profiles ou similar)
+    // Atualizar o ID da sessão no banco de dados
     const { error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .update({ last_session_id: sessionId })
       .eq('id', userId);
 
@@ -120,9 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Inscrever para mudanças no perfil do usuário
     const channel = supabase
       .channel(`profile_${userId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        table: 'profiles', 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        table: 'user_profiles',
         schema: 'public',
         filter: `id=eq.${userId}`
       }, (payload) => {

@@ -354,8 +354,42 @@ button, a {
   .no-print {
     display: none !important;
   }
-  
+
   .print-only {
     display: block !important;
   }
+
+  /* Hide sidebar and topbar, show only main content */
+  nav, aside, header, footer,
+  [class*="sidebar"], [class*="mobile-menu"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  /* Ensure content fills the page */
+  main, [class*="main-content"] {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page breaks */
+  .page-break-before { page-break-before: always; }
+  .page-break-after { page-break-after: always; }
+  .avoid-break { page-break-inside: avoid; }
+
+  /* Clean up shadows and transitions for print */
+  * {
+    box-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* Ensure colors print correctly */
+  .bg-white { background-color: white !important; }
+  .text-gray-900 { color: #111827 !important; }
+  .text-gray-600 { color: #4B5563 !important; }
 }

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   DollarSign, TrendingUp, TrendingDown, Plus,
   Download, X, FileText, Share2,
-  Sparkles, Loader2, Copy, ChevronDown, ChevronRight
+  Sparkles, Loader2, Copy, ChevronDown, ChevronRight, Trash2, Filter
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
@@ -71,9 +72,16 @@ export default function FinancePage() {
   const [orgId, setOrgId] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTransaction, setNewTransaction] = useState({ description: '', category: 'Show', amount: 0, type: 'revenue' as 'revenue' | 'expense' });
+  const [newTransaction, setNewTransaction] = useState({ description: '', category: 'Show', amount: 0, type: 'revenue' as 'revenue' | 'expense', artist_id: '' });
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzingFinances, setAnalyzingFinances] = useState(false);
+
+  // Filters
+  const [filterType, setFilterType] = useState<'all' | 'revenue' | 'expense'>('all');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Relatório mensal
   const now = new Date();
@@ -162,7 +170,8 @@ export default function FinancePage() {
           amount: newTransaction.amount,
           type: newTransaction.type,
           status: 'paid',
-          transaction_date: new Date().toISOString().split('T')[0]
+          transaction_date: new Date().toISOString().split('T')[0],
+          ...(newTransaction.artist_id ? { artist_id: newTransaction.artist_id } : {})
         })
         .select()
         .single();
@@ -182,11 +191,24 @@ export default function FinancePage() {
         }, ...transactions]);
       }
       setShowAddModal(false);
-      setNewTransaction({ description: '', category: 'Show', amount: 0, type: 'revenue' });
+      setNewTransaction({ description: '', category: 'Show', amount: 0, type: 'revenue', artist_id: '' });
       toast.success('Transação adicionada!');
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);
       toast.error('Erro ao salvar. Tente novamente.');
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm('Deletar esta transação? Esta ação não pode ser desfeita.')) return;
+    try {
+      const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+      if (error) throw error;
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      toast.success('Transação deletada.');
+    } catch (error: any) {
+      console.error('Erro ao deletar transação:', error);
+      toast.error(error?.message || 'Erro ao deletar. Tente novamente.');
     }
   };
 
@@ -251,6 +273,45 @@ export default function FinancePage() {
     }
   };
 
+  // Filtered transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      if (filterType !== 'all' && t.type !== filterType) return false;
+      if (filterCategory && t.category !== filterCategory) return false;
+      if (filterDateFrom && t.transaction_date < filterDateFrom) return false;
+      if (filterDateTo && t.transaction_date > filterDateTo) return false;
+      return true;
+    });
+  }, [transactions, filterType, filterCategory, filterDateFrom, filterDateTo]);
+
+  // Monthly evolution chart data (last 6 months)
+  const monthlyChartData = useMemo(() => {
+    const months: Record<string, { mes: string; Receitas: number; Despesas: number }> = {};
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      months[key] = { mes: label, Receitas: 0, Despesas: 0 };
+    }
+    transactions.forEach(t => {
+      const key = t.transaction_date?.substring(0, 7);
+      if (key && months[key]) {
+        if (t.type === 'revenue') months[key].Receitas += Number(t.amount);
+        else months[key].Despesas += Number(t.amount);
+      }
+    });
+    return Object.values(months);
+  }, [transactions]);
+
+  // Profit margin
+  const totalRevenue = transactions.filter(t => t.type === 'revenue').reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const profitMargin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
+
+  // Unique categories for filter
+  const uniqueCategories = Array.from(new Set(transactions.map(t => t.category))).filter(Boolean).sort();
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
@@ -291,23 +352,50 @@ export default function FinancePage() {
             <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
             <span className="text-sm text-gray-500 font-medium">Receita Total</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">R$ {transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-gray-900">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-100 rounded-lg"><TrendingDown className="w-5 h-5 text-red-600" /></div>
             <span className="text-sm text-gray-500 font-medium">Despesas Totais</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">R$ {transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-gray-900">R$ {totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-[#FFAD85] shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-100 rounded-lg"><DollarSign className="w-5 h-5 text-orange-600" /></div>
-            <span className="text-sm text-gray-500 font-medium">Lucro Líquido</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg"><DollarSign className="w-5 h-5 text-orange-600" /></div>
+              <span className="text-sm text-gray-500 font-medium">Lucro Líquido</span>
+            </div>
+            {totalRevenue > 0 && (
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${profitMargin >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {profitMargin.toFixed(1)}% margem
+              </span>
+            )}
           </div>
-          <p className="text-2xl font-bold text-orange-600">R$ {(transactions.filter(t => t.type === 'revenue').reduce((sum, t) => sum + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className={`text-2xl font-bold ${totalRevenue - totalExpenses >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+            R$ {(totalRevenue - totalExpenses).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
         </div>
       </div>
+
+      {/* Gráfico de Evolução Mensal */}
+      {monthlyChartData.some(d => d.Receitas > 0 || d.Despesas > 0) && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+          <h3 className="font-bold text-lg text-gray-900 mb-4">Evolução dos últimos 6 meses</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={monthlyChartData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+              <YAxis tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              <Legend />
+              <Bar dataKey="Receitas" fill="#22c55e" radius={[4,4,0,0]} />
+              <Bar dataKey="Despesas" fill="#ef4444" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Análise IA */}
       {aiAnalysis && (
@@ -315,7 +403,7 @@ export default function FinancePage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg text-purple-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-purple-600" />
-              Análise Financeira do Marcos
+              Análise Financeira {reportArtists.length > 0 ? `de ${reportArtists[0].stage_name || reportArtists[0].name}` : 'da Plataforma'}
             </h3>
             <button onClick={() => setAiAnalysis(null)} className="text-purple-400 hover:text-purple-600">
               <X className="w-5 h-5" />
@@ -327,9 +415,32 @@ export default function FinancePage() {
 
       {/* Tabela de Transações Recentes */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="font-bold text-lg">Transações Recentes</h3>
-          <button className="text-sm text-[#FFAD85] font-bold hover:underline">Ver todas</button>
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-lg">Transações</h3>
+            <button
+              onClick={() => setShowFilters(f => !f)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${showFilters ? 'bg-[#FFAD85] text-white border-[#FFAD85]' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Filter className="w-4 h-4" />
+              Filtros {(filterType !== 'all' || filterCategory || filterDateFrom || filterDateTo) && '●'}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent">
+                <option value="all">Tipo: Todos</option>
+                <option value="revenue">Receitas</option>
+                <option value="expense">Despesas</option>
+              </select>
+              <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent">
+                <option value="">Categoria: Todas</option>
+                {uniqueCategories.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+              </select>
+              <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent" placeholder="De" />
+              <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent" placeholder="Até" />
+            </div>
+          )}
         </div>
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-bold">
@@ -338,16 +449,26 @@ export default function FinancePage() {
               <th className="px-6 py-3">Categoria</th>
               <th className="px-6 py-3">Data</th>
               <th className="px-6 py-3 text-right">Valor</th>
+              <th className="px-6 py-3 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {transactions.map(t => (
-              <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+            {filteredTransactions.map(t => (
+              <tr key={t.id} className="hover:bg-gray-50 transition-colors group">
                 <td className="px-6 py-4 font-medium">{t.description}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{t.category}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{CATEGORY_LABELS[t.category] || t.category}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{t.transaction_date}</td>
                 <td className={`px-6 py-4 text-right font-bold ${t.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
                   {t.type === 'revenue' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleDeleteTransaction(t.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all rounded"
+                    title="Deletar transação"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -634,6 +755,19 @@ export default function FinancePage() {
                   step="0.01"
                 />
               </div>
+              {reportArtists.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Artista (opcional)</label>
+                  <select
+                    value={newTransaction.artist_id}
+                    onChange={(e) => setNewTransaction({...newTransaction, artist_id: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                  >
+                    <option value="">Nenhum</option>
+                    {reportArtists.map(a => <option key={a.id} value={a.id}>{a.stage_name || a.name}</option>)}
+                  </select>
+                </div>
+              )}
               <button
                 onClick={handleAddTransaction}
                 className="w-full py-3 bg-[#FFAD85] text-white rounded-xl font-bold text-lg hover:bg-[#FF9B6A] mt-4"

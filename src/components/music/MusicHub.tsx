@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown, Upload, File, Image, Headphones, Download } from 'lucide-react';
+import { Music, Library, Calendar, List, Plus, X, Guitar, Piano, Mic2, Drum, Volume2, FileText, Clock, Hash, Edit3, Trash2, Eye, ChevronDown, Upload, File, Image, Headphones, Download, Monitor, ChevronLeft, ChevronRight, QrCode, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 
@@ -113,6 +113,12 @@ export default function MusicHub() {
   const [arrangements, setArrangements] = useState<Arrangement[]>([]);
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
+  const [stageModeSetlist, setStageModeSetlist] = useState<Setlist | null>(null);
+  const [stageIndex, setStageIndex] = useState(0);
+  const [qrSetlist, setQrSetlist] = useState<Setlist | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
 
   useEffect(() => {
     const artistFromNav = (location.state as any)?.artist;
@@ -120,6 +126,41 @@ export default function MusicHub() {
   }, []);
 
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    if (!stageModeSetlist) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); setStageIndex(i => Math.min(i + 1, stageModeSetlist.songs.length - 1)); }
+      if (e.key === 'ArrowLeft') setStageIndex(i => Math.max(i - 1, 0));
+      if (e.key === 'Escape') setStageModeSetlist(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [stageModeSetlist]);
+
+  async function openQR(setlist: Setlist) {
+    setQrSetlist(setlist);
+    setQrCodeUrl('');
+    setQrLoading(true);
+    try {
+      const QRCodeGenerator = await import('qrcode');
+      const url = `${window.location.origin}/music?setlist=${setlist.id}`;
+      const qrUrl = await QRCodeGenerator.default.toDataURL(url, { width: 300, margin: 2 });
+      setQrCodeUrl(qrUrl);
+    } catch {
+      toast.error('Erro ao gerar QR code');
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
+  async function handleCopyQR() {
+    if (!qrSetlist) return;
+    const url = `${window.location.origin}/music?setlist=${qrSetlist.id}`;
+    await navigator.clipboard.writeText(url).catch(() => {});
+    setQrCopied(true);
+    setTimeout(() => setQrCopied(false), 2000);
+  }
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -690,15 +731,31 @@ export default function MusicHub() {
                 <div className="space-y-3">
                   {setlists.map(set => (
                     <div key={set.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900">{set.name}</h4>
                           {set.event && <p className="text-sm text-gray-600 mt-1">🎤 {set.event}</p>}
                           {set.date && <p className="text-xs text-gray-500">📅 {set.date}</p>}
                           <p className="text-xs text-gray-500 mt-1">{set.songs.length} músicas{set.totalDuration ? ` • ${set.totalDuration}` : ''}</p>
                           {set.notes && <p className="text-xs text-gray-400 mt-1">{set.notes}</p>}
                         </div>
-                        <List className="w-5 h-5 text-orange-600" />
+                        <div className="flex gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => openQR(set)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            QR Code
+                          </button>
+                          <button
+                            onClick={() => { setStageModeSetlist(set); setStageIndex(0); }}
+                            disabled={set.songs.length === 0}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Monitor className="w-3.5 h-3.5" />
+                            Modo Palco
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1163,6 +1220,90 @@ export default function MusicHub() {
             <div className="mt-6">
               <button onClick={() => setViewingArrangement(null)} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Fechar</button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ===== MODO PALCO ===== */}
+      {stageModeSetlist && (
+        <div className="fixed inset-0 bg-black z-[100] flex flex-col text-white select-none">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-6 py-4 bg-black/80">
+            <div>
+              <p className="text-sm text-gray-400">{stageModeSetlist.name}</p>
+              <p className="text-xs text-gray-500">{stageIndex + 1} / {stageModeSetlist.songs.length}</p>
+            </div>
+            <button onClick={() => setStageModeSetlist(null)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Song display */}
+          <div className="flex-1 flex items-center justify-center px-8">
+            <div className="text-center max-w-2xl">
+              <p className="text-gray-500 text-sm mb-4 uppercase tracking-widest">Música {stageIndex + 1}</p>
+              <h2 className="text-4xl sm:text-6xl font-bold text-white leading-tight">
+                {stageModeSetlist.songs[stageIndex]}
+              </h2>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between px-6 py-6 bg-black/80">
+            <button
+              onClick={() => setStageIndex(i => Math.max(i - 1, 0))}
+              disabled={stageIndex === 0}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Anterior
+            </button>
+
+            <div className="flex gap-1.5">
+              {stageModeSetlist.songs.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setStageIndex(i)}
+                  className={`w-2 h-2 rounded-full transition-colors ${i === stageIndex ? 'bg-[#FFAD85]' : 'bg-white/30'}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => setStageIndex(i => Math.min(i + 1, stageModeSetlist.songs.length - 1))}
+              disabled={stageIndex === stageModeSetlist.songs.length - 1}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#FFAD85] hover:bg-[#FF9B6A] disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              Próxima
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL QR CODE ===== */}
+      {qrSetlist && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">QR Code — {qrSetlist.name}</h3>
+              <button onClick={() => setQrSetlist(null)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Compartilhe com os músicos para acesso rápido ao setlist.</p>
+            <div className="flex items-center justify-center bg-gray-50 rounded-xl p-4 mb-4 min-h-[200px]">
+              {qrLoading ? (
+                <div className="text-gray-400 text-sm">Gerando QR code...</div>
+              ) : qrCodeUrl ? (
+                <img src={qrCodeUrl} alt="QR Code" className="max-w-full h-auto" />
+              ) : null}
+            </div>
+            <button
+              onClick={handleCopyQR}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            >
+              {qrCopied ? <><Check className="w-4 h-4 text-green-600" />Link copiado!</> : <><Copy className="w-4 h-4" />Copiar link</>}
+            </button>
           </div>
         </div>
       )}

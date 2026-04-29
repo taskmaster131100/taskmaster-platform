@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 import { Plus, Music, Search, X, Calendar, Upload, FileText, Clock, CheckCircle2, Circle, Sparkles, AlertTriangle, ArrowLeft, CheckCheck, ChevronDown, ChevronUp, ArrowRight, Zap, Link2 } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
@@ -119,6 +121,7 @@ export default function ReleasesManager() {
   const dateInputRef = useRef<HTMLInputElement>(null);
   // Artista vindo da navegação — persiste para pré-preencher o form mesmo após resetForm
   const [navArtistName, setNavArtistName] = useState('');
+  const [availableArtists, setAvailableArtists] = useState<{ id: string; name: string; stage_name?: string }[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -154,6 +157,12 @@ export default function ReleasesManager() {
   useEffect(() => {
     loadReleases();
   }, [typeFilter, navArtistId]);
+
+  useEffect(() => {
+    supabase.from('artists').select('id, name, stage_name').order('name').then(({ data }) => {
+      setAvailableArtists(data || []);
+    });
+  }, []);
 
   // Auto-focus date field when returning from proposal to adjust date
   useEffect(() => {
@@ -198,8 +207,10 @@ export default function ReleasesManager() {
         setShowModal(false);
         resetForm();
         loadReleases();
-      } catch (error) {
+        toast.success('Lançamento atualizado.');
+      } catch (error: any) {
         console.error('Erro ao atualizar lançamento:', error);
+        toast.error(error?.message || 'Erro ao atualizar lançamento. Tente novamente.');
       }
       return;
     }
@@ -221,8 +232,10 @@ export default function ReleasesManager() {
       setProposal(null);
       resetForm();
       loadReleases();
-    } catch (error) {
+      toast.success('Lançamento criado com cronograma.');
+    } catch (error: any) {
       console.error('Erro ao criar lançamento com cronograma:', error);
+      toast.error(error?.message || 'Erro ao criar lançamento. Tente novamente.');
     } finally {
       setSavingRelease(false);
     }
@@ -238,8 +251,10 @@ export default function ReleasesManager() {
       setProposal(null);
       resetForm();
       loadReleases();
-    } catch (error) {
+      toast.success('Lançamento criado.');
+    } catch (error: any) {
       console.error('Erro ao criar lançamento:', error);
+      toast.error(error?.message || 'Erro ao criar lançamento. Tente novamente.');
     } finally {
       setSavingRelease(false);
     }
@@ -645,14 +660,28 @@ export default function ReleasesManager() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Artista *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.artist_name}
-                      onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
-                      placeholder="Nome do artista"
-                    />
+                    {availableArtists.length > 0 ? (
+                      <select
+                        required
+                        value={formData.artist_name}
+                        onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent bg-white"
+                      >
+                        <option value="">Selecione um artista</option>
+                        {availableArtists.map(a => (
+                          <option key={a.id} value={a.stage_name || a.name}>{a.stage_name || a.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        value={formData.artist_name}
+                        onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent"
+                        placeholder="Nome do artista"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -886,7 +915,7 @@ export default function ReleasesManager() {
                                 </div>
                                 <div className="flex-shrink-0 text-right">
                                   <p className="text-xs font-medium text-gray-700">
-                                    {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    {new Date(String(task.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                                   </p>
                                   {task.priority === 'alta' && (
                                     <span className="text-xs text-orange-500 font-medium">alta</span>

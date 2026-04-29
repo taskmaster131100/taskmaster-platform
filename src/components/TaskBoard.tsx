@@ -419,6 +419,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
   const getPriorityColor = (task: Task) => {
     switch (task.priority || 'medium') {
+      case 'urgent': return 'bg-red-200 text-red-800';
       case 'high':   return 'bg-red-100 text-red-700';
       case 'medium': return 'bg-yellow-100 text-yellow-700';
       case 'low':    return 'bg-green-100 text-green-700';
@@ -428,6 +429,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
   const getPriorityLabel = (task: Task) => {
     const p = task.priority || 'medium';
+    if (p === 'urgent') return 'Urgente';
     return p === 'high' ? 'Alta' : p === 'medium' ? 'Média' : 'Baixa';
   };
 
@@ -620,7 +622,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {task.due_date && (
                               <span className="text-xs text-gray-500 hidden sm:block">
-                                {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                {new Date(task.due_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                               </span>
                             )}
                             {assigneeName && (
@@ -706,13 +708,21 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-move ${
-                                    snapshot.isDragging ? 'shadow-lg ring-2 ring-[#FFAD85]' : ''
+                                  className={`group bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-move overflow-hidden ${
+                                    snapshot.isDragging ? 'shadow-xl ring-2 ring-[#FFAD85] rotate-1' : ''
                                   }`}
                                 >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <h4 className="font-medium text-gray-900 flex-1 pr-1">{task.title}</h4>
-                                    <div className="flex items-center gap-1 shrink-0">
+                                  {/* Priority accent bar */}
+                                  <div className={`h-1 w-full ${
+                                    task.priority === 'urgent' || task.priority === 'critical' ? 'bg-red-500' :
+                                    task.priority === 'high' ? 'bg-orange-400' :
+                                    task.priority === 'medium' ? 'bg-yellow-400' :
+                                    'bg-gray-200'
+                                  }`} />
+                                  <div className="p-3">
+                                  <div className="flex items-start justify-between mb-1.5">
+                                    <h4 className="font-semibold text-gray-900 text-sm leading-snug flex-1 pr-1">{task.title}</h4>
+                                    <div className="flex items-center gap-0.5 shrink-0">
                                       <button
                                         onClick={() => {
                                           setSelectedTask(task);
@@ -721,20 +731,20 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                         className="p-1 text-gray-400 hover:text-[#FFAD85] transition-colors"
                                         title="Editar"
                                       >
-                                        <Edit2 className="w-4 h-4" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                       </button>
                                       <button
                                         onClick={() => handleDeleteTask(task.id)}
-                                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                                         title="Excluir"
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </div>
                                   </div>
 
                                   {task.description && (
-                                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                    <p className="text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed">
                                       {task.description}
                                     </p>
                                   )}
@@ -761,7 +771,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                     )}
                                     {task.due_date && (
                                       <span className="text-xs text-gray-500">
-                                        {new Date(task.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                        {new Date(task.due_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR')}
                                       </span>
                                     )}
                                   </div>
@@ -834,6 +844,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                                       </span>
                                     )}
                                   </div>
+                                  </div>{/* end p-3 */}
                                 </div>
                               )}
                             </Draggable>
@@ -873,7 +884,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             setSelectedTask(null);
           }}
           onSave={(data) => {
-            handleUpdateTask(selectedTask.id, data);
+            handleUpdateTask(selectedTask.id, { ...data, status: data.status || selectedTask.status });
             setShowEditModal(false);
             setSelectedTask(null);
           }}
@@ -943,6 +954,7 @@ function TaskFormModal({
               notes:       fd.get('notes'),
               workstream:  fd.get('workstream'),
               priority:    fd.get('priority'),
+              status:      fd.get('status') || undefined,
               due_date:    fd.get('due_date') || null,
               assignee_id: fd.get('assignee_id') || null,
               project_id:  fd.get('project_id') || null,
@@ -1000,6 +1012,23 @@ function TaskFormModal({
               />
             </div>
 
+            {/* Status — só aparece na edição */}
+            {task && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                <select
+                  name="status"
+                  defaultValue={task.status || 'todo'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent text-sm"
+                >
+                  <option value="todo">A Fazer</option>
+                  <option value="in_progress">Em Progresso</option>
+                  <option value="done">Concluído</option>
+                  <option value="blocked">Bloqueado</option>
+                </select>
+              </div>
+            )}
+
             {/* Área + Prioridade */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1025,6 +1054,7 @@ function TaskFormModal({
                   <option value="low">Baixa</option>
                   <option value="medium">Média</option>
                   <option value="high">Alta</option>
+                  <option value="urgent">Urgente</option>
                 </select>
               </div>
             </div>

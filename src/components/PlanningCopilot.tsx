@@ -25,6 +25,7 @@ interface PlatformContext {
   subTasks: any[]; // sub-tarefas com phase + status para análise operacional
   teamMembers: any[];
   financials: any[];
+  kpis: any[];
   calendarEvents: any[];
   artists: any[];
 }
@@ -46,6 +47,7 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
     subTasks: [],
     teamMembers: [],
     financials: [],
+    kpis: [],
     calendarEvents: [],
     artists: []
   };
@@ -110,6 +112,25 @@ async function loadPlatformContext(organizationId?: string | null): Promise<Plat
     if (organizationId) artistsQuery = artistsQuery.eq('organization_id', organizationId);
     const { data: artists } = await artistsQuery;
     context.artists = artists || [];
+
+    // Transações financeiras — resumo para análise de saúde financeira
+    if (organizationId) {
+      const { data: financials } = await supabase
+        .from('financial_transactions')
+        .select('type, amount, category, transaction_date')
+        .eq('organization_id', organizationId)
+        .order('transaction_date', { ascending: false })
+        .limit(100);
+      context.financials = financials || [];
+
+      // KPIs cadastrados
+      const { data: kpis } = await supabase
+        .from('kpis')
+        .select('name, value, target, unit, category, period')
+        .eq('organization_id', organizationId)
+        .limit(20);
+      context.kpis = kpis || [];
+    }
 
   } catch (error) {
     console.error('Erro ao carregar contexto:', error);
@@ -265,8 +286,41 @@ function formatContextForAI(ctx: PlatformContext): string {
   // ── ARTISTAS ──────────────────────────────────────────────────
   if (ctx.artists.length > 0) {
     contextStr += '\nARTISTAS:\n';
-    ctx.artists.slice(0, 10).forEach(a => {
+    ctx.artists.slice(0, 10).forEach((a: any) => {
       contextStr += `"${a.name || a.artist_name}" gênero:${a.genre || '?'}\n`;
+    });
+  }
+
+  // ── FINANCEIRO ────────────────────────────────────────────────
+  if (ctx.financials && ctx.financials.length > 0) {
+    const revenues = ctx.financials.filter((f: any) => f.type === 'revenue');
+    const expenses = ctx.financials.filter((f: any) => f.type === 'expense');
+    const totalRevenue = revenues.reduce((s: number, f: any) => s + Number(f.amount), 0);
+    const totalExpenses = expenses.reduce((s: number, f: any) => s + Number(f.amount), 0);
+    const balance = totalRevenue - totalExpenses;
+
+    contextStr += '\nFINANCEIRO:\n';
+    contextStr += `Receitas: R$ ${totalRevenue.toFixed(2)} | Despesas: R$ ${totalExpenses.toFixed(2)} | Saldo: R$ ${balance.toFixed(2)}${balance < 0 ? ' ⚠ SALDO NEGATIVO' : ''}\n`;
+
+    // Breakdown por categoria
+    const byCategory: Record<string, { revenue: number; expense: number }> = {};
+    ctx.financials.forEach((f: any) => {
+      if (!byCategory[f.category]) byCategory[f.category] = { revenue: 0, expense: 0 };
+      if (f.type === 'revenue') byCategory[f.category].revenue += Number(f.amount);
+      else byCategory[f.category].expense += Number(f.amount);
+    });
+    Object.entries(byCategory).slice(0, 8).forEach(([cat, { revenue, expense }]) => {
+      if (revenue > 0) contextStr += `  [${cat}] Receita: R$ ${revenue.toFixed(2)}\n`;
+      if (expense > 0) contextStr += `  [${cat}] Despesa: R$ ${expense.toFixed(2)}\n`;
+    });
+  }
+
+  // ── KPIs ──────────────────────────────────────────────────────
+  if (ctx.kpis && ctx.kpis.length > 0) {
+    contextStr += '\nKPIs:\n';
+    ctx.kpis.slice(0, 10).forEach((k: any) => {
+      const prog = k.target ? ` (meta: ${k.target}${k.unit || ''})` : '';
+      contextStr += `"${k.name}": ${k.value}${k.unit || ''}${prog} [${k.category}/${k.period}]\n`;
     });
   }
 
@@ -833,7 +887,7 @@ function detectProactiveAlerts(ctx: PlatformContext): string | null {
 
             if (nextSub) {
               const due = nextSub.due_date
-                ? ` — prazo: ${new Date(nextSub.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`
+                ? ` — prazo: ${new Date(String(nextSub.due_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`
                 : '';
               lines.push(`O próximo passo é **"${nextSub.title}"**${due}.`);
             }
@@ -888,9 +942,12 @@ function detectProactiveAlerts(ctx: PlatformContext): string | null {
   if (overdue.length > 0) {
     lines.push(`\n⚠ **${overdue.length} item${overdue.length > 1 ? 'ns atrasados' : ' atrasado'}:**`);
     overdue.slice(0, 3).forEach(t => {
+      const dueParsed = new Date(String(t.due_date).slice(0, 10) + 'T12:00:00');
+      if (isNaN(dueParsed.getTime())) return;
       const days = Math.floor(
-        (new Date(today).getTime() - new Date(t.due_date + 'T12:00:00').getTime()) / 86400000
+        (new Date(today).getTime() - dueParsed.getTime()) / 86400000
       );
+      if (isNaN(days) || days < 0) return;
       lines.push(`• "${t.title}" — ${days} dia${days > 1 ? 's' : ''} em atraso`);
     });
     if (overdue.length > 3) lines.push(`• ...e mais ${overdue.length - 3}`);
@@ -1004,6 +1061,12 @@ export default function PlanningCopilot() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [readyToCreate, setReadyToCreate] = useState(false);
+  // Projeto pendente de confirmação antes de inserir no banco
+  const [pendingProject, setPendingProject] = useState<{
+    projectData: any;
+    resolvedOrgId: string;
+    resolvedArtistId: string | null;
+  } | null>(null);
   // Conflito de nome de artista — exige decisão explícita do usuário antes de continuar
   const [artistConflict, setArtistConflict] = useState<{
     name: string;
@@ -1145,7 +1208,8 @@ export default function PlanningCopilot() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setReadyToCreate(false); // nova mensagem cancela o banner de confirmação pendente
+    setReadyToCreate(false); // nova mensagem cancela banners de confirmação pendentes
+    setPendingProject(null);
     const currentFile = attachedFile;
     setAttachedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -1691,170 +1755,29 @@ export default function PlanningCopilot() {
           };
         }
 
-        // Criar o projeto no Supabase
-        console.info(`[Copilot] Criando projeto "${projectData.name}" | org: ${resolvedOrgId} | artist_id: ${resolvedArtistId}`);
-        const { data: newProject, error: projectError } = await supabase
-          .from('projects')
-          .insert({
-            name: projectData.name || 'Novo Projeto',
-            description: projectData.description || '',
-            status: 'active',
-            organization_id: resolvedOrgId,
-            created_by: user?.id,
-            budget: Number(projectData.budget) || 0,
-            objective: projectData.objective || null,
-            strategy: projectData.strategy || null,
-            project_type: projectData.project_type || projectData.tipo || null,
-            start_date: projectData.start_date || null,
-            end_date: projectData.end_date || projectData.launch_date || null,
-            ...(resolvedArtistId ? { artist_id: resolvedArtistId } : {}),
-          })
-          .select('id')
-          .single();
+        // Pré-criação resolvida — mostrar prévia e aguardar confirmação do usuário
+        setPendingProject({ projectData, resolvedOrgId, resolvedArtistId });
 
-        if (projectError) throw projectError;
-
-        // Criar tarefas para cada fase — atomicidade: se qualquer lote falhar, desfaz o projeto
-        if (projectData.phases && newProject) {
-          const today = new Date();
-          for (const phase of projectData.phases) {
-            if (phase.tasks) {
-              const taskRows = phase.tasks.map((task: any, taskIndex: number) => {
-                let dueDate: string | null = null;
-                if (task.days_from_start != null && Number.isFinite(task.days_from_start)) {
-                  const d = new Date(today);
-                  d.setDate(d.getDate() + Number(task.days_from_start));
-                  dueDate = d.toISOString().split('T')[0];
-                } else if (task.due_date) {
-                  // Validate date from AI — reject non-ISO strings like "D+30" or "Invalid Date"
-                  const parsed = new Date(task.due_date);
-                  if (!isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(task.due_date)) {
-                    dueDate = task.due_date.slice(0, 10);
-                  }
-                }
-                return {
-                  title: task.title,
-                  description: task.description || '',
-                  status: 'todo',
-                  priority: task.priority || 'medium',
-                  workstream: normalizeWorkstream(task.category || task.workstream),
-                  phase: task.fase || task.phase || phase.name || null,
-                  etapa: task.etapa || null,
-                  internal_notes: task.internal_notes || null,
-                  project_id: newProject.id,
-                  organization_id: resolvedOrgId,
-                  reporter_id: user?.id,
-                  order_index: taskIndex,
-                  labels: phase.name ? [phase.name] : [],
-                  ...(dueDate ? { due_date: dueDate } : {}),
-                };
-              });
-              const { data: createdTasks, error: taskError } = await supabase
-                .from('tasks').insert(taskRows).select('id, workstream, due_date');
-              if (taskError) {
-                // Rollback: apagar o projeto criado para evitar projeto sem tarefas
-                await supabase.from('projects').delete().eq('id', newProject.id);
-                throw new Error(`Falha ao criar tarefas da fase "${phase.name}": ${taskError.message}`);
-              }
-
-              // Auto-gerar sub-tarefas para cada tarefa pai criada
-              if (createdTasks && createdTasks.length > 0) {
-                const allSubRows: any[] = [];
-                for (const parent of createdTasks) {
-                  const ws = parent.workstream || 'geral';
-                  const template = getSubTasksForWorkstream(ws);
-                  if (template.length === 0) continue;
-                  const baseDate = parent.due_date
-                    ? new Date(parent.due_date + 'T12:00:00')
-                    : new Date();
-                  template.slice(0, 12).forEach(st => {
-                    const d = new Date(baseDate);
-                    d.setDate(d.getDate() - (st.days_from_parent || 0));
-                    allSubRows.push({
-                      title: st.title,
-                      status: 'todo',
-                      priority: st.priority || 'medium',
-                      phase: st.phase,
-                      workstream: ws,
-                      parent_task_id: parent.id,
-                      project_id: newProject.id,
-                      organization_id: resolvedOrgId,
-                      due_date: d.toISOString().split('T')[0],
-                    });
-                  });
-                }
-                if (allSubRows.length > 0) {
-                  // Insert em lotes de 50 para não ultrapassar limites da API
-                  for (let i = 0; i < allSubRows.length; i += 50) {
-                    await supabase.from('tasks').insert(allSubRows.slice(i, i + 50));
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Notificar ArtistDetails para recarregar projetos
-        window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
-          detail: { projectId: newProject.id, projectName: projectData.name }
-        }));
-        trackEvent('project_created', {
-          project_id: newProject.id,
-          project_type: projectData.project_type || null,
-          method: 'ai_copilot',
-          artist_id: resolvedArtistId,
-          total_tasks: totalTasks,
-          budget: projectData.budget,
+        const previewLines = [`📋 **Projeto pronto para criar: "${projectData.name}"**\n`];
+        if (projectData.objective) previewLines.push(`**Objetivo:** ${projectData.objective}\n`);
+        previewLines.push(`**Total:** ${totalPhases} fase${totalPhases !== 1 ? 's' : ''} · ${totalTasks} tarefa${totalTasks !== 1 ? 's' : ''}\n`);
+        projectData.phases?.forEach((phase: any, i: number) => {
+          const count = phase.tasks?.length || 0;
+          previewLines.push(`• Fase ${i + 1}: **${phase.name}** (${count} tarefa${count !== 1 ? 's' : ''})`);
         });
-
-        // Recarregar contexto: usar resolvedOrgId (garantido) em vez de organizationId do auth
-        loadPlatformContext(resolvedOrgId).then(ctx => setPlatformContext(ctx));
-        console.info(`[Copilot] Contexto recarregado após criação do projeto | org: ${resolvedOrgId}`);
-
-        // Redirecionar automaticamente para o ProjectDashboard após 2s
-        setTimeout(() => {
-          navigate('/planejamento', {
-            state: {
-              projectId: newProject.id,
-              project: { id: newProject.id, name: projectData.name },
-              autoOpenProject: true,
-            }
-          });
-        }, 2000);
-
-        // Toast com navegação direta para o TaskBoard filtrado pelo projeto
-        toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas! Abrindo projeto...`, {
-          action: {
-            label: 'Ver Tarefas →',
-            onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name, view: 'departments' } })
-          },
-          duration: 10000,
-        });
-
-        // Montar mensagem amigável (SEM código, SEM JSON)
-        const friendlyMessage = `✅ **Pronto! Projeto "${projectData.name}" criado com sucesso!**
-
-📊 **O que foi criado:**
-• **${totalPhases} fases** organizadas
-• **${totalTasks} tarefas** com prazos automáticos
-${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}
-
-➡️ Clique em **"Ver Tarefas →"** na notificação acima para acompanhar o projeto.
-Ou acesse **Tarefas** no menu lateral a qualquer momento.
-
-Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identificar o que precisa de atenção primeiro.`;
+        previewLines.push(`\nRevisou tudo? Clique em **Confirmar e criar** abaixo para salvar na plataforma.`);
 
         return {
           role: 'assistant' as const,
-          content: friendlyMessage
+          content: previewLines.join('\n')
         };
       } catch (createErr: any) {
-        console.error('Erro ao criar projeto:', createErr);
+        console.error('Erro ao preparar projeto:', createErr);
         const errMsg = createErr?.message || 'Tente novamente.';
-        toast.error(`Erro ao criar o projeto: ${errMsg}`);
+        toast.error(`Erro ao preparar o projeto: ${errMsg}`);
         return {
           role: 'assistant' as const,
-          content: `Desculpe, tive um problema ao criar o projeto na plataforma. ${errMsg} Pode tentar novamente?`
+          content: `Desculpe, tive um problema ao preparar o projeto. ${errMsg} Pode tentar novamente?`
         };
       } finally {
         isCreatingProjectRef.current = false;
@@ -1872,6 +1795,154 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
       role: 'assistant' as const,
       content: cleanText || aiResponse
     };
+  };
+
+  // Executar criação real no Supabase após confirmação do usuário
+  const handleConfirmProjectCreation = async () => {
+    if (!pendingProject || isCreatingProjectRef.current) return;
+    isCreatingProjectRef.current = true;
+    const { projectData, resolvedOrgId, resolvedArtistId } = pendingProject;
+    setPendingProject(null);
+    setIsLoading(true);
+
+    let totalTasks = 0;
+    let totalPhases = 0;
+    const phaseNames: string[] = [];
+    if (projectData.phases) {
+      totalPhases = projectData.phases.length;
+      projectData.phases.forEach((phase: any) => {
+        phaseNames.push(phase.name);
+        if (phase.tasks) totalTasks += phase.tasks.length;
+      });
+    }
+
+    try {
+      console.info(`[Copilot] Criando projeto "${projectData.name}" | org: ${resolvedOrgId} | artist_id: ${resolvedArtistId}`);
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: projectData.name || 'Novo Projeto',
+          description: projectData.description || '',
+          status: 'active',
+          organization_id: resolvedOrgId,
+          created_by: user?.id,
+          budget: Number(projectData.budget) || 0,
+          objective: projectData.objective || null,
+          strategy: projectData.strategy || null,
+          project_type: projectData.project_type || projectData.tipo || null,
+          start_date: projectData.start_date || null,
+          end_date: projectData.end_date || projectData.launch_date || null,
+          ...(resolvedArtistId ? { artist_id: resolvedArtistId } : {}),
+        })
+        .select('id')
+        .single();
+
+      if (projectError) throw projectError;
+
+      if (projectData.phases && newProject) {
+        const today = new Date();
+        for (const phase of projectData.phases) {
+          if (phase.tasks) {
+            const taskRows = phase.tasks.map((task: any, taskIndex: number) => {
+              let dueDate: string | null = null;
+              if (task.days_from_start != null && Number.isFinite(task.days_from_start)) {
+                const d = new Date(today);
+                d.setDate(d.getDate() + Number(task.days_from_start));
+                dueDate = d.toISOString().split('T')[0];
+              } else if (task.due_date) {
+                const parsed = new Date(task.due_date);
+                if (!isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(task.due_date)) {
+                  dueDate = task.due_date.slice(0, 10);
+                }
+              }
+              return {
+                title: task.title,
+                description: task.description || '',
+                status: 'todo',
+                priority: task.priority || 'medium',
+                workstream: normalizeWorkstream(task.category || task.workstream),
+                phase: task.fase || task.phase || phase.name || null,
+                etapa: task.etapa || null,
+                internal_notes: task.internal_notes || null,
+                project_id: newProject.id,
+                organization_id: resolvedOrgId,
+                reporter_id: user?.id,
+                order_index: taskIndex,
+                labels: phase.name ? [phase.name] : [],
+                ...(dueDate ? { due_date: dueDate } : {}),
+              };
+            });
+            const { data: createdTasks, error: taskError } = await supabase
+              .from('tasks').insert(taskRows).select('id, workstream, due_date');
+            if (taskError) {
+              await supabase.from('projects').delete().eq('id', newProject.id);
+              throw new Error(`Falha ao criar tarefas da fase "${phase.name}": ${taskError.message}`);
+            }
+            if (createdTasks && createdTasks.length > 0) {
+              const allSubRows: any[] = [];
+              for (const parent of createdTasks) {
+                const ws = parent.workstream || 'geral';
+                const template = getSubTasksForWorkstream(ws);
+                if (template.length === 0) continue;
+                // Slice to YYYY-MM-DD before parsing to avoid "Invalid time value" when
+                // due_date is a full timestamp string (e.g. "2026-05-01T00:00:00+00:00")
+                const rawDue = parent.due_date ? String(parent.due_date).slice(0, 10) : null;
+                const baseDateValid = rawDue && /^\d{4}-\d{2}-\d{2}$/.test(rawDue);
+                const baseDate = baseDateValid ? new Date(rawDue + 'T12:00:00') : new Date();
+                if (isNaN(baseDate.getTime())) continue; // skip if still invalid
+                template.slice(0, 12).forEach(st => {
+                  try {
+                    const d = new Date(baseDate);
+                    d.setDate(d.getDate() - (Number(st.days_from_parent) || 0));
+                    if (isNaN(d.getTime())) return; // skip invalid date
+                    allSubRows.push({
+                      title: st.title, status: 'todo', priority: st.priority || 'medium',
+                      phase: st.phase, workstream: ws, parent_task_id: parent.id,
+                      project_id: newProject.id, organization_id: resolvedOrgId,
+                      due_date: d.toISOString().split('T')[0],
+                    });
+                  } catch { /* skip subtask with date error */ }
+                });
+              }
+              if (allSubRows.length > 0) {
+                for (let i = 0; i < allSubRows.length; i += 50) {
+                  await supabase.from('tasks').insert(allSubRows.slice(i, i + 50));
+                }
+              }
+            }
+          }
+        }
+      }
+
+      window.dispatchEvent(new CustomEvent('taskmaster:project-created', {
+        detail: { projectId: newProject.id, projectName: projectData.name }
+      }));
+      trackEvent('project_created', {
+        project_id: newProject.id, project_type: projectData.project_type || null,
+        method: 'ai_copilot', artist_id: resolvedArtistId, total_tasks: totalTasks, budget: projectData.budget,
+      });
+      loadPlatformContext(resolvedOrgId).then(ctx => setPlatformContext(ctx));
+
+      toast.success(`Projeto "${projectData.name}" criado — ${totalTasks} tarefas geradas!`, {
+        action: { label: 'Ver Tarefas →', onClick: () => navigate('/tarefas', { state: { projectId: newProject.id, projectName: projectData.name, view: 'departments' } }) },
+        duration: 10000,
+      });
+
+      const successMsg = `✅ **Projeto "${projectData.name}" criado com sucesso!**\n\n📊 **O que foi criado:**\n• **${totalPhases} fases** organizadas\n• **${totalTasks} tarefas** com prazos automáticos\n${phaseNames.map((name, i) => `• Fase ${i + 1}: ${name}`).join('\n')}\n\n➡️ Acesse **Tarefas** no menu lateral para acompanhar. Quer ajustar prazos ou definir responsáveis?`;
+      setMessages(prev => [...prev, { role: 'assistant', content: successMsg }]);
+
+      setTimeout(() => {
+        navigate('/planejamento', { state: { projectId: newProject.id, project: { id: newProject.id, name: projectData.name }, autoOpenProject: true } });
+      }, 2000);
+    } catch (err: any) {
+      console.error('Erro ao criar projeto:', err);
+      const errMsg = err?.message || 'Tente novamente.';
+      toast.error(`Erro ao criar o projeto: ${errMsg}`);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Tive um problema ao criar o projeto na plataforma. ${errMsg}` }]);
+    } finally {
+      isCreatingProjectRef.current = false;
+      setIsLoading(false);
+    }
   };
 
   // Confirmação explícita de criação — envia instrução forçada para o modelo criar o JSON
@@ -2012,6 +2083,37 @@ Quer continuar? Posso ajudar a ajustar prazos, definir responsáveis ou identifi
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-100">
+        {pendingProject && (
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-blue-900">Confirmar criação do projeto "{pendingProject.projectData.name}"</span>
+            </div>
+            <p className="text-xs text-blue-700 mb-2">
+              {(() => {
+                let t = 0;
+                pendingProject.projectData.phases?.forEach((p: any) => { t += p.tasks?.length || 0; });
+                return `${pendingProject.projectData.phases?.length || 0} fases · ${t} tarefas serão criadas no banco.`;
+              })()}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfirmProjectCreation}
+                disabled={isLoading}
+                className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Criando...' : 'Confirmar e criar'}
+              </button>
+              <button
+                onClick={() => setPendingProject(null)}
+                disabled={isLoading}
+                className="px-3 py-1.5 border border-blue-300 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
         {readyToCreate && (
           <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
