@@ -301,12 +301,26 @@ export async function saveReleaseWithTasks(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
-  const tasksToInsert = tasks.map(({ area, status: _s, ...rest }) => ({
+  // Fetch organization_id from the release so tasks pass RLS
+  const { data: release } = await supabase
+    .from('releases')
+    .select('organization_id')
+    .eq('id', releaseId)
+    .single();
+  const orgId = release?.organization_id || null;
+
+  // Map AIReleaseTask fields to actual tasks schema:
+  //   - area → workstream ('Lançamento'→'lancamento', 'Marketing'→'marketing')
+  //   - priority: 'alta'→'high', 'media'→'medium'
+  //   - strip: status (not 'a_fazer'), project_id (null, not a required link), release_id (column doesn't exist)
+  const tasksToInsert = tasks.map(({ area, status: _s, priority, project_id: _pid, ...rest }) => ({
     ...rest,
     workstream: area === 'Marketing' ? 'marketing' : 'lancamento',
     status: 'todo',
-    release_id: releaseId,
-    created_by: user.id,
+    priority: priority === 'alta' ? 'high' : 'medium',
+    reporter_id: user.id,
+    organization_id: orgId,
+    labels: [`release:${releaseId}`],
   }));
 
   const { error } = await supabase.from('tasks').insert(tasksToInsert);

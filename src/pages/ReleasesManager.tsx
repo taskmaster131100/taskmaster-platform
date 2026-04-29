@@ -117,6 +117,7 @@ export default function ReleasesManager() {
   const [modalStep, setModalStep] = useState<'form' | 'proposal'>('form');
   const [proposal, setProposal] = useState<ReleaseTimelineProposal | null>(null);
   const [savingRelease, setSavingRelease] = useState(false);
+  const [partialReleaseId, setPartialReleaseId] = useState<string | null>(null);
   const [adjustingDate, setAdjustingDate] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
   // Artista vindo da navegação — persiste para pré-preencher o form mesmo após resetForm
@@ -227,7 +228,9 @@ export default function ReleasesManager() {
     setSavingRelease(true);
     try {
       const newRelease = await createRelease(normalizedFormData());
+      setPartialReleaseId(newRelease.id); // track in case tasks fail below
       await saveReleaseWithTasks(newRelease.id, proposal.tasks);
+      setPartialReleaseId(null);
       setShowModal(false);
       setModalStep('form');
       setProposal(null);
@@ -242,11 +245,15 @@ export default function ReleasesManager() {
     }
   };
 
-  // Adjustment 2: button text is "Criar apenas o lançamento"
   const handleConfirmWithoutTimeline = async () => {
     setSavingRelease(true);
     try {
-      await createRelease(normalizedFormData());
+      // If handleConfirmWithTimeline already created the release (tasks failed),
+      // reuse that ID instead of creating a duplicate
+      if (!partialReleaseId) {
+        await createRelease(normalizedFormData());
+      }
+      setPartialReleaseId(null);
       setShowModal(false);
       setModalStep('form');
       setProposal(null);
@@ -373,6 +380,7 @@ export default function ReleasesManager() {
     setSelectedRelease(null);
     setModalStep('form');
     setProposal(null);
+    setPartialReleaseId(null);
   };
 
   const filteredReleases = releases.filter(release => {

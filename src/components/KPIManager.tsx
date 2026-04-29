@@ -42,6 +42,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
   const { organizationId } = useAuth();
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingKpi, setEditingKpi] = useState<KPI | null>(null);
   const [formData, setFormData] = useState({
@@ -80,6 +81,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
       toast.error('Organização não identificada. Recarregue a página.');
       return;
     }
+    setSaving(true);
     try {
       const payload = {
         name: formData.name,
@@ -93,12 +95,16 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
       };
 
       if (editingKpi) {
-        const { error } = await supabase.from('kpis').update(payload).eq('id', editingKpi.id);
+        const { data: updated, error } = await supabase
+          .from('kpis').update(payload).eq('id', editingKpi.id).select('id').single();
         if (error) throw error;
+        if (!updated) throw new Error('Falha ao atualizar KPI. Verifique permissões e tente novamente.');
         toast.success('KPI atualizado com sucesso');
       } else {
-        const { error } = await supabase.from('kpis').insert([payload]);
+        const { data: created, error } = await supabase
+          .from('kpis').insert([payload]).select('id').single();
         if (error) throw error;
+        if (!created) throw new Error('Falha ao salvar KPI. Verifique permissões e tente novamente.');
         toast.success('KPI criado com sucesso');
       }
 
@@ -109,6 +115,8 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
     } catch (error: any) {
       console.error('Error saving KPI:', error);
       toast.error(error?.message || 'Erro ao salvar KPI. Tente novamente.');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -370,8 +378,12 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ selectedProject }) => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="flex-1 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A]">
-                  {editingKpi ? 'Atualizar' : 'Criar'}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 text-white bg-[#FFAD85] rounded-lg hover:bg-[#FF9B6A] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Salvando...' : editingKpi ? 'Atualizar' : 'Criar'}
                 </button>
               </div>
             </form>

@@ -248,7 +248,7 @@ export default function EPKPage() {
                       <p className="font-semibold text-gray-900 text-sm">{r.title}</p>
                       <p className="text-xs text-gray-500">
                         {r.type && `${r.type} • `}
-                        {r.release_date ? new Date(r.release_date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : ''}
+                        {r.release_date ? new Date(String(r.release_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : ''}
                       </p>
                     </div>
                   </div>

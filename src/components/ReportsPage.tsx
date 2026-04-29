@@ -563,7 +563,7 @@ const ReportsPage: React.FC = () => {
                       <span className="text-sm font-medium text-gray-800 truncate max-w-[60%]">{r.title || 'Sem título'}</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {r.release_date && (
-                          <span className="text-xs text-gray-400">{new Date(r.release_date).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-xs text-gray-400">{new Date(String(r.release_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
                         )}
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[r.status] || 'bg-gray-100 text-gray-600'}`}>
                           {statusLabels[r.status] || r.status}
