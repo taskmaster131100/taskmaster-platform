@@ -122,6 +122,7 @@ export default function MainLayout({
       items: [
         { id: 'team', label: 'Equipe', icon: UsersRound, link: '/team' },
         { id: 'finance', label: 'Financeiro', icon: DollarSign, link: '/finance' },
+        { id: 'kpis', label: 'KPIs', icon: TrendingUp, link: '/kpis' },
         { id: 'epk', label: 'EPK', icon: FileText, link: '/epk' },
       ]
     },

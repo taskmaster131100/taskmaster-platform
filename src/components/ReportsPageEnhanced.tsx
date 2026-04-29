@@ -61,7 +61,7 @@ const ReportsPageEnhanced: React.FC = () => {
       // Load shows
       const { data: shows } = await supabase
         .from('shows')
-        .select('date, status');
+        .select('show_date, status');
 
       // Load artists (from projects or separate artists table)
       const { data: artists } = await supabase
@@ -85,7 +85,7 @@ const ReportsPageEnhanced: React.FC = () => {
       const activePlannings = plannings?.filter(p => p.status === 'active' || p.status === 'in_progress').length || 0;
 
       const totalShows = shows?.length || 0;
-      const upcomingShows = shows?.filter(s => s.date >= today && s.status !== 'cancelled').length || 0;
+      const upcomingShows = shows?.filter(s => s.show_date && String(s.show_date).slice(0, 10) >= today && s.status !== 'cancelled').length || 0;
 
       const totalArtists = artists?.length || 0;
 

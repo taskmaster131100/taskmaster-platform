@@ -126,6 +126,7 @@ export default function ReleasesManager() {
   const [formData, setFormData] = useState({
     title: '',
     artist_name: '',
+    artist_id: undefined as string | undefined,
     release_type: 'single' as ReleaseType,
     release_date: '',
     isrc: '',
@@ -272,6 +273,7 @@ export default function ReleasesManager() {
     setFormData({
       title: release.title,
       artist_name: release.artist_name,
+      artist_id: release.artist_id,
       release_type: release.release_type,
       release_date: release.release_date,
       isrc: release.isrc || '',
@@ -664,7 +666,10 @@ export default function ReleasesManager() {
                       <select
                         required
                         value={formData.artist_name}
-                        onChange={(e) => setFormData({ ...formData, artist_name: e.target.value })}
+                        onChange={(e) => {
+                          const selected = availableArtists.find(a => (a.stage_name || a.name) === e.target.value);
+                          setFormData({ ...formData, artist_name: e.target.value, artist_id: selected?.id });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFAD85] focus:border-transparent bg-white"
                       >
                         <option value="">Selecione um artista</option>

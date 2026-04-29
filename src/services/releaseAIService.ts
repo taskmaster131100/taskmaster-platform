@@ -301,8 +301,10 @@ export async function saveReleaseWithTasks(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
 
-  const tasksToInsert = tasks.map(t => ({
-    ...t,
+  const tasksToInsert = tasks.map(({ area, status: _s, ...rest }) => ({
+    ...rest,
+    workstream: area === 'Marketing' ? 'marketing' : 'lancamento',
+    status: 'todo',
     release_id: releaseId,
     created_by: user.id,
   }));

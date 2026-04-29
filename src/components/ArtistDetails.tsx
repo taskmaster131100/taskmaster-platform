@@ -820,7 +820,7 @@ const ArtistDetails: React.FC<ArtistDetailsProps> = ({ artistId, onBack, onSelec
                         }`} />
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600">{show.title}</p>
-                          <p className="text-xs text-gray-500">{show.venue || show.venue_address || '—'} · {new Date(show.show_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-xs text-gray-500">{show.venue || show.venue_address || '—'} · {new Date(String(show.show_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                         </div>
                       </div>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${

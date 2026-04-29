@@ -723,16 +723,27 @@ ${fileContent ? `\nDOCUMENTO ANEXADO PELO USUÁRIO:\n${fileContent}\n` : ''}`;
     ...messages.map(m => ({ role: m.role, content: m.content }))
   ];
 
-  const response = await fetch('/api/ai-chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: maxTokens
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  let response: Response;
+  try {
+    response = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: apiMessages,
+        temperature: 0.7,
+        max_tokens: maxTokens
+      })
+    });
+  } catch (err: any) {
+    if (err?.name === 'AbortError') throw new Error('A IA demorou demais para responder (30s). Tente novamente com uma pergunta mais simples.');
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -1061,6 +1072,7 @@ export default function PlanningCopilot() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [readyToCreate, setReadyToCreate] = useState(false);
+  const [createRetryCount, setCreateRetryCount] = useState(0);
   // Projeto pendente de confirmação antes de inserir no banco
   const [pendingProject, setPendingProject] = useState<{
     projectData: any;
@@ -1599,6 +1611,13 @@ export default function PlanningCopilot() {
     // → mostrar mensagem controlada e oferecer novo envio; nunca exibir payload bruto
     const tagWasDetected = /\[CRIAR_PROJETO\]/.test(aiResponse) || /\[\/CRIAR_PROJETO\]/.test(aiResponse);
     if (tagWasDetected && !projectData) {
+      if (createRetryCount >= 2) {
+        setCreateRetryCount(0);
+        return {
+          role: 'assistant' as const,
+          content: 'Não consegui gerar o JSON do projeto após várias tentativas. Por favor, recarregue a conversa e tente novamente com menos detalhes de uma vez.'
+        };
+      }
       setReadyToCreate(true);
       return {
         role: 'assistant' as const,
@@ -1941,6 +1960,7 @@ export default function PlanningCopilot() {
       setMessages(prev => [...prev, { role: 'assistant', content: `Tive um problema ao criar o projeto na plataforma. ${errMsg}` }]);
     } finally {
       isCreatingProjectRef.current = false;
+      setCreateRetryCount(0);
       setIsLoading(false);
     }
   };
@@ -1949,6 +1969,7 @@ export default function PlanningCopilot() {
   const handleConfirmCreate = async () => {
     if (!platformContext) return;
     setReadyToCreate(false);
+    setCreateRetryCount(c => c + 1);
     setIsLoading(true);
 
     // Instrução como USER (não system) — OpenAI prioriza mensagens user no final do histórico

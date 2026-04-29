@@ -186,7 +186,7 @@ export default function OrganizationDashboard({
           .limit(5),
         supabase
           .from('shows')
-          .select('id, title, show_date, city, status')
+          .select('id, title, show_date, venue, status')
           .gte('show_date', today)
           .order('show_date', { ascending: true })
           .limit(3),
